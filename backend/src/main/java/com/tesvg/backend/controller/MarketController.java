@@ -16,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -98,11 +101,39 @@ public class MarketController {
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int limit,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(defaultValue = "12") int size,
             HttpServletRequest req) {
 
         Long userId = resolveUserId(req);
-        List<Producto> productos;
 
+        if (page != null) {
+            PageRequest pr = PageRequest.of(page, size);
+            Page<Producto> result;
+            if (q != null && !q.isBlank()) {
+                result = productoRepo.findByTituloContainingIgnoreCaseAndEstado(
+                        q.trim(), Producto.Estado.DISPONIBLE, pr);
+            } else if (categoria != null && !categoria.isBlank()) {
+                try {
+                    Producto.Categoria cat = Producto.Categoria.valueOf(categoria.toUpperCase());
+                    result = productoRepo.findByCategoriaAndEstadoOrderByFechaDesc(
+                            cat, Producto.Estado.DISPONIBLE, pr);
+                } catch (IllegalArgumentException e) {
+                    result = productoRepo.findByEstadoOrderByFechaDesc(Producto.Estado.DISPONIBLE, pr);
+                }
+            } else {
+                result = productoRepo.findByEstadoOrderByFechaDesc(Producto.Estado.DISPONIBLE, pr);
+            }
+            List<Map<String, Object>> content = result.getContent().stream()
+                    .map(p -> toMap(p, userId)).collect(Collectors.toList());
+            return ResponseEntity.ok(Map.of(
+                    "content", content,
+                    "hasMore", !result.isLast(),
+                    "page",    page
+            ));
+        }
+
+        List<Producto> productos;
         if (q != null && !q.isBlank()) {
             productos = productoRepo.findByTituloContainingIgnoreCaseAndEstado(
                     q.trim(), Producto.Estado.DISPONIBLE);

@@ -86,6 +86,8 @@
 
   <!-- EMPTY STATE — rendered by NidoUI.empty() -->
   <div id="mkt-empty" hidden></div>
+  <div id="mkt-loader" class="feed-page-loader" hidden></div>
+  <div id="mkt-sentinel" style="height:1px;pointer-events:none"></div>
 
 </main>
 
@@ -266,6 +268,14 @@
   let userMap        = {};
   let searchTimer;
   let buyProductId   = null;
+
+  // Marketplace infinite scroll state
+  let _mktPage    = 0;
+  let _mktHasMore = true;
+  let _mktLoading = false;
+  let _mktObserverReady = false;
+  let _mktCat     = '';
+  let _mktQ       = '';
 
   /* ── UTILS ── */
   function esc(s) {
@@ -536,18 +546,65 @@
   }
 
   async function loadProducts(cat, q) {
+    _mktCat = cat || '';
+    _mktQ   = q   || '';
+    _mktPage = 0;
+    _mktHasMore = true;
     setListMode(false);
     mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
-    let url = `${API}/market/productos?`;
+    let url = `${API}/market/productos?page=0&size=12&`;
     if (q) url += `q=${encodeURIComponent(q)}&`;
     else if (cat) url += `categoria=${encodeURIComponent(cat)}&`;
     try {
       const res = await fetch(url, { headers: h });
-      const products = res.ok ? await res.json() : [];
+      const pageData = res.ok ? await res.json() : { content: [], hasMore: false };
+      const products = pageData.content ?? [];
+      _mktHasMore = pageData.hasMore ?? false;
+      _mktPage = 1;
       renderProducts(products);
       fillSellerInfo(products);
+
+      if (!_mktObserverReady) {
+        const sentinel = document.getElementById("mkt-sentinel");
+        if (sentinel && "IntersectionObserver" in window) {
+          new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) cargarMasMkt();
+          }, { rootMargin: "200px" }).observe(sentinel);
+          _mktObserverReady = true;
+        }
+      }
     } catch (_) { document.getElementById('mkt-count').textContent = 'Error al cargar'; }
+  }
+
+  async function cargarMasMkt() {
+    if (_mktLoading || !_mktHasMore) return;
+    _mktLoading = true;
+    const loader = document.getElementById("mkt-loader");
+    if (loader) { loader.hidden = false; loader.innerHTML = (NidoUI?.sk?.mktCard || '').repeat(3); }
+    try {
+      let url = `${API}/market/productos?page=${_mktPage}&size=12&`;
+      if (_mktQ) url += `q=${encodeURIComponent(_mktQ)}&`;
+      else if (_mktCat) url += `categoria=${encodeURIComponent(_mktCat)}&`;
+      const res = await fetch(url, { headers: h });
+      if (!res.ok) return;
+      const pageData = await res.json();
+      const products = pageData.content ?? [];
+      if (products.length) {
+        const grid = document.getElementById('mkt-grid');
+        grid.insertAdjacentHTML('beforeend', products.map(renderCard).join(''));
+        fillSellerInfo(products);
+        const count = document.getElementById('mkt-count');
+        const prev = parseInt(count.textContent) || 0;
+        const total = prev + products.length;
+        count.textContent = total + ' producto' + (total !== 1 ? 's' : '');
+      }
+      _mktHasMore = pageData.hasMore ?? false;
+      _mktPage++;
+    } finally {
+      if (loader) loader.hidden = true;
+      _mktLoading = false;
+    }
   }
 
   async function loadFavs() {

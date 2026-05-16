@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -63,10 +66,22 @@ public class PublicacionController {
         return ResponseEntity.ok(publicacionRepository.save(publicacion));
     }
 
-    // Feed general (todos los posts ordenados por fecha)
+    // Feed general — sin page param → lista completa (compat perfil/buscar)
+    //               con page param → respuesta paginada { content, hasMore, page }
     @GetMapping
-    public List<Publicacion> listar() {
-        return publicacionRepository.findAllByOrderByFechaDesc();
+    public ResponseEntity<?> listar(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(defaultValue = "15") int size) {
+        if (page == null) {
+            return ResponseEntity.ok(publicacionRepository.findAllByOrderByFechaDesc());
+        }
+        Page<Publicacion> result = publicacionRepository.findAllByOrderByFechaDesc(
+                PageRequest.of(page, size));
+        return ResponseEntity.ok(Map.of(
+                "content",  result.getContent(),
+                "hasMore",  !result.isLast(),
+                "page",     page
+        ));
     }
 
     // Solo anuncios oficiales (más reciente primero)

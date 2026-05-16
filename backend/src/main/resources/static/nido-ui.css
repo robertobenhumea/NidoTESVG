@@ -472,3 +472,7 @@ html[data-accent="purple"] {
   --gold-dark: #5F3DC4;
   --gold-light:#F3F0FF;
 }
+
+/* ── INFINITE SCROLL LOADER ──────────────────────────── */
+.feed-page-loader { padding: 12px 0 4px; }
+#feed-sentinel    { height: 1px; pointer-events: none; }

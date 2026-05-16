@@ -1352,6 +1352,8 @@
 
       <!-- FEED -->
       <div id="feed" class="home-feed"></div>
+      <div id="feed-loader" class="feed-page-loader" hidden></div>
+      <div id="feed-sentinel" style="height:1px;pointer-events:none"></div>
 
     </main><!-- /feed-col -->
 
@@ -1503,6 +1505,19 @@
     let pollActive    = false;
     let encuestasMap  = new Map(); // pubId → encuesta object
     let misVotosMap   = new Map(); // encuestaId → opcionId
+
+    // Feed infinite scroll state
+    let _feedPage    = 0;
+    let _feedHasMore = true;
+    let _feedLoading = false;
+    let _feedObserverReady = false;
+    // Feed data maps reused by lazy-loaded pages
+    let feedPostById        = new Map();
+    let feedShareCount      = new Map();
+    let feedYaCompartido    = new Set();
+    let feedMisReacciones   = new Map();
+    let feedReaccionesTodas = new Map();
+    let feedComentarios     = new Map();
 
     async function seleccionarImagen(input) {
       const file = input.files[0];
@@ -1669,7 +1684,7 @@
       feed.innerHTML = NidoUI.sk.repeat(NidoUI.sk.feedCard, 3);
 
       const [postsRes, usersRes, misReaccionesRes, reaccionesTodasRes, comentariosRes, encuestasTodas, misVotosRes] = await Promise.all([
-        fetch("/publicaciones",                        { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/publicaciones?page=0&size=15",         { headers: { "Authorization": "Bearer " + token } }),
         fetch("/usuarios",                             { headers: { "Authorization": "Bearer " + token } }),
         fetch("/interacciones/mis-reacciones",        { headers: { "Authorization": "Bearer " + token } }),
         fetch("/interacciones/reacciones-todos",      { headers: { "Authorization": "Bearer " + token } }),
@@ -1702,13 +1717,13 @@
       const rawMisReacciones   = misReaccionesRes.ok   ? await misReaccionesRes.json()   : {};
       const rawReaccionesTodas = reaccionesTodasRes.ok ? await reaccionesTodasRes.json() : {};
       // pubId → tipo string (o null si sin reacción)
-      const misReaccionesMap = new Map(Object.entries(rawMisReacciones).map(([k,v]) => [Number(k), v]));
+      feedMisReacciones = new Map(Object.entries(rawMisReacciones).map(([k,v]) => [Number(k), v]));
       // pubId → { tipo → count }
-      const reaccionesTodasMap = new Map(Object.entries(rawReaccionesTodas).map(([k,v]) => [Number(k), v]));
+      feedReaccionesTodas = new Map(Object.entries(rawReaccionesTodas).map(([k,v]) => [Number(k), v]));
 
       // comentarios agrupados por post
       const rawComentarios = comentariosRes.ok ? await comentariosRes.json() : {};
-      const comentariosMap = new Map(Object.entries(rawComentarios).map(([k, v]) => [Number(k), v]));
+      feedComentarios = new Map(Object.entries(rawComentarios).map(([k, v]) => [Number(k), v]));
 
       // encuestas y votos propios
       const rawEncuestas = encuestasTodas.ok ? await encuestasTodas.json() : {};
@@ -1716,7 +1731,10 @@
       const rawMisVotos = misVotosRes.ok ? await misVotosRes.json() : {};
       misVotosMap = new Map(Object.entries(rawMisVotos).map(([k, v]) => [Number(k), Number(v)]));
 
-      const data = await postsRes.json();
+      const pageData = await postsRes.json();
+      const data = pageData.content ?? [];
+      _feedHasMore = pageData.hasMore ?? false;
+      _feedPage = 1;
 
       if (!data.length) {
         feed.innerHTML = `<div class="state-msg"><span class="icon">📭</span><p>Aún no hay publicaciones. ¡Sé el primero!</p></div>`;
@@ -1724,19 +1742,19 @@
       }
 
       // Mapa id → post para lookup de originales en compartidas
-      const postById = new Map(data.map(p => [p.id, p]));
+      feedPostById = new Map(data.map(p => [p.id, p]));
 
       // Cuántas veces fue compartido cada post raíz
-      const shareCountMap = new Map();
+      feedShareCount = new Map();
       data.forEach(p => {
         if (p.compartida && p.publicacionOriginalId) {
-          shareCountMap.set(p.publicacionOriginalId,
-            (shareCountMap.get(p.publicacionOriginalId) ?? 0) + 1);
+          feedShareCount.set(p.publicacionOriginalId,
+            (feedShareCount.get(p.publicacionOriginalId) ?? 0) + 1);
         }
       });
 
       // Posts ya compartidos por el usuario actual (publicacionOriginalId)
-      const yaCompartidoSet = new Set(
+      feedYaCompartido = new Set(
         data.filter(p => p.compartida && p.usuarioId === currentUserId && p.publicacionOriginalId)
             .map(p => p.publicacionOriginalId)
       );
@@ -1753,10 +1771,10 @@
         const div = document.createElement("div");
         div.className = "anuncio-card";
         const { nombre, rol: anuncioRol } = globalUserIdMap.get(post.usuarioId) ?? { nombre: "Institución", rol: 'AUTORIDAD' };
-        const miTipo       = misReaccionesMap.get(post.id) ?? null;
-        const countsObj    = reaccionesTodasMap.get(post.id) ?? {};
+        const miTipo       = feedMisReacciones.get(post.id) ?? null;
+        const countsObj    = feedReaccionesTodas.get(post.id) ?? {};
         const totalLikes   = Object.values(countsObj).reduce((a,b) => a+b, 0);
-        const postComments = comentariosMap.get(post.id) ?? [];
+        const postComments = feedComentarios.get(post.id) ?? [];
         div.innerHTML = `
           <div class="anuncio-top">
             <span class="anuncio-badge">📢 Anuncio oficial</span>
@@ -1796,27 +1814,41 @@
         feed.appendChild(div);
       });
 
-      // ── Renderizar posts fijados y normales (fijados primero, todo en fecha DESC) ──
-      [...fijados, ...normales].forEach(post => {
+      // ── Renderizar posts fijados y normales ──
+      _appendPostCards([...fijados, ...normales], feed);
+      injectTodosModulos();
+
+      // IntersectionObserver for infinite scroll (created once)
+      if (!_feedObserverReady) {
+        const sentinel = document.getElementById("feed-sentinel");
+        if (sentinel && "IntersectionObserver" in window) {
+          new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) cargarMasPosts();
+          }, { rootMargin: "300px" }).observe(sentinel);
+          _feedObserverReady = true;
+        }
+      }
+    }
+
+    function _appendPostCards(posts, container) {
+      posts.forEach(post => {
         const div = document.createElement("div");
         div.className = "card post-card nido-post-card" + (post.fijada ? " pinned-post" : "");
         const { foto, nombre, rol: postRol } = globalUserIdMap.get(post.usuarioId) ?? { foto: null, nombre: "Usuario #" + post.usuarioId, rol: 'ESTUDIANTE' };
         const avatarBg   = foto ? `url('${foto}') center/cover no-repeat` : hueFromStr(nombre);
         const avatarText = foto ? "" : initials(nombre);
-        const miTipo       = misReaccionesMap.get(post.id) ?? null;
-        const countsObj    = reaccionesTodasMap.get(post.id) ?? {};
+        const miTipo       = feedMisReacciones.get(post.id) ?? null;
+        const countsObj    = feedReaccionesTodas.get(post.id) ?? {};
         const totalLikes   = Object.values(countsObj).reduce((a,b) => a+b, 0);
-        const postComments = comentariosMap.get(post.id) ?? [];
+        const postComments = feedComentarios.get(post.id) ?? [];
 
-        // Identificar el post "raíz" para contar shares y botón de compartir
         const raizId     = post.compartida && post.publicacionOriginalId ? post.publicacionOriginalId : post.id;
-        const shareCount = shareCountMap.get(raizId) ?? 0;
-        const yaComp     = yaCompartidoSet.has(raizId);
+        const shareCount = feedShareCount.get(raizId) ?? 0;
+        const yaComp     = feedYaCompartido.has(raizId);
 
-        // Bloque de contenido: diferente si es compartida
         let contenidoHtml;
         if (post.compartida && post.publicacionOriginalId) {
-          const orig = postById.get(post.publicacionOriginalId);
+          const orig = feedPostById.get(post.publicacionOriginalId);
           const { foto: oFoto, nombre: oNombre } = orig
             ? (globalUserIdMap.get(orig.usuarioId) ?? { foto: null, nombre: "Usuario" })
             : { foto: null, nombre: "Usuario eliminado" };
@@ -1893,9 +1925,40 @@
             </div>
           </div>
         `;
-        feed.appendChild(div);
+        container.appendChild(div);
       });
-      injectTodosModulos();
+    }
+
+    async function cargarMasPosts() {
+      if (_feedLoading || !_feedHasMore) return;
+      _feedLoading = true;
+      const loader = document.getElementById("feed-loader");
+      if (loader) { loader.hidden = false; loader.innerHTML = NidoUI.sk.repeat(NidoUI.sk.feedCard, 2); }
+      try {
+        const res = await fetch(`/publicaciones?page=${_feedPage}&size=15`, {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!res.ok) return;
+        const pageData = await res.json();
+        const posts = (pageData.content ?? []).filter(p => !p.esAnuncio && !p.fijada);
+        posts.forEach(p => {
+          feedPostById.set(p.id, p);
+          if (p.compartida && p.publicacionOriginalId) {
+            feedShareCount.set(p.publicacionOriginalId,
+              (feedShareCount.get(p.publicacionOriginalId) ?? 0) + 1);
+          }
+          if (p.compartida && p.usuarioId === currentUserId && p.publicacionOriginalId) {
+            feedYaCompartido.add(p.publicacionOriginalId);
+          }
+        });
+        const feed = document.getElementById("feed");
+        _appendPostCards(posts, feed);
+        _feedHasMore = pageData.hasMore ?? false;
+        _feedPage++;
+      } finally {
+        if (loader) loader.hidden = true;
+        _feedLoading = false;
+      }
     }
 
     // ── COMMENTS ──
