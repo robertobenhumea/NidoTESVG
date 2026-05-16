@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumasMail — NidoTESVG</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+    /* ── DESIGN TOKENS ── */
+    :root {
+      --nav-h: 56px;
+      --sidebar-w: 224px;
+      --list-w: 344px;
+      /* Dark palette */
+      --m-bg:       #0c0c14;
+      --m-sidebar:  #09090e;
+      --m-surface:  rgba(255,255,255,0.046);
+      --m-surface2: rgba(255,255,255,0.082);
+      --m-border:   rgba(255,255,255,0.088);
+      --m-text:     #e8e6e0;
+      --m-muted:    rgba(232,230,224,0.50);
+      --m-active:   rgba(245,166,35,0.13);
+      --m-hover:    rgba(255,255,255,0.046);
+      --m-unread:   #4e9ef1;
+      --m-gold:     #F5A623;
+      --m-gold-dk:  #D4891A;
+      --m-shadow:   0 4px 24px rgba(0,0,0,0.46);
+    }
+    html[data-theme="light"] {
+      --m-bg:       #EFF1F7;
+      --m-sidebar:  #FFFFFF;
+      --m-surface:  #FFFFFF;
+      --m-surface2: #F5F7FC;
+      --m-border:   #E2E6EF;
+      --m-text:     #1C202E;
+      --m-muted:    #6B7380;
+      --m-active:   rgba(184,122,8,0.09);
+      --m-hover:    rgba(0,0,0,0.038);
+      --m-unread:   #2563EB;
+      --m-gold:     #B87A08;
+      --m-gold-dk:  #8A5C06;
+      --m-shadow:   0 2px 12px rgba(0,0,0,0.10);
+    }
+
+    /* ── GLOBAL ── */
+    body.mail-page {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--m-bg);
+      color: var(--m-text);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav.mail-nav {
+      height: var(--nav-h);
+      background: var(--m-sidebar);
+      border-bottom: 1px solid var(--m-border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      z-index: 200;
+      flex-shrink: 0;
+    }
+    .nav-logo {
+      font-size: 1.32rem; font-weight: 800;
+      color: var(--m-text); text-decoration: none;
+      letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+      line-height: 1;
+    }
+    .nav-logo span.logo-badge {
+      background: var(--m-gold); color: #111;
+      padding: 1px 7px; border-radius: 6px;
+    }
+    .nav-logo-sub {
+      font-size: .6rem; font-weight: 600; color: var(--m-muted);
+      letter-spacing: .3px; display: block; margin-top: 1px;
+    }
+    .nav-search { flex: 1; position: relative; max-width: 420px; margin: 0 auto; }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--m-border); border-radius: 20px;
+      font-size: .875rem; background: var(--m-surface2); outline: none;
+      transition: border-color .18s; color: var(--m-text); font-family: inherit;
+    }
+    .nav-search-input::placeholder { color: var(--m-muted); }
+    .nav-search-input:focus { border-color: var(--m-gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; color: var(--m-muted);
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem; text-decoration: none; color: var(--m-text);
+      background: none; border: none; cursor: pointer; transition: background .15s;
+    }
+    .nav-icon-btn:hover { background: var(--m-hover); }
+    .nav-icon-btn.active { background: var(--m-active); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--m-gold); color: #111;
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── MAIN WRAP ── */
+    .mail-wrap { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .mail-sidebar {
+      width: var(--sidebar-w);
+      background: var(--m-sidebar);
+      border-right: 1px solid var(--m-border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .mail-sidebar::-webkit-scrollbar { width: 4px; }
+    .mail-sidebar::-webkit-scrollbar-thumb { background: var(--m-border); border-radius: 4px; }
+
+    .btn-compose {
+      margin: 14px 12px 10px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #ffe3a1, var(--m-gold) 52%, #c87804);
+      color: #111; border: none; border-radius: 26px;
+      font-size: .9rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 16px rgba(245,166,35,.30);
+      transition: box-shadow .2s, transform .15s;
+    }
+    html[data-theme="light"] .btn-compose { box-shadow: 0 2px 10px rgba(184,122,8,.28); }
+    .btn-compose:hover { box-shadow: 0 6px 24px rgba(245,166,35,.4); transform: translateY(-1px); }
+    .btn-compose svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .sidebar-section { padding: 4px 0; }
+    .sidebar-section-title {
+      font-size: .64rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--m-muted);
+      padding: 10px 16px 4px;
+    }
+
+    .slink {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px; font-size: .875rem; font-weight: 600;
+      color: var(--m-text); text-decoration: none; cursor: pointer;
+      border: none; background: none; width: 100%; text-align: left;
+      border-radius: 0 28px 28px 0; margin-right: 8px;
+      transition: background .12s, color .12s; position: relative;
+    }
+    .slink:hover { background: var(--m-hover); }
+    .slink.active { background: var(--m-active); color: var(--m-gold); }
+    .slink .slink-count {
+      margin-left: auto; font-size: .7rem; font-weight: 800;
+      background: var(--m-unread); color: #fff;
+      padding: 1px 7px; border-radius: 12px; min-width: 22px; text-align: center;
+    }
+    .slink-icon {
+      width: 20px; height: 20px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--m-muted);
+    }
+    .slink.active .slink-icon { color: var(--m-gold); }
+    .slink-icon svg { width: 16px; height: 16px; }
+    .etiqueta-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── MAIL LIST COLUMN ── */
+    .mail-list-col {
+      width: var(--list-w); flex-shrink: 0;
+      border-right: 1px solid var(--m-border);
+      display: flex; flex-direction: column;
+      background: var(--m-sidebar);
+    }
+    .mail-list-header {
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--m-border);
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .mail-list-title { font-size: 1rem; font-weight: 700; flex: 1; color: var(--m-text); }
+    .btn-refresh {
+      background: none; border: none; cursor: pointer;
+      color: var(--m-muted); font-size: 1rem; padding: 6px; border-radius: 8px;
+      transition: background .12s, color .12s; line-height: 1;
+    }
+    .btn-refresh:hover { background: var(--m-hover); color: var(--m-text); }
+
+    .mail-list { flex: 1; overflow-y: auto; }
+    .mail-list::-webkit-scrollbar { width: 4px; }
+    .mail-list::-webkit-scrollbar-thumb { background: var(--m-border); border-radius: 4px; }
+
+    /* ── MAIL ITEM ── */
+    .mail-item {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 13px 14px 13px 20px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--m-border);
+      transition: background .1s; position: relative;
+    }
+    .mail-item:hover { background: var(--m-hover); }
+    .mail-item.active { background: var(--m-active); }
+
+    /* Unread indicator dot */
+    .mail-item.unread::before {
+      content: '';
+      position: absolute;
+      left: 7px; top: 50%; transform: translateY(-50%);
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--m-unread);
+    }
+
+    .mail-item-avatar {
+      width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+      background: var(--m-gold); color: #111;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .9rem; overflow: hidden;
+    }
+    .mail-item-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .mail-item-body { flex: 1; min-width: 0; }
+    .mail-item-row1 {
+      display: flex; justify-content: space-between;
+      align-items: center; gap: 6px; margin-bottom: 3px;
+    }
+    .mail-item-from {
+      font-size: .875rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; color: var(--m-text);
+    }
+    .mail-item.unread .mail-item-from { font-weight: 800; }
+    .mail-item-date {
+      font-size: .7rem; color: var(--m-muted); white-space: nowrap; flex-shrink: 0;
+    }
+    .mail-item.unread .mail-item-date { color: var(--m-unread); font-weight: 700; }
+
+    .mail-item-subject {
+      font-size: .82rem; color: var(--m-text); opacity: .8;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .mail-item.unread .mail-item-subject { opacity: 1; font-weight: 700; }
+
+    .mail-item-row3 {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mail-item-preview {
+      font-size: .76rem; color: var(--m-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1;
+    }
+    .mail-item-flags { display: flex; gap: 3px; flex-shrink: 0; font-size: .78rem; }
+
+    .mail-empty {
+      padding: 60px 20px; text-align: center; color: var(--m-muted);
+    }
+    .mail-empty .icon { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+    .mail-empty p { font-size: .88rem; }
+
+    /* ── ROLE BADGES ── */
+    .rol-badge {
+      display: inline-flex; align-items: center;
+      padding: 1px 6px; border-radius: 5px;
+      font-size: .64rem; font-weight: 800;
+      letter-spacing: .05em; border: 1px solid;
+      text-transform: uppercase; vertical-align: middle;
+      margin-left: 5px; line-height: 1.6;
+    }
+    .rol-docente    { background:rgba(229,162,0,.14);  color:#E5A200; border-color:rgba(229,162,0,.28); }
+    .rol-autoridad  { background:rgba(99,102,241,.14); color:#818CF8; border-color:rgba(99,102,241,.28); }
+    .rol-administ   { background:rgba(16,185,129,.12); color:#34D399; border-color:rgba(16,185,129,.26); }
+    .rol-personal   { background:rgba(251,146,60,.12); color:#FB923C; border-color:rgba(251,146,60,.26); }
+    .rol-admin-sys  { background:rgba(239,68,68,.12);  color:#F87171; border-color:rgba(239,68,68,.28); }
+    html[data-theme="light"] .rol-docente   { color:#8A5C06; background:rgba(138,92,6,.10);   border-color:rgba(138,92,6,.22); }
+    html[data-theme="light"] .rol-autoridad { color:#4338CA; background:rgba(67,56,202,.10);  border-color:rgba(67,56,202,.22); }
+    html[data-theme="light"] .rol-administ  { color:#059669; background:rgba(5,150,105,.10);  border-color:rgba(5,150,105,.22); }
+    html[data-theme="light"] .rol-personal  { color:#C2410C; background:rgba(194,65,12,.10);  border-color:rgba(194,65,12,.22); }
+    html[data-theme="light"] .rol-admin-sys { color:#DC2626; background:rgba(220,38,38,.10);  border-color:rgba(220,38,38,.22); }
+
+    /* ── READING PANE ── */
+    .mail-reading {
+      flex: 1; display: flex; flex-direction: column;
+      overflow-y: auto; background: var(--m-bg);
+    }
+    .mail-reading::-webkit-scrollbar { width: 5px; }
+    .mail-reading::-webkit-scrollbar-thumb { background: var(--m-border); border-radius: 4px; }
+
+    .reading-placeholder {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--m-muted); gap: 14px; padding: 40px;
+    }
+    .reading-placeholder .icon { font-size: 2.8rem; }
+    .reading-placeholder p { font-size: .9rem; }
+
+    .reading-header {
+      padding: 22px 28px 16px;
+      border-bottom: 1px solid var(--m-border);
+      flex-shrink: 0;
+      background: var(--m-surface);
+    }
+    .reading-subject {
+      font-size: 1.28rem; font-weight: 800;
+      color: var(--m-text); margin-bottom: 16px;
+      line-height: 1.3;
+    }
+    .reading-meta {
+      display: flex; align-items: center; gap: 12px;
+      padding-bottom: 2px;
+    }
+    .reading-avatar {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: var(--m-gold); color: #111;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.05rem; overflow: hidden;
+    }
+    .reading-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .reading-from { flex: 1; min-width: 0; }
+    .reading-from-name {
+      font-size: .9rem; font-weight: 700; color: var(--m-text);
+      display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    }
+    .reading-from-sub { font-size: .78rem; color: var(--m-muted); margin-top: 2px; }
+    .reading-date { font-size: .78rem; color: var(--m-muted); white-space: nowrap; flex-shrink: 0; }
+
+    .reading-actions {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      padding: 10px 28px; border-bottom: 1px solid var(--m-border);
+      background: var(--m-sidebar); flex-shrink: 0;
+    }
+    .btn-action {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 8px;
+      border: 1px solid var(--m-border);
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      background: var(--m-surface); color: var(--m-text);
+      transition: border-color .15s, background .15s;
+      font-family: inherit;
+    }
+    .btn-action:hover { border-color: var(--m-gold); background: var(--m-active); color: var(--m-gold); }
+    .btn-action.danger { border-color: rgba(239,68,68,.3); color: #F87171; }
+    .btn-action.danger:hover { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.5); }
+    .btn-action.active-fav { background: var(--m-active); border-color: rgba(245,166,35,.4); color: var(--m-gold); }
+    html[data-theme="light"] .btn-action.danger { color: #DC2626; border-color: rgba(220,38,38,.3); }
+    html[data-theme="light"] .btn-action.danger:hover { background: rgba(220,38,38,.08); }
+
+    .reading-body { padding: 24px 28px; flex: 1; }
+    .reading-body-content {
+      font-size: .92rem; line-height: 1.75; color: var(--m-text);
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .reading-body-html { font-size: .92rem; line-height: 1.75; color: var(--m-text); }
+    .reading-body-html * { max-width: 100%; }
+
+    .reading-quote {
+      margin-top: 20px;
+      border-left: 3px solid var(--m-border);
+      padding: 10px 16px;
+      background: var(--m-surface);
+      border-radius: 0 10px 10px 0;
+    }
+    .reading-quote-title { font-size: .72rem; color: var(--m-muted); font-weight: 600; margin-bottom: 6px; }
+    .reading-quote-body  { font-size: .82rem; color: var(--m-muted); white-space: pre-wrap; }
+
+    .reading-adjuntos { padding: 0 28px 22px; }
+    .adjuntos-title {
+      font-size: .72rem; font-weight: 800; color: var(--m-muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+    }
+    .adjunto-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .adjunto-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 12px;
+      border: 1px solid var(--m-border); background: var(--m-surface);
+      text-decoration: none; color: var(--m-text); font-size: .82rem;
+      transition: border-color .12s, background .12s;
+      cursor: pointer; font-family: inherit; min-width: 180px;
+    }
+    .adjunto-chip:hover { border-color: var(--m-gold); background: var(--m-active); }
+    .adjunto-icon { font-size: 1.4rem; }
+    .adjunto-info strong { display: block; font-size: .82rem; font-weight: 700; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .adjunto-info small  { color: var(--m-muted); font-size: .7rem; }
+
+    .reading-firma {
+      margin: 0 28px; padding: 12px 0 24px;
+      border-top: 1px solid var(--m-border);
+      font-size: .78rem; color: var(--m-muted); line-height: 1.6;
+    }
+
+    /* ── COMPOSE MODAL ── */
+    .compose-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.48); z-index: 500;
+      align-items: flex-end; justify-content: flex-end; padding: 20px;
+    }
+    .compose-backdrop.open { display: flex; }
+    .compose-modal {
+      width: 580px; max-width: 100%;
+      background: var(--m-sidebar);
+      border: 1px solid var(--m-border);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -8px 48px rgba(0,0,0,.36);
+      display: flex; flex-direction: column; max-height: 88vh;
+    }
+    .compose-modal-header {
+      display: flex; align-items: center; padding: 14px 18px;
+      background: #111827; color: #fff;
+      border-radius: 16px 16px 0 0; flex-shrink: 0;
+    }
+    html[data-theme="light"] .compose-modal-header { background: #1C202E; }
+    .compose-modal-title { font-size: .95rem; font-weight: 700; flex: 1; }
+    .compose-modal-close {
+      background: none; border: none; color: rgba(255,255,255,.6);
+      font-size: 1.1rem; cursor: pointer; padding: 2px 8px; border-radius: 6px;
+    }
+    .compose-modal-close:hover { color: #fff; background: rgba(255,255,255,.14); }
+
+    .compose-fields { flex-shrink: 0; border-bottom: 1px solid var(--m-border); }
+    .compose-field {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 18px; border-bottom: 1px solid var(--m-border);
+      position: relative;
+    }
+    .compose-field:last-child { border-bottom: none; }
+    .compose-field label {
+      font-size: .78rem; font-weight: 700; color: var(--m-muted);
+      padding-top: 3px; white-space: nowrap; min-width: 50px;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .compose-field input {
+      flex: 1; border: none; outline: none; font-size: .9rem;
+      color: var(--m-text); background: transparent; font-family: inherit;
+    }
+    .compose-field input::placeholder { color: var(--m-muted); }
+
+    .compose-to-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .to-chip {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--m-active); color: var(--m-gold);
+      border: 1px solid rgba(245,166,35,.3);
+      padding: 2px 8px 2px 10px; border-radius: 20px;
+      font-size: .8rem; font-weight: 600;
+    }
+    .to-chip button { background: none; border: none; cursor: pointer; color: var(--m-muted); font-size: .8rem; padding: 0 1px; line-height: 1; }
+    .to-chip button:hover { color: var(--m-text); }
+
+    .autocomplete-list {
+      position: absolute; background: var(--m-sidebar);
+      border: 1px solid var(--m-border); border-radius: 12px;
+      box-shadow: var(--m-shadow); z-index: 600;
+      max-height: 220px; overflow-y: auto;
+      min-width: 280px; top: 100%; left: 0; right: 0;
+    }
+    .autocomplete-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; cursor: pointer; font-size: .875rem;
+    }
+    .autocomplete-item:hover { background: var(--m-hover); }
+    .autocomplete-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--m-gold); color: #111;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .76rem; font-weight: 700; overflow: hidden; flex-shrink: 0;
+    }
+    .autocomplete-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── RICH TEXT TOOLBAR ── */
+    .compose-editor-toolbar {
+      display: flex; gap: 4px; padding: 7px 18px;
+      border-bottom: 1px solid var(--m-border);
+      flex-shrink: 0; flex-wrap: wrap;
+    }
+    .toolbar-btn {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid transparent;
+      background: none; cursor: pointer; font-size: .875rem;
+      color: var(--m-text); transition: background .12s; min-width: 28px; text-align: center;
+    }
+    .toolbar-btn:hover { background: var(--m-hover); }
+    .toolbar-sep { width: 1px; background: var(--m-border); margin: 2px 4px; align-self: stretch; }
+
+    .compose-editor {
+      flex: 1; overflow-y: auto; padding: 14px 18px; outline: none;
+      font-size: .9rem; line-height: 1.65; color: var(--m-text);
+      min-height: 160px;
+    }
+    .compose-editor:empty::before {
+      content: attr(data-placeholder); color: var(--m-muted);
+      pointer-events: none; display: block;
+    }
+    .compose-firma {
+      padding: 10px 18px; border-top: 1px solid var(--m-border);
+      font-size: .76rem; color: var(--m-muted); line-height: 1.5; flex-shrink: 0;
+    }
+    .compose-footer {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 18px; border-top: 1px solid var(--m-border);
+      flex-shrink: 0; flex-wrap: wrap;
+    }
+    .btn-send {
+      padding: 9px 22px;
+      background: linear-gradient(135deg, #ffe3a1, var(--m-gold) 52%, #c87804);
+      color: #111; border: none; border-radius: 22px;
+      font-size: .875rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(245,166,35,.3);
+      transition: box-shadow .2s, transform .15s;
+    }
+    .btn-send:hover { box-shadow: 0 4px 18px rgba(245,166,35,.4); transform: translateY(-1px); }
+    .btn-compose-icon {
+      padding: 7px 13px; background: none;
+      border: 1px solid var(--m-border); border-radius: 20px;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      color: var(--m-text); transition: border-color .15s; font-family: inherit;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-compose-icon:hover { border-color: var(--m-gold); color: var(--m-gold); }
+
+    .adjuntos-preview { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 18px 0; }
+    .adjunto-preview-chip {
+      display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+      background: var(--m-surface); border: 1px solid var(--m-border);
+      border-radius: 20px; font-size: .78rem; color: var(--m-text);
+    }
+    .adjunto-preview-chip button { background: none; border: none; cursor: pointer; color: var(--m-muted); font-size: .8rem; }
+
+    /* ── MODALS ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.56); z-index: 600;
+      align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--m-sidebar); border: 1px solid var(--m-border);
+      border-radius: 16px; padding: 28px 28px 24px;
+      max-width: 380px; width: 90%; box-shadow: var(--m-shadow);
+    }
+    .modal-title { font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: var(--m-text); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .btn-modal-cancel {
+      padding: 9px 18px; background: none; border: 1px solid var(--m-border);
+      border-radius: 10px; font-size: .875rem; font-weight: 600;
+      cursor: pointer; color: var(--m-text); font-family: inherit;
+    }
+    .btn-modal-cancel:hover { background: var(--m-hover); }
+    .btn-modal-ok {
+      padding: 9px 20px;
+      background: linear-gradient(135deg, #ffe3a1, var(--m-gold) 52%, #c87804);
+      color: #111; border: none; border-radius: 10px;
+      font-size: .875rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .modal-input {
+      width: 100%; padding: 10px 13px; border: 1px solid var(--m-border);
+      border-radius: 10px; font-size: .9rem; outline: none;
+      color: var(--m-text); background: var(--m-surface2);
+      font-family: inherit; transition: border-color .15s;
+    }
+    .modal-input:focus { border-color: var(--m-gold); }
+    .modal-input::placeholder { color: var(--m-muted); }
+
+    /* ── INSTITUTIONAL CHANNELS ── */
+    .inst-channel-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 12px 7px 14px;
+      border-radius: 0 26px 26px 0; margin-right: 8px;
+      cursor: pointer; border: none; background: none;
+      width: 100%; text-align: left;
+      font-size: .82rem; font-weight: 600; color: var(--m-muted);
+      transition: background .12s, color .12s; font-family: inherit;
+    }
+    .inst-channel-item:hover { background: var(--m-hover); color: var(--m-text); }
+    .inst-channel-item.active { background: var(--m-active); color: var(--m-gold); }
+    .inst-ch-hash {
+      font-size: .7rem; font-weight: 900; font-family: monospace;
+      color: inherit; flex-shrink: 0; opacity: .55; width: 10px;
+    }
+    .inst-channel-item.active .inst-ch-hash { opacity: .8; }
+    .inst-ch-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--m-gold); flex-shrink: 0; margin-left: auto;
+      opacity: 0; transition: opacity .15s;
+    }
+    .inst-channel-item.active .inst-ch-dot { opacity: 1; }
+
+    /* Avisos sidebar link */
+    .sidebar-avisos-link {
+      display: flex; align-items: center; gap: 8px;
+      margin: 0 8px 0 0; padding: 8px 14px;
+      border-radius: 0 26px 26px 0;
+      background: rgba(245,166,35,0.08); border: none;
+      color: var(--m-gold); font-size: .82rem; font-weight: 700;
+      text-decoration: none; font-family: inherit;
+      transition: background .12s; cursor: pointer;
+    }
+    .sidebar-avisos-link:hover { background: rgba(245,166,35,0.16); }
+    .sidebar-avisos-link svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* Compose priority row */
+    .compose-prio-row {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 18px; border-bottom: 1px solid var(--m-border);
+      flex-shrink: 0; flex-wrap: wrap;
+    }
+    .compose-prio-lbl {
+      font-size: .71rem; font-weight: 700; color: var(--m-muted);
+      text-transform: uppercase; letter-spacing: .05em;
+      white-space: nowrap; margin-right: 2px;
+    }
+    .compose-prio-opt {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 20px;
+      border: 1px solid var(--m-border); background: none;
+      font-size: .73rem; font-weight: 700; cursor: pointer;
+      color: var(--m-muted); font-family: inherit; transition: all .12s;
+    }
+    .compose-prio-opt[data-prio=""] { border-color: var(--m-border); }
+    .compose-prio-opt[data-prio=""].active { background: var(--m-active); color: var(--m-gold); border-color: rgba(245,166,35,.3); }
+    .compose-prio-opt[data-prio="URGENTE"].active    { border-color:#F87171; color:#F87171; background:rgba(239,68,68,0.12); }
+    .compose-prio-opt[data-prio="IMPORTANTE"].active { border-color:#FB923C; color:#FB923C; background:rgba(249,115,22,0.12); }
+    .compose-prio-opt[data-prio="ACADEMICO"].active  { border-color:#60A5FA; color:#60A5FA; background:rgba(59,130,246,0.12); }
+    .compose-prio-opt[data-prio="EVENTO"].active     { border-color:#A78BFA; color:#A78BFA; background:rgba(139,92,246,0.12); }
+    html[data-theme="light"] .compose-prio-opt[data-prio="URGENTE"].active    { border-color:#DC2626; color:#DC2626; background:rgba(220,38,38,.09); }
+    html[data-theme="light"] .compose-prio-opt[data-prio="IMPORTANTE"].active { border-color:#C2410C; color:#C2410C; background:rgba(194,65,12,.09); }
+    html[data-theme="light"] .compose-prio-opt[data-prio="ACADEMICO"].active  { border-color:#1D4ED8; color:#1D4ED8; background:rgba(29,78,216,.09); }
+    html[data-theme="light"] .compose-prio-opt[data-prio="EVENTO"].active     { border-color:#7C3AED; color:#7C3AED; background:rgba(124,58,237,.09); }
+    .prio-mini-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Mail item priority dot */
+    .mail-prio-dot {
+      display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+      margin-right: 5px; vertical-align: middle; flex-shrink: 0;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .inst-channel-item .ch-lbl,
+      .inst-ch-dot { display: none; }
+      .inst-channel-item { padding: 8px 0; justify-content: center; margin-right: 0; border-radius: 0; }
+      .sidebar-avisos-link .lnk-lbl { display: none; }
+      .sidebar-avisos-link { justify-content: center; padding: 8px 0; margin-right: 0; border-radius: 0; }
+      :root { --sidebar-w: 56px; }
+      .slink span:not(.slink-icon):not(.slink-count) { display: none; }
+      .slink-count {
+        position: absolute; top: 4px; right: 4px;
+        font-size: .6rem; min-width: 16px; padding: 1px 4px;
+      }
+      .btn-compose span:last-child { display: none; }
+      .btn-compose { border-radius: 50%; width: 42px; height: 42px; padding: 0; justify-content: center; }
+      .sidebar-section-title { display: none; }
+      :root { --list-w: 268px; }
+    }
+    @media (max-width: 680px) {
+      :root { --list-w: 100%; }
+      .mail-reading { display: none; }
+      .mail-reading.show-mobile {
+        display: flex; position: fixed;
+        inset: var(--nav-h) 0 0 0; z-index: 100;
+      }
+    }
+    @media (max-width: 760px) {
+      .compose-modal { border-radius: 16px 16px 0 0; }
+      .compose-field { padding: 10px 14px; }
+      .compose-field input { font-size: 1rem; min-height: 44px; }
+      .mail-item { padding: 12px 12px 12px 18px; }
+      .mail-item-avatar { width: 40px; height: 40px; }
+      .reading-header { padding: 16px 16px 12px; }
+      .reading-body  { padding: 16px; }
+      .reading-adjuntos { padding: 0 16px 18px; }
+      .reading-firma { margin: 0 16px; }
+      .reading-actions { padding: 8px 16px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body class="mail-page">
+
+  <nav class="mail-nav">
+    <a class="nav-logo" href="/home.html">Nido<span class="logo-badge">TESVG</span><span class="nav-logo-sub">PlumasMail</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="search-input"
+             placeholder="Buscar en PlumasMail…"
+             oninput="onSearch(this.value)">
+      <span class="nav-search-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+    </div>
+    <div class="nav-actions">
+      <a class="nav-icon-btn active" href="/correo.html" title="PlumasMail">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </a>
+      <a href="/perfil.html" style="text-decoration:none">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn" onclick="logout()" title="Cerrar sesión">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="mail-wrap">
+
+    <!-- SIDEBAR -->
+    <div class="mail-sidebar">
+      <button class="btn-compose" onclick="openCompose()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Redactar</span>
+      </button>
+
+      <div class="sidebar-section">
+        <button class="slink active" id="slink-entrada" onclick="loadCarpeta('entrada', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg></span>
+          <span>Bandeja</span>
+          <span class="slink-count" id="count-entrada" style="display:none"></span>
+        </button>
+        <button class="slink" id="slink-enviados" onclick="loadCarpeta('enviados', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+          <span>Enviados</span>
+        </button>
+        <button class="slink" id="slink-borradores" onclick="loadCarpeta('borradores', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+          <span>Borradores</span>
+          <span class="slink-count" id="count-borradores" style="display:none"></span>
+        </button>
+        <button class="slink" id="slink-favoritos" onclick="loadCarpeta('favoritos', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <span>Favoritos</span>
+        </button>
+        <button class="slink" id="slink-comunicados" onclick="loadCarpeta('comunicados', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg></span>
+          <span>Comunicados</span>
+        </button>
+        <button class="slink" id="slink-papelera" onclick="loadCarpeta('papelera', this)">
+          <span class="slink-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></span>
+          <span>Papelera</span>
+        </button>
+      </div>
+
+      <div class="sidebar-section" id="etiquetas-sidebar">
+        <div class="sidebar-section-title">Etiquetas</div>
+        <div id="etiquetas-list"></div>
+        <button class="slink" onclick="promptNuevaEtiqueta()" style="color:var(--m-muted);font-size:.78rem">
+          <span class="slink-icon" style="font-size:1rem;color:var(--m-muted)">+</span>
+          <span>Nueva etiqueta</span>
+        </button>
+      </div>
+
+      <!-- ── CANALES INSTITUCIONALES ── -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Canales</div>
+        <a class="sidebar-avisos-link" href="/avisos.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+          <span class="lnk-lbl">📢 Avisos institucionales</span>
+        </a>
+        <button class="inst-channel-item" data-canal="direccion" onclick="loadCanal(this)">
+          <span class="inst-ch-hash">#</span><span class="ch-lbl">Dirección</span><span class="inst-ch-dot"></span>
+        </button>
+        <button class="inst-channel-item" data-canal="docentes" onclick="loadCanal(this)">
+          <span class="inst-ch-hash">#</span><span class="ch-lbl">Docentes</span><span class="inst-ch-dot"></span>
+        </button>
+        <button class="inst-channel-item" data-canal="coordinacion" onclick="loadCanal(this)">
+          <span class="inst-ch-hash">#</span><span class="ch-lbl">Coordinación</span><span class="inst-ch-dot"></span>
+        </button>
+        <button class="inst-channel-item" data-canal="servicios" onclick="loadCanal(this)">
+          <span class="inst-ch-hash">#</span><span class="ch-lbl">Servicios</span><span class="inst-ch-dot"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIL LIST -->
+    <div class="mail-list-col" id="mail-list-col">
+      <div class="mail-list-header">
+        <div class="mail-list-title" id="carpeta-title">Bandeja de entrada</div>
+        <button class="btn-refresh" onclick="refrescar()" title="Actualizar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        </button>
+      </div>
+      <div class="mail-list" id="mail-list">
+        <div class="mail-empty"><span class="icon">📭</span><p>Cargando…</p></div>
+      </div>
+    </div>
+
+    <!-- READING PANE -->
+    <div class="mail-reading" id="mail-reading">
+      <div class="reading-placeholder">
+        <div class="icon">✉️</div>
+        <p>Selecciona un correo para leerlo</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COMPOSE MODAL -->
+  <div class="compose-backdrop" id="compose-backdrop">
+    <div class="compose-modal">
+      <div class="compose-modal-header">
+        <span class="compose-modal-title" id="compose-title">Nuevo mensaje</span>
+        <button class="compose-modal-close" onclick="closeCompose()">✕</button>
+      </div>
+      <div class="compose-fields">
+        <div class="compose-field">
+          <label>Para</label>
+          <div class="compose-to-chips" id="to-chips">
+            <input type="text" id="to-input" placeholder="Nombre o correo…"
+                   oninput="onToInput(this.value)" onkeydown="onToKey(event)"
+                   autocomplete="off" style="min-width:120px;flex:1;border:none;outline:none;font-size:.9rem;background:transparent;color:var(--m-text)">
+          </div>
+          <div class="autocomplete-list" id="autocomplete-list" style="display:none"></div>
+        </div>
+        <div class="compose-field">
+          <label>Asunto</label>
+          <input type="text" id="compose-subject" placeholder="Asunto del correo">
+        </div>
+      </div>
+
+      <!-- Priority row -->
+      <div class="compose-prio-row">
+        <span class="compose-prio-lbl">Prioridad</span>
+        <button type="button" class="compose-prio-opt active" data-prio="" onclick="setComposePrio(this)">Normal</button>
+        <button type="button" class="compose-prio-opt" data-prio="URGENTE" onclick="setComposePrio(this)"><span class="prio-mini-dot" style="background:#F87171"></span>Urgente</button>
+        <button type="button" class="compose-prio-opt" data-prio="IMPORTANTE" onclick="setComposePrio(this)"><span class="prio-mini-dot" style="background:#FB923C"></span>Importante</button>
+        <button type="button" class="compose-prio-opt" data-prio="ACADEMICO" onclick="setComposePrio(this)"><span class="prio-mini-dot" style="background:#60A5FA"></span>Académico</button>
+        <button type="button" class="compose-prio-opt" data-prio="EVENTO" onclick="setComposePrio(this)"><span class="prio-mini-dot" style="background:#A78BFA"></span>Evento</button>
+      </div>
+
+      <div class="compose-editor-toolbar">
+        <button class="toolbar-btn" onclick="fmt('bold')" title="Negrita"><b>B</b></button>
+        <button class="toolbar-btn" onclick="fmt('italic')" title="Cursiva"><i>I</i></button>
+        <button class="toolbar-btn" onclick="fmt('underline')" title="Subrayado"><u>U</u></button>
+        <button class="toolbar-btn" onclick="fmt('strikeThrough')" title="Tachado"><s>S</s></button>
+        <span class="toolbar-sep"></span>
+        <button class="toolbar-btn" onclick="fmt('insertUnorderedList')" title="Lista">≡</button>
+        <button class="toolbar-btn" onclick="fmt('insertOrderedList')" title="Lista num.">1.</button>
+        <span class="toolbar-sep"></span>
+        <button class="toolbar-btn" onclick="insertLink()" title="Link">🔗</button>
+      </div>
+
+      <div class="compose-editor" id="compose-body" contenteditable="true"
+           data-placeholder="Escribe tu mensaje aquí…"></div>
+
+      <div class="adjuntos-preview" id="adjuntos-preview"></div>
+      <div class="compose-firma" id="compose-firma"></div>
+
+      <div class="compose-footer">
+        <button class="btn-send" onclick="enviarCorreo()">Enviar ✈️</button>
+        <button class="btn-compose-icon" onclick="guardarBorrador()">💾 Borrador</button>
+        <button class="btn-compose-icon" onclick="openScheduleModal()">📅 Programar</button>
+        <input type="file" id="file-input" multiple style="display:none" onchange="onFileSelected(this)">
+        <button class="btn-compose-icon" onclick="document.getElementById('file-input').click()">📎 Adjuntar</button>
+        <button class="btn-compose-icon" style="margin-left:auto;border-color:rgba(239,68,68,.3);color:#F87171" onclick="closeCompose()">🗑️ Descartar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEDULE MODAL -->
+  <div class="modal-backdrop" id="modal-schedule">
+    <div class="modal">
+      <div class="modal-title">📅 Programar envío</div>
+      <input type="datetime-local" id="schedule-dt" class="modal-input">
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeScheduleModal()">Cancelar</button>
+        <button class="btn-modal-ok" onclick="programarEnvio()">Programar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETIQUETA MODAL -->
+  <div class="modal-backdrop" id="modal-etiqueta">
+    <div class="modal">
+      <div class="modal-title">🏷️ Nueva etiqueta</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input type="text" id="etiqueta-nombre" class="modal-input" placeholder="Nombre de la etiqueta">
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="font-size:.82rem;color:var(--m-muted)">Color:</label>
+          <input type="color" id="etiqueta-color" value="#F5A623" style="width:36px;height:28px;border:none;cursor:pointer;border-radius:6px">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="document.getElementById('modal-etiqueta').classList.remove('open')">Cancelar</button>
+        <button class="btn-modal-ok" onclick="crearEtiqueta()">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/nido-ui.js"></script>
+  <script>
+    const TOKEN = localStorage.getItem('token');
+    if (!TOKEN) location.href = '/login.html';
+
+    let currentUser = null;
+    let currentCarpeta = 'entrada';
+    let currentCorreoId = null;
+    let allUsers = [];
+    let toRecipients = [];
+    let composeReplyRef = null;
+    let composeDraftId = null;
+    let composeFiles = [];
+    let etiquetas = [];
+    let cachedEntrada = [];
+    let composePrioridad = '';
+
+    const CANALES_CONFIG = {
+      direccion:    { label:'Dirección General',   roles:['AUTORIDAD','ADMIN'] },
+      docentes:     { label:'Docentes',            roles:['DOCENTE'] },
+      coordinacion: { label:'Coordinación',        roles:['COORDINADOR'] },
+      servicios:    { label:'Servicios Escolares', roles:['ADMINISTRATIVO','PERSONAL'] },
+    };
+
+    const CARPETA_TITLES = {
+      entrada:'Bandeja de entrada', enviados:'Enviados', borradores:'Borradores',
+      favoritos:'Favoritos', comunicados:'Comunicados', papelera:'Papelera'
+    };
+
+    async function init() {
+      await cargarUsuario();
+      await Promise.all([
+        loadCarpeta('entrada', document.getElementById('slink-entrada')),
+        cargarNoLeidos(), cargarEtiquetas(), cargarTodosUsuarios()
+      ]);
+    }
+
+    async function cargarUsuario() {
+      try {
+        const res = await fetch('/usuarios/me', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) { logout(); return; }
+        currentUser = await res.json();
+        const av = document.getElementById('nav-avatar');
+        if (currentUser.fotoPerfil) av.innerHTML = `<img src="${escH(currentUser.fotoPerfil)}" alt="">`;
+        else av.textContent = (currentUser.username || '?')[0].toUpperCase();
+        document.getElementById('compose-firma').innerHTML =
+          `--<br>${escH(currentUser.username)}<br>${rolLabel(currentUser.rol)} | TESVG`;
+      } catch(e) { console.error('cargarUsuario error:', e); }
+    }
+
+    async function cargarTodosUsuarios() {
+      try {
+        const res = await fetch('/usuarios', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (res.ok) allUsers = await res.json();
+      } catch(e) {}
+    }
+
+    async function cargarNoLeidos() {
+      try {
+        const res = await fetch('/correos/no-leidos', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) return;
+        const data = await res.json();
+        const el = document.getElementById('count-entrada');
+        if (data.count > 0) { el.textContent = data.count; el.style.display = ''; }
+        else el.style.display = 'none';
+      } catch(e) {}
+    }
+
+    async function cargarEtiquetas() {
+      try {
+        const res = await fetch('/correos/etiquetas', { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) return;
+        etiquetas = await res.json();
+        renderEtiquetasSidebar();
+      } catch(e) {}
+    }
+
+    function renderEtiquetasSidebar() {
+      document.getElementById('etiquetas-list').innerHTML = etiquetas.map(et => `
+        <button class="slink" onclick="loadEtiqueta('${escH(et.nombre)}', this)">
+          <span class="etiqueta-dot" style="background:${escH(et.color)}"></span>
+          <span>${escH(et.nombre)}</span>
+        </button>`).join('');
+    }
+
+    async function loadCarpeta(carpeta, btn) {
+      currentCarpeta = carpeta;
+      document.querySelectorAll('.slink').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('carpeta-title').textContent = CARPETA_TITLES[carpeta] || carpeta;
+      document.getElementById('mail-list').innerHTML = '<div class="mail-empty"><span class="icon">⌛</span><p>Cargando…</p></div>';
+      clearReading();
+
+      document.querySelector('.btn-vaciar')?.remove();
+
+      try {
+        const res = await fetch(`/correos/${carpeta}`, { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) throw new Error();
+        const correos = await res.json();
+        renderList(correos, carpeta);
+        if (carpeta === 'entrada') { cachedEntrada = correos; cargarNoLeidos(); }
+        if (carpeta === 'borradores') {
+          const el = document.getElementById('count-borradores');
+          if (correos.length) { el.textContent = correos.length; el.style.display = ''; }
+          else el.style.display = 'none';
+        }
+        if (carpeta === 'papelera') {
+          const header = document.querySelector('.mail-list-header');
+          const btn2 = document.createElement('button');
+          btn2.className = 'btn-compose-icon btn-vaciar';
+          btn2.style = 'font-size:.75rem;padding:4px 10px;color:#F87171;border-color:rgba(239,68,68,.3)';
+          btn2.textContent = 'Vaciar';
+          btn2.onclick = vaciarPapelera;
+          header.appendChild(btn2);
+        }
+      } catch(e) {
+        document.getElementById('mail-list').innerHTML = '<div class="mail-empty"><span class="icon">⚠️</span><p>Error al cargar</p></div>';
+      }
+    }
+
+    async function loadEtiqueta(nombre, btn) {
+      currentCarpeta = 'etiqueta:' + nombre;
+      document.querySelectorAll('.slink').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('carpeta-title').textContent = '🏷️ ' + nombre;
+      document.getElementById('mail-list').innerHTML = '<div class="mail-empty"><span class="icon">⌛</span><p>Cargando…</p></div>';
+      clearReading();
+      try {
+        const res = await fetch(`/correos/etiqueta/${encodeURIComponent(nombre)}`, { headers: { Authorization: 'Bearer ' + TOKEN } });
+        renderList(await res.json(), 'entrada');
+      } catch(e) {}
+    }
+
+    function renderList(correos, modo) {
+      const el = document.getElementById('mail-list');
+      if (!correos.length) { el.innerHTML = '<div class="mail-empty"><span class="icon">📭</span><p>Sin correos aquí</p></div>'; return; }
+      el.innerHTML = correos.map(c => renderMailItem(c, modo)).join('');
+    }
+
+    function renderMailItem(c, modo) {
+      const esEntrada = ['entrada','favoritos','papelera'].includes(modo);
+      const nombre = esEntrada ? (c.emisorNombre || 'Desconocido') : ((c.destinatarioNombres||[]).join(', ') || 'Sin destinatario');
+      const foto   = esEntrada ? c.emisorFoto : null;
+      const rol    = esEntrada ? c.emisorRol  : null;
+      const leido  = c.leido !== false;
+      const initials = (nombre||'?')[0].toUpperCase();
+
+      const avatar = foto
+        ? `<div class="mail-item-avatar"><img src="${escH(foto)}" alt=""></div>`
+        : `<div class="mail-item-avatar">${escH(initials)}</div>`;
+
+      const flags = [
+        c.esFavorito ? '⭐' : '',
+        c.tieneAdjuntos ? '📎' : '',
+        c.esComunicado ? '<span class="rol-badge rol-autoridad">Comunicado</span>' : ''
+      ].filter(Boolean).join(' ');
+
+      const PRIO_COLORS = {URGENTE:'#F87171',IMPORTANTE:'#FB923C',ACADEMICO:'#60A5FA',EVENTO:'#A78BFA',ADMINISTRATIVO:'#2DD4BF'};
+      const prioDot = c.prioridad && PRIO_COLORS[c.prioridad]
+        ? `<span class="mail-prio-dot" style="background:${PRIO_COLORS[c.prioridad]}" title="${c.prioridad}"></span>`
+        : '';
+
+      return `
+        <div class="mail-item${leido?'':' unread'}" id="mitem-${c.id}" onclick="verCorreo(${c.id}, this)">
+          ${avatar}
+          <div class="mail-item-body">
+            <div class="mail-item-row1">
+              <span class="mail-item-from">${escH(nombre)}${rol ? rolBadge(rol) : ''}</span>
+              <span class="mail-item-date">${formatDate(c.fecha)}</span>
+            </div>
+            <div class="mail-item-subject">${prioDot}${escH(c.asunto || '(sin asunto)')}</div>
+            <div class="mail-item-row3">
+              <span class="mail-item-preview">${escH((c.cuerpo||'').replace(/\n/g,' ').substring(0,90))}</span>
+              <span class="mail-item-flags">${flags}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function verCorreo(id, itemEl) {
+      currentCorreoId = id;
+      document.querySelectorAll('.mail-item').forEach(i => i.classList.remove('active'));
+      if (itemEl) itemEl.classList.add('active');
+      document.getElementById('mail-reading').innerHTML = '<div class="reading-placeholder"><div class="icon">⌛</div><p>Cargando…</p></div>';
+
+      /* Show reading pane on mobile */
+      document.getElementById('mail-reading').classList.add('show-mobile');
+
+      try {
+        const res = await fetch(`/correos/${id}`, { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) throw new Error();
+        const c = await res.json();
+        const item = document.getElementById('mitem-' + id);
+        if (item) item.classList.remove('unread');
+        renderReading(c);
+        cargarNoLeidos();
+      } catch(e) {
+        document.getElementById('mail-reading').innerHTML = '<div class="reading-placeholder"><div class="icon">⚠️</div><p>Error al cargar el correo</p></div>';
+      }
+    }
+
+    function renderReading(c) {
+      const esPropio = c.emisorId === currentUser?.id;
+      const enPapelera = !!c.enPapelera;
+      const esFav = !!c.esFavorito;
+
+      const adjuntosHtml = c.adjuntos?.length ? `
+        <div class="reading-adjuntos">
+          <div class="adjuntos-title">📎 ${c.adjuntos.length} adjunto${c.adjuntos.length>1?'s':''}</div>
+          <div class="adjunto-list">
+            ${c.adjuntos.map(a => `
+              <button class="adjunto-chip" onclick="descargarAdjunto('${escH(a.archivoUrl)}','${escH(a.nombreArchivo)}')" type="button">
+                <span class="adjunto-icon">${iconoAdjunto(a.tipoArchivo)}</span>
+                <div class="adjunto-info">
+                  <strong>${escH(a.nombreArchivo)}</strong>
+                  <small>${formatBytes(a.tamanio)}</small>
+                </div>
+              </button>`).join('')}
+          </div>
+        </div>` : '';
+
+      const quoteHtml = c.referencia ? `
+        <div class="reading-quote">
+          <div class="reading-quote-title">── Original de ${escH(c.referencia.emisorNombre||'?')} · ${formatDate(c.referencia.fecha)} ──</div>
+          <div class="reading-quote-body">${escH(c.referencia.cuerpo||'')}</div>
+        </div>` : '';
+
+      const bodyHtml = c.cuerpoHtml
+        ? `<div class="reading-body-html">${c.cuerpoHtml}</div>`
+        : `<div class="reading-body-content">${escH(c.cuerpo||'')}</div>`;
+
+      const etiqOpts = etiquetas.map(et =>
+        `<option value="${escH(et.nombre)}" ${c.etiqueta===et.nombre?'selected':''}>${escH(et.nombre)}</option>`).join('');
+
+      const avatarHtml = c.emisorFoto
+        ? `<img src="${escH(c.emisorFoto)}" alt="">`
+        : escH((c.emisorNombre||'?')[0].toUpperCase());
+
+      const destinatariosStr = (c.destinatarios||[]).map(d=>escH(d.nombre||'?')).join(', ');
+
+      document.getElementById('mail-reading').innerHTML = `
+        <div class="reading-header">
+          <div class="reading-subject">${escH(c.asunto)}</div>
+          <div class="reading-meta">
+            <div class="reading-avatar">${avatarHtml}</div>
+            <div class="reading-from">
+              <div class="reading-from-name">
+                ${escH(c.emisorNombre||'?')}${c.emisorRol ? rolBadge(c.emisorRol) : ''}
+              </div>
+              <div class="reading-from-sub">Para: ${destinatariosStr}</div>
+            </div>
+            <div class="reading-date">${formatDate(c.fecha)}</div>
+          </div>
+        </div>
+        <div class="reading-actions">
+          ${!esPropio&&!enPapelera?`<button class="btn-action" onclick="replyCorreo(${c.id})">↩ Responder</button>`:''}
+          ${!enPapelera?`<button class="btn-action" onclick="forwardCorreo(${c.id})">↪ Reenviar</button>`:''}
+          ${!esPropio?`<button class="btn-action${esFav?' active-fav':''}" id="btn-fav" onclick="toggleFav(${c.id},${esFav})">${esFav?'⭐':'☆'} Favorito</button>`:''}
+          ${etiquetas.length&&!esPropio?`<select class="btn-action" onchange="setEtiqueta(${c.id},this.value)" style="padding:6px 10px">
+            <option value="">🏷️ Etiquetar</option>${etiqOpts}</select>`:''}
+          ${!enPapelera&&!esPropio?`<button class="btn-action danger" onclick="moverPapelera(${c.id})">🗑️ Papelera</button>`:''}
+          ${enPapelera?`<button class="btn-action" onclick="restaurar(${c.id})">↩ Restaurar</button>`:''}
+        </div>
+        <div class="reading-body">${bodyHtml}${quoteHtml}</div>
+        ${adjuntosHtml}
+        <div class="reading-firma">
+          ${escH(c.emisorNombre||'')} · ${rolLabel(c.emisorRol)} | TESVG
+        </div>`;
+    }
+
+    async function descargarAdjunto(url, nombre) {
+      try {
+        const res = await fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } });
+        if (!res.ok) { NidoUI.toast.error('No se pudo descargar el adjunto'); return; }
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nombre || 'adjunto';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      } catch(e) { NidoUI.toast.error('Error al descargar'); }
+    }
+
+    function clearReading() {
+      document.getElementById('mail-reading').classList.remove('show-mobile');
+      document.getElementById('mail-reading').innerHTML =
+        `<div class="reading-placeholder"><div class="icon">✉️</div><p>Selecciona un correo para leerlo</p></div>`;
+      currentCorreoId = null;
+    }
+
+    async function toggleFav(id, esFav) {
+      const nuevo = !esFav;
+      await fetch(`/correos/${id}/favorito`, {
+        method:'PUT', headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},
+        body:JSON.stringify({favorito:nuevo})
+      });
+      const btn = document.getElementById('btn-fav');
+      if (btn) { btn.textContent = (nuevo?'⭐':'☆')+' Favorito'; btn.classList.toggle('active-fav',nuevo); btn.setAttribute('onclick',`toggleFav(${id},${nuevo})`); }
+      NidoUI.toast.ok(nuevo?'Marcado como favorito':'Quitado de favoritos');
+    }
+
+    async function moverPapelera(id) {
+      await fetch(`/correos/${id}/papelera`,{method:'PUT',headers:{Authorization:'Bearer '+TOKEN}});
+      NidoUI.toast.ok('Movido a papelera');
+      clearReading(); refrescar();
+    }
+
+    async function restaurar(id) {
+      await fetch(`/correos/${id}/restaurar`,{method:'PUT',headers:{Authorization:'Bearer '+TOKEN}});
+      NidoUI.toast.ok('Restaurado');
+      clearReading(); refrescar();
+    }
+
+    async function vaciarPapelera() {
+      if (!confirm('¿Vaciar correos con más de 30 días en papelera?')) return;
+      await fetch('/correos/papelera/vaciar',{method:'DELETE',headers:{Authorization:'Bearer '+TOKEN}});
+      NidoUI.toast.ok('Papelera vaciada'); refrescar();
+    }
+
+    async function setEtiqueta(id, etiqueta) {
+      await fetch(`/correos/${id}/etiqueta`,{
+        method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},
+        body:JSON.stringify({etiqueta:etiqueta||null})
+      });
+      NidoUI.toast.ok(etiqueta?`Etiqueta "${etiqueta}" asignada`:'Etiqueta removida');
+    }
+
+    function replyCorreo(id) {
+      const subj = document.querySelector('.reading-subject')?.textContent || '';
+      composeReplyRef = id;
+      openCompose();
+      document.getElementById('compose-subject').value = 'Re: ' + subj.replace(/^Re:\s*/i,'');
+      document.getElementById('compose-title').textContent = 'Responder';
+    }
+
+    function forwardCorreo(id) {
+      const subj = document.querySelector('.reading-subject')?.textContent || '';
+      composeReplyRef = id;
+      openCompose();
+      document.getElementById('compose-subject').value = 'Fwd: ' + subj.replace(/^Fwd:\s*/i,'');
+      document.getElementById('compose-title').textContent = 'Reenviar';
+    }
+
+    function openCompose() {
+      toRecipients = []; composeFiles = []; composePrioridad = '';
+      document.getElementById('compose-title').textContent = 'Nuevo mensaje';
+      document.getElementById('to-chips').innerHTML = buildToInput();
+      document.getElementById('compose-subject').value = '';
+      document.getElementById('compose-body').innerHTML = '';
+      document.getElementById('adjuntos-preview').innerHTML = '';
+      document.getElementById('autocomplete-list').style.display = 'none';
+      document.querySelectorAll('.compose-prio-opt').forEach(b => b.classList.remove('active'));
+      document.querySelector('.compose-prio-opt[data-prio=""]')?.classList.add('active');
+      document.getElementById('compose-backdrop').classList.add('open');
+      setTimeout(() => document.getElementById('to-input')?.focus(), 50);
+    }
+
+    function setComposePrio(btn) {
+      document.querySelectorAll('.compose-prio-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      composePrioridad = btn.dataset.prio || '';
+    }
+
+    function closeCompose() {
+      document.getElementById('compose-backdrop').classList.remove('open');
+      composeReplyRef = null; composeDraftId = null; composeFiles = [];
+    }
+
+    function buildToInput() {
+      return `<input type="text" id="to-input" placeholder="${toRecipients.length?'':'Nombre o correo…'}"
+        oninput="onToInput(this.value)" onkeydown="onToKey(event)"
+        autocomplete="off" style="min-width:60px;flex:1;border:none;outline:none;font-size:.9rem;background:transparent;color:var(--m-text)">`;
+    }
+
+    let acTimer = null;
+    function onToInput(val) {
+      clearTimeout(acTimer);
+      const list = document.getElementById('autocomplete-list');
+      if (!val.trim()) { list.style.display='none'; return; }
+      acTimer = setTimeout(() => {
+        const q = val.toLowerCase();
+        const matches = allUsers
+          .filter(u => u.id !== currentUser?.id && !toRecipients.find(r=>r.id===u.id)
+            && (u.username?.toLowerCase().includes(q) || u.correo?.toLowerCase().includes(q)))
+          .slice(0,6);
+        if (!matches.length) { list.style.display='none'; return; }
+        list.innerHTML = matches.map(u => `
+          <div class="autocomplete-item" onclick="addRecipient(${u.id},'${escH(u.username)}')">
+            <div class="autocomplete-avatar">${u.fotoPerfil?`<img src="${escH(u.fotoPerfil)}" alt="">`:escH((u.username||'?')[0].toUpperCase())}</div>
+            <div>
+              <div style="font-weight:700">${escH(u.username)}${u.rol?rolBadge(u.rol):''}</div>
+              <div style="font-size:.74rem;color:var(--m-muted)">${escH(u.correo||'')}</div>
+            </div>
+          </div>`).join('');
+        list.style.display = 'block';
+      }, 200);
+    }
+
+    function onToKey(e) {
+      if (e.key==='Escape') { document.getElementById('autocomplete-list').style.display='none'; return; }
+      if (e.key==='Backspace' && !e.target.value && toRecipients.length)
+        removeRecipient(toRecipients[toRecipients.length-1].id);
+    }
+
+    function addRecipient(id, username) {
+      if (toRecipients.find(r=>r.id===id)) return;
+      toRecipients.push({id, username});
+      renderToChips();
+      document.getElementById('autocomplete-list').style.display='none';
+      document.getElementById('to-input')?.focus();
+    }
+
+    function removeRecipient(id) {
+      toRecipients = toRecipients.filter(r=>r.id!==id);
+      renderToChips();
+    }
+
+    function renderToChips() {
+      document.getElementById('to-chips').innerHTML =
+        toRecipients.map(r=>`<span class="to-chip">${escH(r.username)}<button onclick="removeRecipient(${r.id})" type="button">✕</button></span>`).join('')
+        + buildToInput();
+    }
+
+    function fmt(cmd) { document.getElementById('compose-body').focus(); document.execCommand(cmd,false,null); }
+    function insertLink() { const url=prompt('URL:'); if(url){document.getElementById('compose-body').focus();document.execCommand('createLink',false,url);} }
+
+    function onFileSelected(input) {
+      for(const f of input.files) composeFiles.push({file:f,nombre:f.name});
+      renderAdjuntosPreview(); input.value='';
+    }
+
+    function renderAdjuntosPreview() {
+      document.getElementById('adjuntos-preview').innerHTML = composeFiles.map((f,i)=>
+        `<div class="adjunto-preview-chip">${iconoAdjunto(f.file.type)} ${escH(f.nombre)} <small style="color:var(--m-muted)">(${formatBytes(f.file.size)})</small><button onclick="composeFiles.splice(${i},1);renderAdjuntosPreview()">✕</button></div>`
+      ).join('');
+    }
+
+    async function enviarCorreo() {
+      const asunto = document.getElementById('compose-subject').value.trim();
+      const bodyEl = document.getElementById('compose-body');
+      const cuerpoHtml = bodyEl.innerHTML.trim();
+      const cuerpo = bodyEl.innerText.trim();
+      if (!toRecipients.length) { NidoUI.toast.error('Añade al menos un destinatario'); return; }
+      if (!asunto) { NidoUI.toast.error('El asunto es obligatorio'); return; }
+      if (!cuerpo) { NidoUI.toast.error('Escribe el cuerpo del correo'); return; }
+
+      const payload = {
+        receptorIds: toRecipients.map(r=>r.id), asunto, cuerpo, cuerpoHtml,
+        ...(composePrioridad ? {prioridad: composePrioridad} : {}),
+        ...(composeReplyRef?{referenciaId:composeReplyRef}:{}),
+        ...(composeDraftId?{borradorId:composeDraftId}:{})
+      };
+      try {
+        const res = await fetch('/correos/enviar',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify(payload)});
+        if (!res.ok) { NidoUI.toast.error('Error al enviar'); return; }
+        const {id} = await res.json();
+        for(const {file,nombre} of composeFiles) {
+          const fd=new FormData(); fd.append('archivo',file,nombre);
+          await fetch(`/correos/${id}/adjunto`,{method:'POST',headers:{Authorization:'Bearer '+TOKEN},body:fd});
+        }
+        NidoUI.toast.ok('Correo enviado ✈️');
+        closeCompose();
+        if (currentCarpeta==='enviados') refrescar();
+      } catch(e) { NidoUI.toast.error('Error de conexión'); }
+    }
+
+    async function guardarBorrador() {
+      const bodyEl = document.getElementById('compose-body');
+      const payload = {
+        asunto: document.getElementById('compose-subject').value.trim(),
+        cuerpo: bodyEl.innerText.trim(),
+        cuerpoHtml: bodyEl.innerHTML.trim(),
+        ...(composeDraftId?{id:composeDraftId}:{})
+      };
+      const res = await fetch('/correos/borrador',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify(payload)});
+      if (!res.ok) { NidoUI.toast.error('Error al guardar'); return; }
+      const {id} = await res.json();
+      composeDraftId = id;
+      NidoUI.toast.ok('Borrador guardado');
+    }
+
+    function openScheduleModal() {
+      const now=new Date(); now.setMinutes(now.getMinutes()+5);
+      document.getElementById('schedule-dt').value = now.toISOString().slice(0,16);
+      document.getElementById('modal-schedule').classList.add('open');
+    }
+    function closeScheduleModal() { document.getElementById('modal-schedule').classList.remove('open'); }
+
+    async function programarEnvio() {
+      const dt = document.getElementById('schedule-dt').value;
+      if (!dt) { NidoUI.toast.error('Selecciona fecha y hora'); return; }
+      const bodyEl = document.getElementById('compose-body');
+      const asunto = document.getElementById('compose-subject').value.trim();
+      const cuerpo = bodyEl.innerText.trim();
+      if (!toRecipients.length||!asunto||!cuerpo) { NidoUI.toast.error('Completa destinatarios, asunto y cuerpo'); return; }
+      const res = await fetch('/correos/programar',{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},
+        body:JSON.stringify({receptorIds:toRecipients.map(r=>r.id),asunto,cuerpo,cuerpoHtml:bodyEl.innerHTML.trim(),programadoPara:dt})
+      });
+      if (!res.ok) { NidoUI.toast.error('Error al programar'); return; }
+      NidoUI.toast.ok('Programado para '+new Date(dt).toLocaleString('es-MX'));
+      closeScheduleModal(); closeCompose();
+    }
+
+    function promptNuevaEtiqueta() { document.getElementById('modal-etiqueta').classList.add('open'); }
+
+    async function crearEtiqueta() {
+      const nombre = document.getElementById('etiqueta-nombre').value.trim();
+      const color  = document.getElementById('etiqueta-color').value;
+      if (!nombre) { NidoUI.toast.error('Nombre requerido'); return; }
+      const res = await fetch('/correos/etiquetas',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify({nombre,color})});
+      if (!res.ok) { NidoUI.toast.error('Error'); return; }
+      document.getElementById('modal-etiqueta').classList.remove('open');
+      document.getElementById('etiqueta-nombre').value = '';
+      NidoUI.toast.ok('Etiqueta creada');
+      cargarEtiquetas();
+    }
+
+    let searchTimer = null;
+    function onSearch(val) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        if (!val.trim()) { refrescar(); return; }
+        const res = await fetch(`/correos/buscar?q=${encodeURIComponent(val)}`,{headers:{Authorization:'Bearer '+TOKEN}});
+        if (!res.ok) return;
+        const data = await res.json();
+        const todos = [...(data.entrada||[]),...(data.enviados||[])];
+        document.getElementById('carpeta-title').textContent = `Resultados: "${val}"`;
+        renderList(todos,'entrada');
+      }, 400);
+    }
+
+    function refrescar() {
+      if (currentCarpeta.startsWith('etiqueta:'))
+        loadEtiqueta(currentCarpeta.replace('etiqueta:',''), null);
+      else
+        loadCarpeta(currentCarpeta, document.getElementById('slink-'+currentCarpeta));
+    }
+
+    async function loadCanal(btn) {
+      const cfg = CANALES_CONFIG[btn.dataset.canal];
+      if (!cfg) return;
+      document.querySelectorAll('.slink, .inst-channel-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('carpeta-title').textContent = cfg.label;
+      document.getElementById('mail-list').innerHTML = '<div class="mail-empty"><span class="icon">⌛</span><p>Cargando…</p></div>';
+      clearReading();
+      if (!cachedEntrada.length) {
+        try {
+          const r = await fetch('/correos/entrada', { headers: { Authorization: 'Bearer ' + TOKEN } });
+          if (r.ok) cachedEntrada = await r.json();
+        } catch(e) {}
+      }
+      renderList(cachedEntrada.filter(c => cfg.roles.includes(c.emisorRol || '')), 'entrada');
+    }
+
+    function logout() { localStorage.removeItem('token'); location.href='/login.html'; }
+
+    function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function formatDate(d) {
+      if (!d) return '';
+      const date = new Date(d), now = new Date();
+      if (now.toDateString()===date.toDateString()) return date.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      if ((now-date)<7*86400000) return date.toLocaleDateString('es-MX',{weekday:'short'});
+      return date.toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+    }
+
+    function formatBytes(b) {
+      if (!b) return '';
+      if (b<1024) return b+' B';
+      if (b<1048576) return (b/1024).toFixed(1)+' KB';
+      return (b/1048576).toFixed(1)+' MB';
+    }
+
+    function iconoAdjunto(tipo) {
+      if (!tipo) return '📄';
+      if (tipo.startsWith('image/')) return '🖼️';
+      if (tipo.startsWith('video/')) return '🎬';
+      if (tipo.includes('pdf')) return '📕';
+      if (tipo.includes('word')||tipo.includes('document')) return '📝';
+      if (tipo.includes('sheet')||tipo.includes('excel')) return '📊';
+      if (tipo.includes('zip')||tipo.includes('rar')) return '🗜️';
+      return '📎';
+    }
+
+    /* ── ROLE BADGE ── */
+    function rolBadge(rol) {
+      const map = {
+        DOCENTE:        ['rol-docente',   'Docente'],
+        AUTORIDAD:      ['rol-autoridad', 'Dirección'],
+        ADMINISTRATIVO: ['rol-administ',  'Adm.'],
+        PERSONAL:       ['rol-personal',  'Personal'],
+        ADMIN:          ['rol-admin-sys', 'Sistema'],
+      };
+      const entry = map[rol];
+      if (!entry) return '';
+      return `<span class="rol-badge ${entry[0]}">${entry[1]}</span>`;
+    }
+
+    const ROL_LABELS={ESTUDIANTE:'Estudiante',DOCENTE:'Docente',AUTORIDAD:'Autoridad',ADMINISTRATIVO:'Administrativo',PERSONAL:'Personal',ADMIN:'Admin'};
+    function rolLabel(rol) { return ROL_LABELS[rol]||(rol||''); }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#to-chips')&&!e.target.closest('#autocomplete-list'))
+        document.getElementById('autocomplete-list').style.display='none';
+    });
+    ['modal-schedule','modal-etiqueta'].forEach(id => {
+      document.getElementById(id).addEventListener('click', e => {
+        if (e.target===document.getElementById(id)) document.getElementById(id).classList.remove('open');
+      });
+    });
+
+    init();
+  </script>
+</body>
+</html>

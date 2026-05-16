@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — NidoApuntes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex; flex-direction: column; gap: 12px;
+      position: sticky;
+      top: calc(var(--nav-h) + 16px);
+      max-height: calc(100vh - var(--nav-h) - 32px);
+      overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--gray-border); border-radius: 4px; }
+
+    .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+    .card-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-text); margin-bottom: 14px; }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 11px; }
+    .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--gray-text); margin-bottom: 4px; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%; padding: 8px 11px; border-radius: 8px;
+      border: 1.5px solid var(--gray-border); font-size: .88rem;
+      font-family: inherit; outline: none; transition: border-color .2s;
+      background: var(--white); color: var(--text);
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,.15); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    /* ── FILE UPLOAD ZONE ── */
+    .upload-zone {
+      border: 2px dashed var(--gray-border); border-radius: 10px;
+      padding: 18px 12px; text-align: center;
+      cursor: pointer; transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--gold); background: var(--gold-light); }
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-zone-icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+    .upload-zone-text { font-size: .8rem; color: var(--gray-text); line-height: 1.4; }
+    .upload-zone-text strong { color: var(--navy); }
+    .upload-status {
+      font-size: .78rem; margin-top: 6px; padding: 5px 10px;
+      border-radius: 6px; display: none;
+    }
+    .upload-status.ok   { background: #D1FAE5; color: #065F46; display: block; }
+    .upload-status.err  { background: #FEE2E2; color: #991B1B; display: block; }
+    .upload-status.wait { background: var(--gold-light); color: var(--navy); display: block; }
+
+    /* or link toggle */
+    .link-toggle { font-size: .78rem; text-align: center; color: var(--gray-text); margin: 6px 0 10px; }
+    .link-toggle a { color: var(--gold-dark); cursor: pointer; font-weight: 600; }
+
+    .btn-primary {
+      width: 100%; padding: 10px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: 8px; font-size: .9rem; font-weight: 700;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-primary:hover { background: var(--gold-dark); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── FILTROS ── */
+    .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .filter-chip {
+      padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--gray-border);
+      font-size: .78rem; font-weight: 600; cursor: pointer; background: var(--white);
+      color: var(--gray-text); transition: all .15s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--gold); color: var(--navy); }
+    .filter-chip.active { background: var(--navy); border-color: var(--navy); color: var(--white); }
+
+    .filter-input {
+      width: 100%; padding: 8px 11px; border-radius: 8px;
+      border: 1.5px solid var(--gray-border); font-size: .85rem;
+      font-family: inherit; outline: none; transition: border-color .2s;
+      margin-bottom: 6px;
+    }
+    .filter-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,.15); }
+
+    .btn-clear-filter {
+      width: 100%; padding: 7px; border: none; border-radius: 8px;
+      background: var(--gray-bg); color: var(--gray-text); font-size: .82rem;
+      font-weight: 600; cursor: pointer; transition: background .15s;
+    }
+    .btn-clear-filter:hover { background: #e4e6e9; }
+
+    /* ── RECURSO CARDS ── */
+    .recurso-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px 20px;
+      margin-bottom: 12px; display: flex; gap: 14px; align-items: flex-start;
+      transition: box-shadow .15s;
+    }
+    .recurso-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.11); }
+
+    .recurso-icon {
+      width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    .recurso-body { flex: 1; min-width: 0; }
+    .recurso-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+    .recurso-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+    .badge {
+      display: inline-block; font-size: .65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .3px;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .badge-apunte   { background: #DBEAFE; color: #1D4ED8; }
+    .badge-libro    { background: #D1FAE5; color: #065F46; }
+    .badge-ejercicio { background: #FEF3C7; color: #92400E; }
+    .badge-otro     { background: var(--gray-bg); color: var(--gray-text); }
+    .badge-carrera  { background: #EDE9FE; color: #5B21B6; }
+    .badge-materia  { background: #FCE7F3; color: #9D174D; }
+
+    .recurso-title { font-size: .97rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .recurso-desc  { font-size: .84rem; color: var(--gray-text); line-height: 1.55; margin-bottom: 8px; white-space: pre-wrap; word-break: break-word; }
+
+    .recurso-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .recurso-meta   { font-size: .76rem; color: var(--gray-text); display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .recurso-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: 8px; font-size: .82rem; font-weight: 700;
+      cursor: pointer; transition: background .15s; text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-download:hover { background: var(--gold-dark); }
+    .btn-download.no-file { background: var(--gray-bg); color: var(--gray-text); cursor: not-allowed; }
+
+    .btn-del-recurso {
+      padding: 6px 10px; background: none; border: 1.5px solid var(--gray-border);
+      border-radius: 8px; font-size: .78rem; color: var(--gray-text);
+      cursor: pointer; transition: all .15s; font-weight: 600;
+    }
+    .btn-del-recurso:hover { background: #FEF2F2; color: #EF4444; border-color: #FCA5A5; }
+
+    /* ── EMPTY ── */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-text); }
+    .empty-state .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+    @media (max-width: 760px) {
+      .upload-zone { padding: 24px 14px; }
+      .upload-zone-icon { font-size: 2rem; }
+      .upload-zone-text { font-size: .9rem; }
+      .recurso-card { padding: 12px 14px; }
+      .recurso-icon { width: 46px; height: 46px; font-size: 1.1rem; flex-shrink: 0; }
+      .recurso-actions { flex-wrap: wrap; gap: 6px; }
+      .recurso-actions a, .recurso-actions button { min-height: 40px; }
+      .filter-row { flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; }
+      .filter-row::-webkit-scrollbar { display: none; }
+      .filter-chip { flex-shrink: 0 !important; min-height: 36px; }
+      .btn-primary { min-height: 48px; font-size: 1rem; }
+      .form-group input, .form-group textarea, .form-group select { min-height: 46px; font-size: 1rem; }
+    }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="logout()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <!-- Subir recurso -->
+      <div class="card">
+        <div class="card-title">📚 Compartir en NidoApuntes</div>
+        <form onsubmit="crearRecurso(event)">
+          <div class="form-group">
+            <label>Título *</label>
+            <input id="f-titulo" type="text" placeholder="Nombre del recurso" required maxlength="255">
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="f-tipo">
+              <option value="apunte">📄 Apunte</option>
+              <option value="libro">📚 Libro</option>
+              <option value="ejercicio">📝 Ejercicio</option>
+              <option value="otro">📎 Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Carrera</label>
+            <select id="f-carrera">
+              <option value="">— Todas las carreras —</option>
+              <option value="ISC">ISC</option>
+              <option value="ISIC">ISIC</option>
+              <option value="IGE">IGE</option>
+              <option value="IM">IM</option>
+              <option value="IQ">IQ</option>
+              <option value="LA">LA</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Materia</label>
+            <input id="f-materia" type="text" placeholder="Ej: Cálculo Diferencial" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="f-desc" placeholder="Breve descripción del recurso…" rows="3"></textarea>
+          </div>
+
+          <!-- Upload zone -->
+          <div class="form-group">
+            <label>Archivo (PDF, Word, PPT, Excel, imagen…)</label>
+            <div class="upload-zone" id="upload-zone"
+                 ondragover="event.preventDefault();this.classList.add('drag')"
+                 ondragleave="this.classList.remove('drag')"
+                 ondrop="soltarArchivo(event)">
+              <input type="file" id="file-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.jpg,.jpeg,.png,.gif,.webp" onchange="seleccionarArchivo(this)">
+              <span class="upload-zone-icon">📁</span>
+              <div class="upload-zone-text">
+                <strong>Arrastra o haz clic</strong><br>
+                PDF, Word, PPT, Excel, imágenes · máx. 10 MB
+              </div>
+            </div>
+            <div class="upload-status" id="upload-status"></div>
+          </div>
+
+          <div class="link-toggle">
+            ¿Prefieres pegar un enlace? <a onclick="toggleLinkMode()">Usar URL externa</a>
+          </div>
+          <div class="form-group" id="url-group" style="display:none">
+            <label>URL del recurso</label>
+            <input id="f-url" type="url" placeholder="https://drive.google.com/…">
+          </div>
+
+          <button class="btn-primary" id="btn-subir" type="submit">Compartir en NidoApuntes</button>
+        </form>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card">
+        <div class="card-title">Filtros</div>
+
+        <div style="font-size:.78rem;font-weight:600;color:var(--gray-text);margin-bottom:6px">Tipo</div>
+        <div class="filter-row" id="tipo-filters">
+          <button class="filter-chip active" data-tipo="" onclick="setTipoFiltro(this)">Todos</button>
+          <button class="filter-chip" data-tipo="apunte"    onclick="setTipoFiltro(this)">📄 Apunte</button>
+          <button class="filter-chip" data-tipo="libro"     onclick="setTipoFiltro(this)">📚 Libro</button>
+          <button class="filter-chip" data-tipo="ejercicio" onclick="setTipoFiltro(this)">📝 Ejercicio</button>
+          <button class="filter-chip" data-tipo="otro"      onclick="setTipoFiltro(this)">📎 Otro</button>
+        </div>
+
+        <div style="font-size:.78rem;font-weight:600;color:var(--gray-text);margin:10px 0 6px">Carrera</div>
+        <div class="filter-row" id="carrera-filters">
+          <button class="filter-chip active" data-carrera="" onclick="setCarreraFiltro(this)">Todas</button>
+          <button class="filter-chip" data-carrera="ISC"  onclick="setCarreraFiltro(this)">ISC</button>
+          <button class="filter-chip" data-carrera="ISIC" onclick="setCarreraFiltro(this)">ISIC</button>
+          <button class="filter-chip" data-carrera="IGE"  onclick="setCarreraFiltro(this)">IGE</button>
+          <button class="filter-chip" data-carrera="IM"   onclick="setCarreraFiltro(this)">IM</button>
+          <button class="filter-chip" data-carrera="IQ"   onclick="setCarreraFiltro(this)">IQ</button>
+          <button class="filter-chip" data-carrera="LA"   onclick="setCarreraFiltro(this)">LA</button>
+        </div>
+
+        <div style="font-size:.78rem;font-weight:600;color:var(--gray-text);margin:10px 0 6px">Materia</div>
+        <input class="filter-input" id="materia-filter" type="text" placeholder="Buscar por materia…" oninput="debounceCargar()">
+
+        <button class="btn-clear-filter" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main id="main-content">
+    </main>
+
+  </div>
+
+  <script src="/nido-ui.js">
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+    const API = "";
+    const token = localStorage.getItem("token")?.trim();
+    if (!token) location.href = "/login.html";
+
+    const TIPO_ICON  = { apunte: "📄", libro: "📚", ejercicio: "📝", otro: "📎" };
+    const TIPO_COLOR = { apunte: "#DBEAFE", libro: "#D1FAE5", ejercicio: "#FEF3C7", otro: "#F3F4F6" };
+    const TIPO_BADGE = { apunte: "badge-apunte", libro: "badge-libro", ejercicio: "badge-ejercicio", otro: "badge-otro" };
+
+    let yo = null;
+    let filtroTipo    = "";
+    let filtroCarrera = "";
+    let filtroMateria = "";
+    let archivoUrlSubido = "";
+    let linkMode = false;
+    let debounceTimer = null;
+
+    function escapeHtml(t) {
+      if (!t) return "";
+      return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+    function formatDate(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleDateString("es-MX", { day:"numeric", month:"short", year:"numeric" });
+    }
+    function logout() { localStorage.removeItem("token"); location.href = "/login.html"; }
+    function irPerfil() { if (yo) location.href = `/perfil.html?id=${yo.id}`; }
+
+    // ── INIT ────────────────────────────────────────────────────────────────
+    async function init() {
+      const res = await fetch(`${API}/usuarios/me`, { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { logout(); return; }
+      yo = await res.json();
+      const ini = yo.username ? yo.username[0].toUpperCase() : yo.correo[0].toUpperCase();
+      document.getElementById("nav-avatar").textContent = ini;
+      await cargar();
+    }
+
+    // ── FILTROS ──────────────────────────────────────────────────────────────
+    function setTipoFiltro(btn) {
+      document.querySelectorAll("#tipo-filters .filter-chip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      filtroTipo = btn.dataset.tipo;
+      cargar();
+    }
+    function setCarreraFiltro(btn) {
+      document.querySelectorAll("#carrera-filters .filter-chip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      filtroCarrera = btn.dataset.carrera;
+      cargar();
+    }
+    function debounceCargar() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { filtroMateria = document.getElementById("materia-filter").value.trim(); cargar(); }, 400);
+    }
+    function limpiarFiltros() {
+      filtroTipo = ""; filtroCarrera = ""; filtroMateria = "";
+      document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".filter-chip[data-tipo='']").forEach(b => b.classList.add("active"));
+      document.querySelectorAll(".filter-chip[data-carrera='']").forEach(b => b.classList.add("active"));
+      document.getElementById("materia-filter").value = "";
+      cargar();
+    }
+
+    // ── LOAD ─────────────────────────────────────────────────────────────────
+    async function cargar() {
+      document.getElementById("main-content").innerHTML = NidoUI.sk.repeat(NidoUI.sk.recursoCard, 5);
+      const qs = new URLSearchParams();
+      if (filtroTipo)    qs.set("tipo",    filtroTipo);
+      if (filtroCarrera) qs.set("carrera", filtroCarrera);
+      if (filtroMateria) qs.set("materia", filtroMateria);
+      const res = await fetch(`${API}/recursos?${qs}`, { headers: { Authorization: "Bearer " + token } });
+      const lista = res.ok ? await res.json() : [];
+      renderRecursos(lista);
+    }
+
+    // ── RENDER ───────────────────────────────────────────────────────────────
+    function renderRecursos(lista) {
+      const el = document.getElementById("main-content");
+      if (!lista.length) {
+        el.innerHTML = `<div class="empty-state"><span class="icon">📚</span><p>No hay recursos con esos filtros.<br>¡Sé el primero en compartir algo!</p></div>`;
+        return;
+      }
+      el.innerHTML = lista.map(r => {
+        const esMio = yo && r.usuarioId === yo.id;
+        const iconBg = TIPO_COLOR[r.tipo] || "#F3F4F6";
+        const tipoBadge = TIPO_BADGE[r.tipo] || "badge-otro";
+        const tipoIcon  = TIPO_ICON[r.tipo]  || "📎";
+
+        const descHtml = r.descripcion
+          ? `<div class="recurso-desc">${escapeHtml(r.descripcion)}</div>` : "";
+
+        let downloadBtn = "";
+        if (r.archivoUrl) {
+          const esExterno = r.archivoUrl.startsWith("http");
+          downloadBtn = `<button class="btn-download" onclick="descargar(${r.id}, '${escapeHtml(r.archivoUrl)}', ${esExterno})">
+            ⬇ Descargar <span style="font-weight:400;font-size:.73rem">(${r.descargas})</span>
+          </button>`;
+        } else {
+          downloadBtn = `<span class="btn-download no-file" title="Sin archivo adjunto">Sin archivo</span>`;
+        }
+
+        return `
+          <div class="recurso-card">
+            <div class="recurso-icon" style="background:${iconBg}">${tipoIcon}</div>
+            <div class="recurso-body">
+              <div class="recurso-badges">
+                <span class="badge ${tipoBadge}">${r.tipo}</span>
+                ${r.carrera ? `<span class="badge badge-carrera">${escapeHtml(r.carrera)}</span>` : ""}
+                ${r.materia ? `<span class="badge badge-materia">${escapeHtml(r.materia)}</span>` : ""}
+              </div>
+              <div class="recurso-title">${escapeHtml(r.titulo)}</div>
+              ${descHtml}
+              <div class="recurso-footer">
+                <div class="recurso-meta">
+                  <span>👤 ${escapeHtml(r.autorNombre || "Desconocido")}</span>
+                  <span>🗓 ${formatDate(r.fecha)}</span>
+                </div>
+                <div class="recurso-actions">
+                  ${downloadBtn}
+                  ${esMio ? `<button class="btn-del-recurso" onclick="eliminar(${r.id})">✕</button>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    // ── DESCARGA ─────────────────────────────────────────────────────────────
+    async function descargar(id, url, esExterno) {
+      await fetch(`${API}/recursos/${id}/descargar`, { method: "POST", headers: { Authorization: "Bearer " + token } });
+      if (esExterno) {
+        window.open(url, "_blank");
+      } else {
+        const a = document.createElement("a");
+        a.href = url; a.download = ""; a.target = "_blank";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      await cargar();
+    }
+
+    // ── UPLOAD FILE ──────────────────────────────────────────────────────────
+    function toggleLinkMode() {
+      linkMode = !linkMode;
+      document.getElementById("url-group").style.display    = linkMode ? "block" : "none";
+      document.getElementById("upload-zone").style.display  = linkMode ? "none"  : "block";
+      document.querySelector(".link-toggle a").textContent  = linkMode ? "Subir archivo" : "Usar URL externa";
+      archivoUrlSubido = "";
+      setUploadStatus("", "");
+    }
+
+    function soltarArchivo(e) {
+      e.preventDefault();
+      document.getElementById("upload-zone").classList.remove("drag");
+      const file = e.dataTransfer.files[0];
+      if (file) subirArchivo(file);
+    }
+
+    function seleccionarArchivo(input) {
+      if (input.files[0]) subirArchivo(input.files[0]);
+    }
+
+    function setUploadStatus(msg, cls) {
+      const el = document.getElementById("upload-status");
+      el.textContent = msg;
+      el.className = "upload-status" + (cls ? " " + cls : "");
+    }
+
+    async function subirArchivo(file) {
+      if (file.size > 10 * 1024 * 1024) { setUploadStatus("El archivo supera 10 MB", "err"); return; }
+      setUploadStatus("⏳ Subiendo…", "wait");
+
+      const fd = new FormData();
+      fd.append("archivo", file);
+
+      const res = await fetch(`${API}/recursos/subir-archivo`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+        body: fd
+      });
+
+      if (!res.ok) {
+        setUploadStatus("❌ " + await res.text(), "err");
+        archivoUrlSubido = "";
+        return;
+      }
+      const data = await res.json();
+      archivoUrlSubido = data.url;
+      setUploadStatus("✅ " + file.name, "ok");
+    }
+
+    // ── CREAR ────────────────────────────────────────────────────────────────
+    async function crearRecurso(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-subir");
+      btn.disabled = true; btn.textContent = "Compartiendo…";
+
+      const archivoUrl = linkMode
+        ? document.getElementById("f-url").value.trim()
+        : archivoUrlSubido;
+
+      const body = {
+        titulo:      document.getElementById("f-titulo").value.trim(),
+        tipo:        document.getElementById("f-tipo").value,
+        carrera:     document.getElementById("f-carrera").value || null,
+        materia:     document.getElementById("f-materia").value.trim() || null,
+        descripcion: document.getElementById("f-desc").value.trim() || null,
+        archivoUrl:  archivoUrl || null
+      };
+
+      const res = await fetch(`${API}/recursos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(body)
+      });
+
+      btn.disabled = false; btn.textContent = "Compartir en NidoApuntes";
+      if (!res.ok) { alert("Error: " + await res.text()); return; }
+
+      NidoUI.toast.ok('Recurso compartido en NidoApuntes');
+      document.getElementById("f-titulo").value  = "";
+      document.getElementById("f-materia").value = "";
+      document.getElementById("f-desc").value    = "";
+      document.getElementById("f-url").value     = "";
+      document.getElementById("file-input").value = "";
+      archivoUrlSubido = "";
+      setUploadStatus("", "");
+
+      await cargar();
+    }
+
+    // ── ELIMINAR ─────────────────────────────────────────────────────────────
+    async function eliminar(id) {
+      if (!confirm("¿Eliminar este recurso?")) return;
+      const res = await fetch(`${API}/recursos/${id}`, { method: "DELETE", headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { alert("Error al eliminar"); return; }
+      NidoUI.toast.ok('Recurso eliminado');
+      await cargar();
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

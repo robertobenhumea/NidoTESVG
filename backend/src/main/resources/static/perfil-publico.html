@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil — NidoTESVG</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --navy-light: #2C2150;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.12);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── COVER ── */
+    .cover {
+      height: 220px;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 50%, var(--gold-dark) 100%);
+      position: relative; overflow: hidden;
+    }
+    .cover::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ── WRAPPER ── */
+    .page-wrapper {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ── PROFILE CARD (header) ── */
+    .profile-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 0 28px 24px;
+      margin-top: -2px;
+      position: relative;
+    }
+
+    .avatar-row {
+      display: flex; align-items: flex-end;
+      justify-content: space-between;
+      padding-top: 12px;
+      flex-wrap: wrap; gap: 12px;
+    }
+
+    .profile-avatar-wrap { margin-top: -68px; }
+    .profile-avatar {
+      width: 120px; height: 120px; border-radius: 50%;
+      border: 4px solid var(--white);
+      background: var(--gold); color: var(--navy);
+      font-size: 2.8rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      overflow: hidden; flex-shrink: 0;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .profile-actions-top {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding-bottom: 4px;
+    }
+
+    .btn-follow {
+      padding: 9px 24px; border-radius: 24px; border: none;
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-follow.seguir { background: var(--gold); color: var(--navy); }
+    .btn-follow.seguir:hover { background: var(--gold-dark); }
+    .btn-follow.siguiendo {
+      background: transparent; color: var(--navy);
+      border: 2px solid var(--gray-border);
+    }
+    .btn-follow.siguiendo:hover { background: #FFF0F0; color: #C92A2A; border-color: #F5C6C6; }
+    .btn-follow:disabled { opacity: .6; cursor: not-allowed; }
+
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 24px; border: 2px solid var(--gray-border);
+      font-size: .85rem; font-weight: 600; color: var(--text);
+      background: var(--white); cursor: pointer; text-decoration: none;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-action:hover { background: var(--gray-bg); border-color: #aaa; }
+
+    /* ── PROFILE INFO ── */
+    .profile-info { margin-top: 14px; }
+    .profile-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .profile-name { font-size: 1.55rem; font-weight: 800; color: var(--text); }
+
+    .role-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .68rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .4px; padding: 3px 10px; border-radius: 20px;
+    }
+    .role-ESTUDIANTE     { background: var(--gold-light); color: var(--navy); }
+    .role-DOCENTE        { background: #DBEAFE; color: #1971C2; }
+    .role-AUTORIDAD      { background: #1A1A2E; color: var(--gold); }
+    .role-ADMINISTRATIVO { background: #EBFBEE; color: #2F9E44; }
+    .role-PERSONAL       { background: #FFF3E0; color: #E67700; }
+    .role-ADMIN          { background: #7C3AED; color: #fff; }
+
+    .profile-carrera  { font-size: .9rem; color: var(--gray-text); margin-top: 3px; }
+    .profile-bio      { font-size: .9rem; color: var(--text); margin-top: 8px; line-height: 1.6; max-width: 560px; }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: flex; gap: 28px; margin-top: 16px; flex-wrap: wrap;
+    }
+    .stat { text-align: center; cursor: default; }
+    .stat-num { font-size: 1.3rem; font-weight: 800; color: var(--navy); line-height: 1; }
+    .stat-label { font-size: .72rem; color: var(--gray-text); margin-top: 2px; text-transform: uppercase; letter-spacing: .3px; }
+
+    /* ── LAYOUT (2 cols) ── */
+    .content-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex; flex-direction: column; gap: 12px;
+      position: sticky;
+      top: calc(var(--nav-h) + 16px);
+      max-height: calc(100vh - var(--nav-h) - 32px);
+      overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--gray-border); border-radius: 4px; }
+
+    .card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px;
+    }
+    .card-title {
+      font-size: .78rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--gray-text); margin-bottom: 12px;
+    }
+
+    /* ── INFO ROWS ── */
+    .info-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 7px 0; border-bottom: 1px solid #F5F5F5;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; margin-top: 1px; }
+    .info-row-body { min-width: 0; }
+    .info-row-label { font-size: .7rem; color: var(--gray-text); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+    .info-row-val { font-size: .88rem; color: var(--text); margin-top: 1px; word-break: break-word; }
+    .info-row-val.empty { color: var(--gray-text); font-style: italic; }
+
+    /* ── INSIGNIAS GRID ── */
+    .badge-grid-sm {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    }
+    .badge-sm {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 4px; border-radius: 8px;
+      border: 1.5px solid var(--gold);
+      background: linear-gradient(135deg, #FFFBF0, var(--white));
+      cursor: default; transition: box-shadow .15s;
+    }
+    .badge-sm:hover { box-shadow: 0 2px 10px rgba(245,166,35,.25); }
+    .badge-sm .bi { font-size: 1.4rem; line-height: 1; }
+    .badge-sm .bn { font-size: .55rem; font-weight: 700; text-align: center; color: var(--navy); margin-top: 3px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+    .badge-empty { font-size: .82rem; color: var(--gray-text); text-align: center; padding: 12px 0; }
+
+    /* ── TABS ── */
+    .tabs-bar {
+      display: flex; gap: 2px;
+      border-bottom: 2px solid var(--gray-border);
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      padding: 10px 18px; border: none; background: none;
+      font-size: .88rem; font-weight: 600; color: var(--gray-text);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: color .15s, border-color .15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab-btn:hover { color: var(--navy); }
+    .tab-btn.active { color: var(--navy); border-bottom-color: var(--gold); }
+    .tab-count {
+      background: var(--gray-bg); color: var(--gray-text);
+      font-size: .7rem; font-weight: 700; border-radius: 12px; padding: 1px 7px;
+    }
+    .tab-btn.active .tab-count { background: var(--gold-light); color: var(--navy); }
+
+    /* ── POST CARDS ── */
+    .post-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px 20px;
+      margin-bottom: 12px; transition: box-shadow .15s;
+    }
+    .post-card:hover { box-shadow: var(--shadow-md); }
+    .post-card.pinned { border-left: 4px solid var(--gold); }
+
+    .pin-banner {
+      font-size: .72rem; font-weight: 700; color: var(--gold-dark);
+      display: block; margin-bottom: 8px; letter-spacing: .2px;
+    }
+
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .post-avatar-sm {
+      width: 38px; height: 38px; border-radius: 50%;
+      font-weight: 700; font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden; color: var(--white);
+    }
+    .post-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+    .post-author { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .post-time   { font-size: .75rem; color: var(--gray-text); margin-top: 1px; }
+
+    .post-content {
+      font-size: .92rem; line-height: 1.65; color: var(--text);
+      white-space: pre-wrap; word-break: break-word;
+      margin-bottom: 10px;
+    }
+    .post-img {
+      width: 100%; max-height: 360px; object-fit: cover;
+      border-radius: 8px; display: block; margin-bottom: 10px;
+      cursor: zoom-in;
+    }
+
+    .post-footer {
+      display: flex; align-items: center; gap: 4px;
+      padding-top: 8px; border-top: 1px solid var(--gray-bg);
+    }
+    .btn-like, .btn-comment-toggle {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 8px; border: none;
+      background: none; color: var(--gray-text); font-size: .85rem;
+      cursor: pointer; font-weight: 600; transition: background .15s, color .15s;
+    }
+    .btn-like:hover { background: #FFF0F0; color: #E0245E; }
+    .btn-like.liked { color: #E0245E; }
+    .btn-comment-toggle:hover { background: var(--gold-light); color: var(--navy); }
+
+    .comments-section { display: none; margin-top: 10px; }
+    .comments-section.visible { display: block; }
+    .comment-item {
+      display: flex; gap: 8px; padding: 6px 0;
+      border-top: 1px solid var(--gray-bg);
+    }
+    .comment-avatar-xs {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      font-weight: 700; font-size: .65rem;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--white);
+    }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-author { font-size: .78rem; font-weight: 700; color: var(--navy); }
+    .comment-text   { font-size: .82rem; color: var(--text); margin-left: 4px; word-break: break-word; }
+    .comment-time   { font-size: .7rem; color: var(--gray-text); display: block; margin-top: 2px; }
+    .btn-del-comment {
+      background: none; border: none; color: var(--gray-text); cursor: pointer;
+      font-size: .85rem; padding: 0 4px; flex-shrink: 0;
+    }
+    .btn-del-comment:hover { color: #EF4444; }
+    .comment-input-row {
+      display: flex; gap: 6px; margin-top: 8px;
+    }
+    .comment-input {
+      flex: 1; padding: 7px 12px; border-radius: 20px;
+      border: 1.5px solid var(--gray-border); outline: none;
+      font-size: .85rem; font-family: inherit;
+      transition: border-color .2s;
+    }
+    .comment-input:focus { border-color: var(--gold); }
+    .btn-send-comment {
+      width: 34px; height: 34px; border-radius: 50%; border: none;
+      background: var(--gold); color: var(--navy);
+      font-size: .9rem; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .btn-send-comment:hover { background: var(--gold-dark); }
+
+    /* ── RECURSO CARDS ── */
+    .recurso-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 18px;
+      margin-bottom: 10px; display: flex; gap: 12px;
+      align-items: flex-start; transition: box-shadow .15s;
+    }
+    .recurso-card:hover { box-shadow: var(--shadow-md); }
+    .recurso-icon-box {
+      width: 48px; height: 48px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; flex-shrink: 0;
+    }
+    .recurso-body { flex: 1; min-width: 0; }
+    .recurso-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+    .rbadge {
+      font-size: .62rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .3px; padding: 2px 7px; border-radius: 20px;
+    }
+    .rb-apunte   { background: #DBEAFE; color: #1D4ED8; }
+    .rb-libro    { background: #D1FAE5; color: #065F46; }
+    .rb-ejercicio{ background: #FEF3C7; color: #92400E; }
+    .rb-otro     { background: var(--gray-bg); color: var(--gray-text); }
+    .rb-materia  { background: #FCE7F3; color: #9D174D; }
+    .recurso-title { font-size: .92rem; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
+    .recurso-desc  { font-size: .82rem; color: var(--gray-text); line-height: 1.5; margin-bottom: 8px; }
+    .recurso-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .recurso-meta { font-size: .74rem; color: var(--gray-text); }
+    .btn-dl {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 14px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: 20px; font-size: .8rem; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-dl:hover { background: var(--gold-dark); }
+    .btn-dl.nofile { background: var(--gray-bg); color: var(--gray-text); cursor: not-allowed; }
+
+    /* ── EMPTY ── */
+    .empty-state {
+      text-align: center; padding: 48px 20px; color: var(--gray-text);
+    }
+    .empty-state .ei { font-size: 2rem; display: block; margin-bottom: 8px; opacity: .4; }
+
+    /* ── SKELETON ── */
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+    .sk-h { height: 18px; margin-bottom: 8px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .content-layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+    }
+    @media (max-width: 540px) {
+      .profile-card { padding: 0 16px 20px; }
+      .cover { height: 130px; }
+      .profile-avatar { width: 76px !important; height: 76px !important; font-size: 1.6rem; }
+      .profile-avatar-wrap { margin-top: -40px; }
+      .profile-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+      .profile-tabs::-webkit-scrollbar { display: none; }
+      .tab-btn { flex-shrink: 0; min-height: 44px; }
+      .profile-actions { gap: 6px; flex-wrap: wrap; }
+      .profile-actions button,
+      .profile-actions a { min-height: 44px; flex: 1; min-width: 110px; justify-content: center; }
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+    /* ── PORTADA CON FOTO REAL ── */
+    .cover { background-size: cover !important; background-position: center !important; }
+
+    /* ── AVATAR CON BORDE DORADO ── */
+    .profile-avatar {
+      box-shadow: 0 0 0 3px var(--gold), 0 4px 16px rgba(0,0,0,.2) !important;
+      border-color: var(--white) !important;
+    }
+
+    /* ── BADGE DE VERIFICACIÓN ── */
+    .verified-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 17px; height: 17px; background: #1877F2; color: #fff;
+      border-radius: 50%; font-size: .65rem; font-weight: 700;
+      margin-left: 4px; vertical-align: middle; flex-shrink: 0;
+    }
+
+    /* ── TAGS DE INTERESES (read-only) ── */
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .tag-chip {
+      display: inline-flex; align-items: center;
+      background: var(--gold-light); color: var(--navy);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: .79rem; font-weight: 600;
+    }
+    .tags-empty-msg { font-size: .82rem; color: var(--gray-text); }
+
+    /* ── INFO BORDER FIX ── */
+    .info-row { border-bottom-color: var(--gray-border); }
+
+    /* ── DARK MODE ── */
+    html[data-theme="dark"] .profile-card   { background: #242526 !important; }
+    html[data-theme="dark"] .card           { background: #242526 !important; }
+    html[data-theme="dark"] .card-title     { color: #B0B3B8 !important; }
+    html[data-theme="dark"] .profile-name   { color: #E4E6EB !important; }
+    html[data-theme="dark"] .stat-num       { color: #E4E6EB !important; }
+    html[data-theme="dark"] .info-row-val   { color: #E4E6EB !important; }
+    html[data-theme="dark"] .tag-chip       { background: #2C2000 !important; color: #E4E6EB !important; }
+    html[data-theme="dark"] .tab-btn.active { color: #E4E6EB !important; }
+    html[data-theme="dark"] .btn-action     { background: #3A3B3C !important; color: #E4E6EB !important; border-color: #3E4042 !important; }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+<nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="logout()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+<!-- COVER -->
+<div class="cover" id="coverEl"></div>
+
+<div class="page-wrapper">
+
+  <!-- PROFILE CARD -->
+  <div class="profile-card" id="profileCard">
+    <div class="avatar-row">
+      <div class="profile-avatar-wrap">
+        <div class="profile-avatar" id="profileAvatar"></div>
+      </div>
+      <div class="profile-actions-top" id="profileActions">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+    <div class="profile-info" id="profileInfo">
+      <div style="height:18px;width:200px" class="skeleton sk-h"></div>
+      <div style="height:14px;width:140px;margin-top:6px" class="skeleton sk-h"></div>
+    </div>
+    <div class="stats-row" id="statsRow">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- 2-COL LAYOUT -->
+  <div class="content-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="card" id="infoCard">
+        <div class="card-title">Información</div>
+        <div class="skeleton sk-h"></div>
+        <div class="skeleton sk-h"></div>
+        <div class="skeleton sk-h"></div>
+      </div>
+
+      <div class="card" id="badgesCard">
+        <div class="card-title">Insignias ganadas</div>
+        <div class="skeleton sk-h"></div>
+      </div>
+
+      <div class="card" id="interesesCard" style="display:none">
+        <div class="card-title">Intereses y habilidades</div>
+        <div class="tags-wrap" id="tagsWrap"></div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main>
+      <div class="tabs-bar">
+        <button class="tab-btn active" id="tab-posts"    onclick="cambiarTab('posts')">
+          📝 Publicaciones <span class="tab-count" id="tc-posts">–</span>
+        </button>
+        <button class="tab-btn"        id="tab-recursos" onclick="cambiarTab('recursos')">
+          📚 NidoApuntes <span class="tab-count" id="tc-recursos">–</span>
+        </button>
+      </div>
+
+      <div id="tab-content-posts"></div>
+      <div id="tab-content-recursos" style="display:none"></div>
+    </main>
+
+  </div>
+</div>
+
+<script src="/nido-ui.js">
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+  const API = "";
+  const TOKEN = localStorage.getItem("token");
+  if (!TOKEN) location.href = "login.html";
+
+  const targetId = Number(new URLSearchParams(location.search).get("id"));
+  if (!targetId) location.href = "home.html";
+
+  let miId = null, miRol = null;
+  let userMap = new Map();   // id → {nombre, foto, color}
+  let tabActual = "posts";
+
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+  const COLORS = ["#1D4ED8","#9D174D","#065F46","#92400E","#5B21B6","#B45309","#0E7490","#BE123C","#1A1A2E","#D97706"];
+  function avatarColor(str) { let h = 0; for (let c of (str||"?")) h = (h*31+c.charCodeAt(0))&0xffff; return COLORS[h%COLORS.length]; }
+  function initials(n) { if (!n) return "?"; const p = n.trim().split(/\s+/); return (p.length>1?p[0][0]+p[p.length-1][0]:n.slice(0,2)).toUpperCase(); }
+  function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function timeAgo(iso) {
+    if (!iso) return "";
+    const d = new Date(iso), diff = (Date.now()-d)/1000;
+    if (diff<60) return "Justo ahora";
+    if (diff<3600) return `Hace ${Math.floor(diff/60)} min`;
+    if (diff<86400) return `Hace ${Math.floor(diff/3600)} h`;
+    return d.toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+  }
+  function formatDate(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+  }
+  function cerrarSesion() { localStorage.removeItem("token"); location.href = "login.html"; }
+
+  async function apiFetch(method, path, body) {
+    const opts = { method, headers: { Authorization: "Bearer " + TOKEN } };
+    if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    const r = await fetch(API + path, opts);
+    if (r.status === 401) { location.href = "login.html"; return null; }
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // ── INIT ────────────────────────────────────────────────────────────────────
+  async function init() {
+    const me = await apiFetch("GET", "/usuarios/me");
+    if (!me) return;
+    miId = me.id; miRol = me.rol;
+    if (miId === targetId) { location.replace("perfil.html"); return; }
+
+    const [usuario, todos, postsRaw, seguidores, siguiendo, estado,
+           misLikes, likesTodos, comentTodos, insigniasGanadas, recursosUsuario] = await Promise.all([
+      apiFetch("GET", `/usuarios/${targetId}`),
+      apiFetch("GET", "/usuarios"),
+      apiFetch("GET", "/publicaciones"),
+      apiFetch("GET", `/seguidores/${targetId}/seguidores`),
+      apiFetch("GET", `/seguidores/${targetId}/siguiendo`),
+      apiFetch("GET", `/seguidores/estado/${targetId}`),
+      apiFetch("GET", "/interacciones/mis-likes"),
+      apiFetch("GET", "/interacciones/likes-todos"),
+      apiFetch("GET", "/interacciones/comentarios-todos"),
+      apiFetch("GET", `/insignias/usuario/${targetId}`),
+      apiFetch("GET", `/recursos/usuario/${targetId}`),
+    ]);
+
+    // Build user map
+    (todos || []).forEach(u => {
+      const nombre = u.username || u.correo;
+      userMap.set(u.id, { nombre, foto: u.fotoPerfil || null, color: avatarColor(nombre) });
+    });
+
+    document.title = `${usuario.username || "Perfil"} — NidoTESVG`;
+
+    renderAvatar(usuario);
+    renderCover(usuario);
+    renderHeader(usuario, seguidores.total, siguiendo.total, estado.siguiendo, (recursosUsuario||[]).length);
+    renderInfo(usuario);
+    renderBadges(insigniasGanadas || []);
+    renderIntereses(usuario);
+
+    const likedSet  = new Set(misLikes || []);
+    const countMap  = new Map(Object.entries(likesTodos||{}).map(([k,v])=>[Number(k),v]));
+    const comentMap = new Map(Object.entries(comentTodos||{}).map(([k,v])=>[Number(k),v]));
+
+    const misPosts = (postsRaw || [])
+      .filter(p => p.usuarioId === targetId)
+      .sort((a,b) => new Date(b.fecha)-new Date(a.fecha));
+    const pinnedPub = misPosts.find(p => p.fijada);
+    const postsSorted = pinnedPub ? [pinnedPub, ...misPosts.filter(p=>!p.fijada)] : misPosts;
+
+    renderPosts(postsSorted, likedSet, countMap, comentMap);
+    renderRecursos(recursosUsuario || []);
+
+    // Update counts
+    document.getElementById("tc-posts").textContent    = postsSorted.length;
+    document.getElementById("tc-recursos").textContent = (recursosUsuario||[]).length;
+  }
+
+  // ── PORTADA ─────────────────────────────────────────────────────────────────
+  function renderCover(u) {
+    if (!u.fotoPortada) return;
+    const el = document.getElementById("coverEl");
+    el.style.backgroundImage    = `url('${esc(u.fotoPortada)}')`;
+    el.style.backgroundSize     = "cover";
+    el.style.backgroundPosition = "center";
+  }
+
+  // ── INTERESES ────────────────────────────────────────────────────────────────
+  function renderIntereses(u) {
+    if (!u.intereses) return;
+    const tags = u.intereses.split(",").map(s => s.trim()).filter(Boolean);
+    if (!tags.length) return;
+    const card = document.getElementById("interesesCard");
+    const wrap = document.getElementById("tagsWrap");
+    wrap.innerHTML = tags.map(t => `<span class="tag-chip">${esc(t)}</span>`).join("");
+    card.style.display = "";
+  }
+
+  // ── AVATAR ──────────────────────────────────────────────────────────────────
+  function renderAvatar(u) {
+    const el = document.getElementById("profileAvatar");
+    const nombre = u.username || u.correo || "?";
+    if (u.fotoPerfil) {
+      el.innerHTML = `<img src="${esc(u.fotoPerfil)}" alt="">`;
+    } else {
+      el.textContent = initials(nombre);
+      el.style.background = avatarColor(nombre);
+      el.style.color = "#fff";
+    }
+  }
+
+  // ── HEADER ──────────────────────────────────────────────────────────────────
+  function renderHeader(u, totalSeg, totalSig, yaSiguiendo, recursosCount) {
+    const nombre   = u.username || "Sin nombre";
+    const rolClass = `role-${u.rol || "ESTUDIANTE"}`;
+    const rolLabel = {
+      ESTUDIANTE: '🎓 Estudiante', DOCENTE: '👨‍🏫 Docente',
+      AUTORIDAD: '🏛️ Autoridad', ADMINISTRATIVO: '📋 Administrativo',
+      PERSONAL: '🔧 Personal', ADMIN: '👑 Admin'
+    }[u.rol] || u.rol;
+
+    const verified = u.correo?.endsWith("@tesvg.edu.mx")
+      ? '<span class="verified-badge" title="Correo institucional verificado">✓</span>' : "";
+
+    document.getElementById("profileInfo").innerHTML = `
+      <div class="profile-name-row">
+        <span class="profile-name">${esc(nombre)}${verified}</span>
+        <span class="role-badge ${rolClass}">${rolLabel}</span>
+      </div>
+      ${u.carrera || u.grupo ? `<div class="profile-carrera">${[u.carrera,u.grupo].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
+      ${u.bio ? `<div class="profile-bio">${esc(u.bio)}</div>` : ""}
+    `;
+
+    document.getElementById("statsRow").innerHTML = `
+      <div class="stat"><div class="stat-num" id="statPosts">–</div><div class="stat-label">publicaciones</div></div>
+      <div class="stat"><div class="stat-num">${totalSeg}</div><div class="stat-label">seguidores</div></div>
+      <div class="stat"><div class="stat-num">${totalSig}</div><div class="stat-label">siguiendo</div></div>
+      <div class="stat"><div class="stat-num">${recursosCount ?? 0}</div><div class="stat-label">recursos</div></div>
+      <div class="stat"><div class="stat-num">${u.grupo ? 1 : 0}</div><div class="stat-label">grupo${u.grupo ? "" : "s"}</div></div>
+    `;
+
+    document.getElementById("profileActions").innerHTML = `
+      <button class="btn-follow ${yaSiguiendo?"siguiendo":"seguir"}" id="btnFollow" onclick="toggleSeguir()">
+        ${yaSiguiendo?"✓ Siguiendo":"Seguir"}
+      </button>
+      <a class="btn-action" href="chat.html?con=${u.id}&nombre=${encodeURIComponent(nombre)}">
+        💬 Mensaje
+      </a>
+      <a class="btn-action" href="correo.html">
+        ✉️ PlumasMail
+      </a>
+    `;
+  }
+
+  // ── INFO SIDEBAR ─────────────────────────────────────────────────────────────
+  function renderInfo(u) {
+    const row = (icon, label, val) => `
+      <div class="info-row">
+        <div class="info-icon">${icon}</div>
+        <div class="info-row-body">
+          <div class="info-row-label">${label}</div>
+          <div class="info-row-val ${val?"":"empty"}">${val ? esc(val) : "No especificado"}</div>
+        </div>
+      </div>`;
+    const fechaFmt = u.fechaNacimiento
+      ? new Date(u.fechaNacimiento + "T00:00:00").toLocaleDateString("es", { day:"numeric", month:"long", year:"numeric" })
+      : null;
+
+    document.getElementById("infoCard").innerHTML = `
+      <div class="card-title">Información</div>
+      ${row("🎓","Carrera",u.carrera)}
+      ${row("👥","Grupo",u.grupo)}
+      ${u.ciudad ? row("📍","Ciudad",u.ciudad) : ""}
+      ${fechaFmt ? row("🎂","Nacimiento",fechaFmt) : ""}
+      ${row("📧","Correo",u.correo)}
+    `;
+  }
+
+  // ── INSIGNIAS ────────────────────────────────────────────────────────────────
+  function renderBadges(insignias) {
+    const el = document.getElementById("badgesCard");
+    if (!insignias.length) {
+      el.innerHTML = `<div class="card-title">Insignias ganadas</div><div class="badge-empty">Aún sin insignias</div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="card-title">Insignias ganadas <span style="font-size:.72rem;font-weight:600;color:var(--gold-dark)">${insignias.length}</span></div>
+      <div class="badge-grid-sm">
+        ${insignias.map(ins => `
+          <div class="badge-sm" title="${esc(ins.descripcion||ins.nombre)}">
+            <span class="bi">${esc(ins.icono||"🏅")}</span>
+            <span class="bn">${esc(ins.nombre)}</span>
+          </div>`).join("")}
+      </div>
+    `;
+  }
+
+  // ── TABS ─────────────────────────────────────────────────────────────────────
+  function cambiarTab(tab) {
+    tabActual = tab;
+    ["posts","recursos"].forEach(t => {
+      document.getElementById("tab-" + t).classList.toggle("active", t === tab);
+      document.getElementById("tab-content-" + t).style.display = t === tab ? "" : "none";
+    });
+  }
+
+  // ── POSTS ────────────────────────────────────────────────────────────────────
+  function renderPosts(posts, likedSet, countMap, comentMap) {
+    const statEl = document.getElementById("statPosts");
+    if (statEl) statEl.textContent = posts.length;
+    const el = document.getElementById("tab-content-posts");
+
+    if (!posts.length) {
+      el.innerHTML = `<div class="empty-state"><span class="ei">📭</span><p>Este usuario aún no ha publicado nada.</p></div>`;
+      return;
+    }
+
+    const u = userMap.get(targetId) || { nombre: "?", foto: null, color: "#888" };
+
+    el.innerHTML = posts.map(p => {
+      const liked    = likedSet.has(p.id);
+      const likes    = countMap.get(p.id) ?? 0;
+      const comList  = comentMap.get(p.id) ?? [];
+      const avatarHtml = u.foto
+        ? `<img src="${esc(u.foto)}" alt="">`
+        : initials(u.nombre);
+      const avatarStyle = u.foto ? "" : `background:${u.color};color:#fff`;
+
+      return `
+        <div class="post-card ${p.fijada?"pinned":""}" id="post-${p.id}">
+          ${p.fijada ? '<span class="pin-banner">📌 Publicación fijada</span>' : ""}
+          <div class="post-header">
+            <div class="post-avatar-sm" style="${avatarStyle}">${avatarHtml}</div>
+            <div>
+              <div class="post-author">${esc(u.nombre)}</div>
+              <div class="post-time">${timeAgo(p.fecha)}</div>
+            </div>
+          </div>
+          ${p.contenido ? `<div class="post-content">${esc(p.contenido)}</div>` : ""}
+          ${p.imagenUrl ? `<img class="post-img" src="${esc(p.imagenUrl)}" alt="" onclick="this.requestFullscreen?.()">` : ""}
+          <div class="post-footer">
+            <button class="btn-like ${liked?"liked":""}" onclick="toggleLike(${p.id},this)">
+              <span class="heart">${liked?"♥":"♡"}</span>
+              <span class="like-count">${likes}</span>
+            </button>
+            <button class="btn-comment-toggle" onclick="toggleComentarios(${p.id})">
+              💬 <span id="cc-${p.id}">${comList.length||"Comentar"}</span>
+            </button>
+          </div>
+          <div class="comments-section" id="cs-${p.id}">
+            <div class="comments-list" id="cl-${p.id}">
+              ${comList.map(c => renderComentario(c)).join("")}
+            </div>
+            <div class="comment-input-row">
+              <input class="comment-input" id="ci-${p.id}" placeholder="Escribe un comentario…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agregarComentario(${p.id})}">
+              <button class="btn-send-comment" onclick="agregarComentario(${p.id})">➤</button>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function renderComentario(c) {
+    const u = userMap.get(c.usuarioId) || { nombre: "Usuario", foto: null, color: "#888" };
+    const avatarHtml  = u.foto ? `<img src="${esc(u.foto)}" alt="">` : initials(u.nombre);
+    const avatarStyle = u.foto ? "overflow:hidden" : `background:${u.color};color:#fff`;
+    const canDel = c.usuarioId === miId;
+    return `
+      <div class="comment-item" id="cmt-${c.id}">
+        <div class="comment-avatar-xs" style="${avatarStyle}">${avatarHtml}</div>
+        <div class="comment-body">
+          <span class="comment-author">${esc(u.nombre)}</span>
+          <span class="comment-text">${esc(c.contenido)}</span>
+          <span class="comment-time">${timeAgo(c.fecha)}</span>
+        </div>
+        ${canDel ? `<button class="btn-del-comment" onclick="eliminarComentario(${c.id},${c.publicacionId})">×</button>` : ""}
+      </div>`;
+  }
+
+  // ── RECURSOS ─────────────────────────────────────────────────────────────────
+  const TIPO_ICON  = { apunte:"📄", libro:"📚", ejercicio:"📝", otro:"📎" };
+  const TIPO_COLOR = { apunte:"#DBEAFE", libro:"#D1FAE5", ejercicio:"#FEF3C7", otro:"#F3F4F6" };
+  const TIPO_BADGE = { apunte:"rb-apunte", libro:"rb-libro", ejercicio:"rb-ejercicio", otro:"rb-otro" };
+
+  function renderRecursos(lista) {
+    const el = document.getElementById("tab-content-recursos");
+    if (!lista.length) {
+      el.innerHTML = `<div class="empty-state"><span class="ei">📭</span><p>Este usuario no ha compartido recursos aún.</p></div>`;
+      return;
+    }
+    el.innerHTML = lista.map(r => {
+      const tipoIcon  = TIPO_ICON[r.tipo]  || "📎";
+      const tipoColor = TIPO_COLOR[r.tipo] || "#F3F4F6";
+      const tipoBadge = TIPO_BADGE[r.tipo] || "rb-otro";
+
+      const dlBtn = r.archivoUrl
+        ? `<button class="btn-dl" onclick="descargar(${r.id},'${esc(r.archivoUrl)}',${r.archivoUrl.startsWith("http")})">⬇ Descargar (${r.descargas||0})</button>`
+        : `<span class="btn-dl nofile">Sin archivo</span>`;
+
+      return `
+        <div class="recurso-card">
+          <div class="recurso-icon-box" style="background:${tipoColor}">${tipoIcon}</div>
+          <div class="recurso-body">
+            <div class="recurso-badges">
+              <span class="rbadge ${tipoBadge}">${r.tipo}</span>
+              ${r.materia ? `<span class="rbadge rb-materia">${esc(r.materia)}</span>` : ""}
+            </div>
+            <div class="recurso-title">${esc(r.titulo)}</div>
+            ${r.descripcion ? `<div class="recurso-desc">${esc(r.descripcion)}</div>` : ""}
+            <div class="recurso-footer">
+              <div class="recurso-meta">🗓 ${formatDate(r.fecha)}</div>
+              ${dlBtn}
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  // ── ACTIONS ──────────────────────────────────────────────────────────────────
+  async function toggleSeguir() {
+    const btn = document.getElementById("btnFollow");
+    btn.disabled = true;
+    try {
+      const { accion, seguidores } = await apiFetch("POST", `/seguidores/toggle/${targetId}`);
+      const ahora = accion === "siguiendo";
+      btn.className = `btn-follow ${ahora?"siguiendo":"seguir"}`;
+      btn.textContent = ahora ? "✓ Siguiendo" : "Seguir";
+      // Update stat
+      const statEl = document.querySelector(".stats-row .stat:nth-child(2) .stat-num");
+      if (statEl) statEl.textContent = seguidores;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function toggleLike(postId, btn) {
+    btn.disabled = true;
+    try {
+      const { accion, likes } = await apiFetch("POST", `/interacciones/like/${postId}`, { tipo: "like" });
+      const liked = accion !== "quitado";
+      btn.classList.toggle("liked", liked);
+      btn.querySelector(".heart").textContent = liked ? "♥" : "♡";
+      btn.querySelector(".like-count").textContent = likes;
+    } finally { btn.disabled = false; }
+  }
+
+  function toggleComentarios(postId) {
+    const s = document.getElementById("cs-" + postId);
+    s.classList.toggle("visible");
+    if (s.classList.contains("visible")) document.getElementById("ci-" + postId)?.focus();
+  }
+
+  async function agregarComentario(postId) {
+    const input = document.getElementById("ci-" + postId);
+    const sendBtn = input.nextElementSibling;
+    const contenido = input.value.trim();
+    if (!contenido) return;
+    input.disabled = true; sendBtn.disabled = true;
+    try {
+      const c = await apiFetch("POST", `/interacciones/comentario/${postId}`, { contenido });
+      // Add to userMap if missing
+      if (!userMap.has(miId)) {
+        const me = await apiFetch("GET", "/usuarios/me");
+        const nombre = me.username || me.correo;
+        userMap.set(miId, { nombre, foto: me.fotoPerfil||null, color: avatarColor(nombre) });
+      }
+      document.getElementById("cl-" + postId).insertAdjacentHTML("beforeend", renderComentario(c));
+      input.value = "";
+      const cc = document.getElementById("cc-" + postId);
+      if (cc) { const n = parseInt(cc.textContent)||0; cc.textContent = n+1; }
+    } catch(e) { alert("Error al comentar."); }
+    finally { input.disabled = false; sendBtn.disabled = false; }
+  }
+
+  async function eliminarComentario(cid, postId) {
+    try {
+      await apiFetch("DELETE", `/interacciones/comentario/${cid}`);
+      const el = document.getElementById("cmt-" + cid);
+      if (el) { el.style.opacity = "0"; el.style.transition = "opacity .2s"; setTimeout(()=>el.remove(),210); }
+      const cc = document.getElementById("cc-" + postId);
+      if (cc) { const n = Math.max(0,parseInt(cc.textContent)-1); cc.textContent = n||"Comentar"; }
+    } catch(e) { alert("No se pudo eliminar."); }
+  }
+
+  async function descargar(id, url, esExterno) {
+    await apiFetch("POST", `/recursos/${id}/descargar`);
+    if (esExterno) { window.open(url, "_blank"); }
+    else { const a = document.createElement("a"); a.href=url; a.download=""; a.target="_blank"; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+  }
+
+  init().catch(() => {
+    document.getElementById("profileCard").innerHTML =
+      '<p style="color:var(--gray-text);padding:30px;text-align:center">No se pudo cargar el perfil.</p>';
+  });
+</script>
+</body>
+</html>

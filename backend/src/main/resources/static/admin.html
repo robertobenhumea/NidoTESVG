@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Panel Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --navy2: #2C2150;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --red: #C92A2A;
+      --red-light: #FFF5F5;
+      --green: #2F9E44;
+      --green-light: #EBFBEE;
+      --sidebar-w: 230px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--navy);
+      min-height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+
+    .sidebar-logo .logo-text {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -.5px;
+      display: block;
+    }
+
+    .sidebar-logo .logo-text span {
+      background: var(--gold);
+      color: var(--navy);
+      padding: 1px 7px;
+      border-radius: 5px;
+    }
+
+    .sidebar-logo .admin-badge {
+      margin-top: 5px;
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--gold);
+    }
+
+    .sidebar-nav { flex: 1; padding: 12px 0; }
+
+    .snav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 20px;
+      font-size: .88rem;
+      font-weight: 500;
+      color: rgba(255,255,255,.7);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      text-decoration: none;
+      transition: background .15s, color .15s;
+      border-radius: 0;
+    }
+
+    .snav-item:hover { background: rgba(255,255,255,.08); color: var(--white); }
+    .snav-item.active { background: rgba(245,166,35,.15); color: var(--gold); font-weight: 700; }
+    .snav-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 14px 20px;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,.5);
+      font-size: .82rem;
+      text-decoration: none;
+      transition: color .15s;
+    }
+
+    .btn-back:hover { color: var(--white); }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 28px 32px 60px;
+      min-width: 0;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .page-title span { color: var(--gold-dark); }
+
+    /* ── STAT CARDS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 22px;
+      border-left: 4px solid var(--gold);
+    }
+
+    .stat-card.red   { border-left-color: var(--red); }
+    .stat-card.green { border-left-color: var(--green); }
+    .stat-card.navy  { border-left-color: var(--navy); }
+
+    .stat-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-text); margin-bottom: 8px; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-icon  { font-size: 1.5rem; float: right; margin-top: -4px; }
+
+    /* ── SECTION ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── TABLE TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      padding: 8px 14px;
+      border: 1.5px solid var(--gray-border);
+      border-radius: 8px;
+      font-size: .88rem;
+      font-family: inherit;
+      outline: none;
+      width: 240px;
+      transition: border-color .2s;
+    }
+
+    .search-input:focus { border-color: var(--gold); }
+
+    .toolbar-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead { background: #F7F8FA; }
+
+    th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--gray-text);
+      border-bottom: 1px solid #E4E6E9;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px 16px;
+      font-size: .875rem;
+      color: var(--text);
+      border-bottom: 1px solid #F5F5F5;
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FAFAFA; }
+
+    /* ── USER ROW ── */
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .u-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: .78rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .u-name { font-weight: 600; color: var(--text); }
+    .u-email { font-size: .78rem; color: var(--gray-text); }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+
+    .badge.ESTUDIANTE { background: var(--gold-light); color: var(--navy); }
+    .badge.AUTORIDAD  { background: var(--navy); color: var(--gold); }
+    .badge.ADMIN      { background: #5B21B6; color: #fff; }
+    .badge.active     { background: var(--green-light); color: var(--green); }
+    .badge.inactive   { background: var(--red-light); color: var(--red); }
+    .badge.anuncio    { background: var(--navy); color: var(--gold); }
+
+    /* ── INLINE ROLE SELECT ── */
+    .role-select {
+      padding: 4px 8px;
+      border: 1.5px solid var(--gray-border);
+      border-radius: 6px;
+      font-size: .8rem;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+
+    .role-select:focus { border-color: var(--gold); }
+
+    /* ── ACTION BUTTONS ── */
+    .btn-action {
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: none;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+
+    .btn-action.danger { background: var(--red-light); color: var(--red); }
+    .btn-action.danger:hover { background: #FFDDDD; }
+    .btn-action.warn  { background: #FFF3CD; color: #856404; }
+    .btn-action.warn:hover { background: #FFE69C; }
+    .btn-action.ok    { background: var(--green-light); color: var(--green); }
+    .btn-action.ok:hover { background: #C3F5D0; }
+    .btn-action:disabled { opacity: .4; cursor: not-allowed; }
+
+    .actions-cell { display: flex; gap: 6px; align-items: center; }
+
+    /* ── POST CONTENT CELL ── */
+    .post-content-cell {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: .85rem;
+      color: var(--gray-text);
+    }
+
+    /* ── REPORT CARDS ── */
+    .report-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--red);
+    }
+
+    .report-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .report-meta { font-size: .78rem; color: var(--gray-text); }
+    .report-meta strong { color: var(--text); }
+
+    .report-body {
+      background: var(--gray-bg);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .87rem;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .report-razon {
+      font-size: .8rem;
+      color: var(--gray-text);
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+
+    .report-actions { display: flex; gap: 8px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-text);
+      font-size: .9rem;
+    }
+
+    .empty-state .icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--navy);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: .88rem;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+      display: none;
+      animation: slideUp .25s ease;
+    }
+
+    .toast.ok  { background: var(--green); }
+    .toast.err { background: var(--red); }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── LOADING ── */
+    .loading { text-align: center; padding: 40px; color: var(--gray-text); font-size: .9rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 760px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 14px 12px 94px; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 14px; }
+      table { min-width: 560px; }
+      .btn-action { min-height: 40px; padding: 0 14px; font-size: .85rem; }
+      .admin-actions { flex-wrap: wrap; gap: 6px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-text">Nido<span>TESVG</span></span>
+      <div class="admin-badge">⚙️ Panel de administración</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="snav-item active" onclick="switchSection('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="snav-item" onclick="switchSection('usuarios')" id="nav-usuarios">
+        <span class="icon">👥</span> Usuarios
+      </button>
+      <button class="snav-item" onclick="switchSection('publicaciones')" id="nav-publicaciones">
+        <span class="icon">📝</span> Publicaciones
+      </button>
+      <button class="snav-item" onclick="switchSection('reportes')" id="nav-reportes">
+        <span class="icon">🚨</span> Reportes
+        <span id="badge-reportes" style="margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:20px;display:none"></span>
+      </button>
+      <button class="snav-item" onclick="switchSection('codigos')" id="nav-codigos">
+        <span class="icon">🔑</span> Códigos
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="btn-back" href="/home.html">← Volver al feed</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="section-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard <span>/ Resumen</span></h1>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total usuarios</div><div class="stat-value" id="st-usuarios">—</div></div>
+        <div class="stat-card green"><div class="stat-label">Usuarios activos</div><div class="stat-value" id="st-activos">—</div></div>
+        <div class="stat-card navy"><div class="stat-label">Total publicaciones</div><div class="stat-value" id="st-pubs">—</div></div>
+        <div class="stat-card red"><div class="stat-label">Reportes pendientes</div><div class="stat-value" id="st-reportes">—</div></div>
+      </div>
+      <div class="table-wrap" style="padding:20px 24px">
+        <p style="font-size:.88rem;color:var(--gray-text);line-height:1.7">
+          Bienvenido al panel de administración de <strong>NidoTESVG</strong>.<br>
+          Desde aquí puedes gestionar usuarios, revisar publicaciones y atender reportes de la comunidad.
+        </p>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-action ok" onclick="switchSection('usuarios')">👥 Ver usuarios</button>
+          <button class="btn-action warn" onclick="switchSection('publicaciones')">📝 Ver publicaciones</button>
+          <button class="btn-action danger" onclick="switchSection('reportes')">🚨 Ver reportes</button>
+          <button class="btn-action" onclick="switchSection('codigos')" style="background:var(--navy);color:var(--gold)">🔑 Códigos de registro</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- USUARIOS -->
+    <section class="section" id="section-usuarios">
+      <div class="page-header">
+        <h1 class="page-title">Usuarios</h1>
+        <div class="toolbar" style="margin-bottom:0">
+          <input class="search-input" type="text" placeholder="Buscar por nombre o correo…"
+                 oninput="filtrarUsuarios(this.value)" id="search-usuarios">
+        </div>
+      </div>
+      <div id="usuarios-content"><div class="loading">Cargando usuarios…</div></div>
+    </section>
+
+    <!-- PUBLICACIONES -->
+    <section class="section" id="section-publicaciones">
+      <div class="page-header">
+        <h1 class="page-title">Publicaciones</h1>
+        <div class="toolbar" style="margin-bottom:0">
+          <input class="search-input" type="text" placeholder="Buscar por autor o contenido…"
+                 oninput="filtrarPubs(this.value)" id="search-pubs">
+        </div>
+      </div>
+      <div id="pubs-content"><div class="loading">Cargando publicaciones…</div></div>
+    </section>
+
+    <!-- REPORTES -->
+    <section class="section" id="section-reportes">
+      <div class="page-header">
+        <h1 class="page-title">Reportes <span>/ Pendientes</span></h1>
+      </div>
+      <div id="reportes-content"><div class="loading">Cargando reportes…</div></div>
+    </section>
+
+    <!-- CÓDIGOS DE REGISTRO -->
+    <section class="section" id="section-codigos">
+      <div class="page-header">
+        <h1 class="page-title">🔑 Códigos <span>/ Registro especial</span></h1>
+      </div>
+
+      <!-- Formulario de creación -->
+      <div class="table-wrap" style="padding:20px 24px;margin-bottom:18px">
+        <div style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-text);margin-bottom:14px">Crear nuevo código</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap">
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--gray-text);display:block;margin-bottom:4px">CÓDIGO</label>
+            <input class="search-input" id="nc-codigo" type="text" placeholder="DOCTESVG2025" style="width:100%;text-transform:uppercase">
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--gray-text);display:block;margin-bottom:4px">ROL</label>
+            <select class="role-select" id="nc-rol" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:.88rem;font-family:inherit;outline:none">
+              <option value="DOCENTE">👨‍🏫 Docente</option>
+              <option value="AUTORIDAD">🏛️ Autoridad</option>
+              <option value="ADMINISTRATIVO">📋 Administrativo</option>
+              <option value="PERSONAL">🔧 Personal</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--gray-text);display:block;margin-bottom:4px">DESCRIPCIÓN</label>
+            <input class="search-input" id="nc-desc" type="text" placeholder="Ej: Para docentes ISC" style="width:100%">
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:700;color:var(--gray-text);display:block;margin-bottom:4px">MÁX. USOS <span style="font-weight:400">(vacío = ilimitado)</span></label>
+            <input class="search-input" id="nc-max" type="number" min="1" placeholder="∞" style="width:100%">
+          </div>
+          <button class="btn-action ok" onclick="crearCodigo()" style="height:38px;white-space:nowrap">+ Crear</button>
+        </div>
+      </div>
+
+      <div id="codigos-content"><div class="loading">Cargando códigos…</div></div>
+    </section>
+
+  </main>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/nido-ui.js"></script>
+<script>
+    const token = localStorage.getItem("token")?.trim();
+    if (!token) window.location.href = "/login.html";
+
+    const h = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+
+    let allUsuarios   = [];
+    let allPubs       = [];
+
+    // ── TOAST ──
+    let toastTimer = null;
+    function toast(msg, type = "ok") {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast " + type;
+      el.style.display = "block";
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    // ── HELPERS ──
+    function escapeHtml(s) {
+      return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function initials(s) {
+      if (!s) return "?";
+      return s.split(/[@.\s]/)[0].slice(0, 2).toUpperCase();
+    }
+
+    function hue(s) {
+      let h = 0;
+      for (let i = 0; i < (s||"").length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xFFFFFF;
+      return `hsl(${h % 360},55%,42%)`;
+    }
+
+    function timeAgo(d) {
+      if (!d) return "";
+      const diff = (Date.now() - new Date(d)) / 1000;
+      if (diff < 60) return "Justo ahora";
+      if (diff < 3600) return `Hace ${Math.floor(diff/60)} min`;
+      if (diff < 86400) return `Hace ${Math.floor(diff/3600)} h`;
+      return new Date(d).toLocaleDateString("es", { day:"numeric", month:"short", year:"numeric" });
+    }
+
+    function avatarHtml(foto, nombre, size = 36) {
+      if (foto) {
+        return `<div class="u-avatar" style="width:${size}px;height:${size}px;background:url('${foto}') center/cover no-repeat"></div>`;
+      }
+      const nm = initials(nombre);
+      return `<div class="u-avatar" style="width:${size}px;height:${size}px;background:${hue(nombre)};color:#fff">${nm}</div>`;
+    }
+
+    // ── NAV ──
+    function switchSection(section) {
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      document.querySelectorAll(".snav-item").forEach(b => b.classList.remove("active"));
+      document.getElementById("section-" + section).classList.add("active");
+      document.getElementById("nav-" + section).classList.add("active");
+
+      if (section === "usuarios")      renderUsuarios(allUsuarios);
+      if (section === "publicaciones") renderPubs(allPubs);
+      if (section === "reportes")      cargarReportes();
+      if (section === "codigos")       cargarCodigos();
+    }
+
+    // ── STATS ──
+    async function cargarStats() {
+      try {
+        const res = await fetch("/admin/stats", { headers: h });
+        if (!res.ok) { window.location.href = "/home.html"; return; }
+        const s = await res.json();
+        document.getElementById("st-usuarios").textContent  = s.totalUsuarios;
+        document.getElementById("st-activos").textContent   = s.usuariosActivos;
+        document.getElementById("st-pubs").textContent      = s.totalPublicaciones;
+        document.getElementById("st-reportes").textContent  = s.reportesPendientes;
+
+        const badgeR = document.getElementById("badge-reportes");
+        if (s.reportesPendientes > 0) {
+          badgeR.textContent = s.reportesPendientes;
+          badgeR.style.display = "inline";
+        }
+      } catch { toast("Error al cargar estadísticas", "err"); }
+    }
+
+    // ── USUARIOS ──
+    async function cargarUsuarios() {
+      document.getElementById("usuarios-content").innerHTML = '<div class="loading">Cargando…</div>';
+      try {
+        const res = await fetch("/admin/usuarios", { headers: h });
+        allUsuarios = res.ok ? await res.json() : [];
+        renderUsuarios(allUsuarios);
+      } catch { document.getElementById("usuarios-content").innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>Error al cargar usuarios.</div>'; }
+    }
+
+    function filtrarUsuarios(q) {
+      const ql = q.toLowerCase();
+      renderUsuarios(allUsuarios.filter(u =>
+        (u.username || "").toLowerCase().includes(ql) ||
+        (u.correo   || "").toLowerCase().includes(ql) ||
+        (u.carrera  || "").toLowerCase().includes(ql)
+      ));
+    }
+
+    function renderUsuarios(lista) {
+      const el = document.getElementById("usuarios-content");
+      if (!lista.length) {
+        el.innerHTML = '<div class="empty-state"><span class="icon">👤</span>No hay usuarios que mostrar.</div>';
+        return;
+      }
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Carrera / Grupo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map(u => `
+              <tr id="urow-${u.id}">
+                <td>
+                  <div class="user-cell">
+                    ${avatarHtml(u.fotoPerfil, u.username || u.correo)}
+                    <div>
+                      <div class="u-name">${escapeHtml(u.username || "Sin nombre")}</div>
+                      <div class="u-email">${escapeHtml(u.correo)}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <select class="role-select" onchange="cambiarRol(${u.id}, this.value, this)">
+                    <option value="ESTUDIANTE"     ${u.rol==='ESTUDIANTE'?'selected':''}>🎓 Estudiante</option>
+                    <option value="DOCENTE"        ${u.rol==='DOCENTE'?'selected':''}>👨‍🏫 Docente</option>
+                    <option value="AUTORIDAD"      ${u.rol==='AUTORIDAD'?'selected':''}>🏛️ Autoridad</option>
+                    <option value="ADMINISTRATIVO" ${u.rol==='ADMINISTRATIVO'?'selected':''}>📋 Administrativo</option>
+                    <option value="PERSONAL"       ${u.rol==='PERSONAL'?'selected':''}>🔧 Personal</option>
+                    <option value="ADMIN"          ${u.rol==='ADMIN'?'selected':''}>👑 Admin</option>
+                  </select>
+                </td>
+                <td style="font-size:.82rem;color:var(--gray-text)">
+                  ${escapeHtml(u.carrera || '—')} / ${escapeHtml(u.grupo || '—')}
+                </td>
+                <td>
+                  <span class="badge ${u.activo ? 'active' : 'inactive'}" id="badge-activo-${u.id}">
+                    ${u.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <button class="btn-action ${u.activo ? 'warn' : 'ok'}"
+                            id="btn-toggle-${u.id}"
+                            onclick="toggleActivo(${u.id}, ${u.activo})">
+                      ${u.activo ? '🔒 Desactivar' : '🔓 Activar'}
+                    </button>
+                    <button class="btn-action danger"
+                            onclick="eliminarUsuario(${u.id}, '${escapeHtml(u.username || u.correo)}')">
+                      🗑 Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    async function cambiarRol(id, rol, select) {
+      select.disabled = true;
+      const res = await fetch(`/admin/usuarios/${id}/rol`, {
+        method: "PUT", headers: h, body: JSON.stringify({ rol })
+      });
+      select.disabled = false;
+      if (res.ok) {
+        toast(`Rol actualizado a ${rol}`);
+        const u = allUsuarios.find(u => u.id === id);
+        if (u) u.rol = rol;
+      } else {
+        toast("Error al cambiar rol", "err");
+        select.value = allUsuarios.find(u => u.id === id)?.rol || "ESTUDIANTE";
+      }
+    }
+
+    async function toggleActivo(id, activo) {
+      const btn   = document.getElementById(`btn-toggle-${id}`);
+      const badge = document.getElementById(`badge-activo-${id}`);
+      btn.disabled = true;
+      const res = await fetch(`/admin/usuarios/${id}/activo`, {
+        method: "PUT", headers: h
+      });
+      btn.disabled = false;
+      if (!res.ok) {
+        const msg = await res.text();
+        toast(msg || "Error al cambiar estado", "err");
+        return;
+      }
+      const { activo: nuevoActivo } = await res.json();
+      btn.textContent = nuevoActivo ? "🔒 Desactivar" : "🔓 Activar";
+      btn.className   = "btn-action " + (nuevoActivo ? "warn" : "ok");
+      btn.onclick     = () => toggleActivo(id, nuevoActivo);
+      badge.textContent = nuevoActivo ? "Activo" : "Inactivo";
+      badge.className   = "badge " + (nuevoActivo ? "active" : "inactive");
+      const u = allUsuarios.find(u => u.id === id);
+      if (u) u.activo = nuevoActivo;
+      toast(nuevoActivo ? "Cuenta activada" : "Cuenta desactivada");
+    }
+
+    async function eliminarUsuario(id, nombre) {
+      if (!confirm(`¿Eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
+      const res = await fetch(`/admin/usuarios/${id}`, {
+        method: "DELETE", headers: h
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        toast(msg || "Error al eliminar", "err");
+        return;
+      }
+      allUsuarios = allUsuarios.filter(u => u.id !== id);
+      document.getElementById(`urow-${id}`)?.remove();
+      toast(`Usuario eliminado`);
+      cargarStats();
+    }
+
+    // ── PUBLICACIONES ──
+    async function cargarPubs() {
+      document.getElementById("pubs-content").innerHTML = '<div class="loading">Cargando…</div>';
+      try {
+        const res = await fetch("/admin/publicaciones", { headers: h });
+        allPubs = res.ok ? await res.json() : [];
+        renderPubs(allPubs);
+      } catch { document.getElementById("pubs-content").innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>Error al cargar publicaciones.</div>'; }
+    }
+
+    function filtrarPubs(q) {
+      const ql = q.toLowerCase();
+      renderPubs(allPubs.filter(p =>
+        (p.contenido   || "").toLowerCase().includes(ql) ||
+        (p.autorNombre || "").toLowerCase().includes(ql)
+      ));
+    }
+
+    function renderPubs(lista) {
+      const el = document.getElementById("pubs-content");
+      if (!lista.length) {
+        el.innerHTML = '<div class="empty-state"><span class="icon">📝</span>No hay publicaciones que mostrar.</div>';
+        return;
+      }
+      el.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Autor</th>
+                <th>Contenido</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map(p => `
+              <tr id="prow-${p.id}">
+                <td>
+                  <div class="u-name" style="font-size:.85rem">${escapeHtml(p.autorNombre || 'Usuario #' + p.usuarioId)}</div>
+                </td>
+                <td>
+                  <div class="post-content-cell" title="${escapeHtml(p.contenido)}">
+                    ${escapeHtml(p.contenido) || '<em style="color:var(--gray-text)">Sin texto</em>'}
+                  </div>
+                </td>
+                <td>
+                  ${p.esAnuncio
+                    ? '<span class="badge anuncio">📢 Anuncio</span>'
+                    : '<span class="badge ESTUDIANTE">Normal</span>'}
+                </td>
+                <td style="font-size:.78rem;color:var(--gray-text);white-space:nowrap">${timeAgo(p.fecha)}</td>
+                <td>
+                  <button class="btn-action danger" onclick="eliminarPub(${p.id})">🗑 Eliminar</button>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    async function eliminarPub(id) {
+      if (!confirm("¿Eliminar esta publicación? Esta acción no se puede deshacer.")) return;
+      const res = await fetch(`/admin/publicaciones/${id}`, {
+        method: "DELETE", headers: h
+      });
+      if (!res.ok) { toast("Error al eliminar publicación", "err"); return; }
+      allPubs = allPubs.filter(p => p.id !== id);
+      document.getElementById(`prow-${id}`)?.remove();
+      toast("Publicación eliminada");
+      cargarStats();
+    }
+
+    // ── REPORTES ──
+    async function cargarReportes() {
+      document.getElementById("reportes-content").innerHTML = '<div class="loading">Cargando reportes…</div>';
+      try {
+        const res = await fetch("/admin/reportes", { headers: h });
+        const reportes = res.ok ? await res.json() : [];
+        renderReportes(reportes);
+      } catch { document.getElementById("reportes-content").innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>Error al cargar reportes.</div>'; }
+    }
+
+    function renderReportes(lista) {
+      const el = document.getElementById("reportes-content");
+      if (!lista.length) {
+        el.innerHTML = '<div class="empty-state"><span class="icon">✅</span>No hay reportes pendientes. ¡Todo en orden!</div>';
+        return;
+      }
+
+      const badgeR = document.getElementById("badge-reportes");
+      badgeR.textContent = lista.length;
+      badgeR.style.display = "inline";
+
+      el.innerHTML = lista.map(r => `
+        <div class="report-card" id="rcard-${r.id}">
+          <div class="report-header">
+            <div class="report-meta">
+              Reportado por <strong>${escapeHtml(r.reportanteNombre || 'Usuario #' + r.reportanteId)}</strong>
+              · ${timeAgo(r.fecha)}
+              · Publicación de <strong>${escapeHtml(r.pubAutor || 'Usuario #' + r.pubUsuarioId)}</strong>
+            </div>
+          </div>
+          ${r.razon ? `<div class="report-razon">Motivo: "${escapeHtml(r.razon)}"</div>` : ''}
+          <div class="report-body">${escapeHtml(r.pubContenido) || '<em>Contenido no disponible</em>'}</div>
+          <div class="report-actions">
+            <button class="btn-action danger" onclick="eliminarDesdereporte(${r.id}, ${r.publicacionId})">🗑 Eliminar publicación</button>
+            <button class="btn-action ok" onclick="atenderReporte(${r.id})">✓ Marcar atendido</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function atenderReporte(id) {
+      const res = await fetch(`/admin/reportes/${id}/atender`, {
+        method: "PUT", headers: h
+      });
+      if (!res.ok) { toast("Error", "err"); return; }
+      document.getElementById(`rcard-${id}`)?.remove();
+      toast("Reporte marcado como atendido");
+      actualizarBadgeReportes(-1);
+      cargarStats();
+    }
+
+    async function eliminarDesdereporte(reporteId, pubId) {
+      if (!confirm("¿Eliminar la publicación reportada?")) return;
+      const res = await fetch(`/admin/publicaciones/${pubId}`, {
+        method: "DELETE", headers: h
+      });
+      if (!res.ok) { toast("Error al eliminar", "err"); return; }
+      document.getElementById(`rcard-${reporteId}`)?.remove();
+      allPubs = allPubs.filter(p => p.id !== pubId);
+      toast("Publicación eliminada y reporte cerrado");
+      actualizarBadgeReportes(-1);
+      cargarStats();
+    }
+
+    function actualizarBadgeReportes(delta) {
+      const badge = document.getElementById("badge-reportes");
+      const n = Math.max(0, (parseInt(badge.textContent) || 0) + delta);
+      badge.textContent = n;
+      badge.style.display = n > 0 ? "inline" : "none";
+    }
+
+    // ── CÓDIGOS DE REGISTRO ──
+    const ROL_LABEL = {
+      ESTUDIANTE: '🎓 Estudiante', DOCENTE: '👨‍🏫 Docente',
+      AUTORIDAD: '🏛️ Autoridad', ADMINISTRATIVO: '📋 Administrativo',
+      PERSONAL: '🔧 Personal', ADMIN: '👑 Admin'
+    };
+
+    async function cargarCodigos() {
+      const el = document.getElementById('codigos-content');
+      el.innerHTML = '<div class="loading">Cargando códigos…</div>';
+      try {
+        const res = await fetch('/admin/codigos-registro', { headers: h });
+        const lista = res.ok ? await res.json() : [];
+        if (!lista.length) {
+          el.innerHTML = '<div class="empty-state"><span class="icon">🔑</span>No hay códigos registrados.</div>';
+          return;
+        }
+        el.innerHTML = `
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Rol</th><th>Descripción</th>
+                  <th>Usos / Máx</th><th>Creado por</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lista.map(c => `
+                <tr id="crow-${c.id}">
+                  <td><strong style="font-family:monospace;letter-spacing:.05em">${escapeHtml(c.codigo)}</strong></td>
+                  <td><span style="font-size:.78rem;font-weight:700">${ROL_LABEL[c.rol] || c.rol}</span></td>
+                  <td style="font-size:.82rem;color:var(--gray-text)">${escapeHtml(c.descripcion || '—')}</td>
+                  <td style="font-size:.82rem">${c.usos} / ${c.maxUsos ?? '∞'}</td>
+                  <td style="font-size:.82rem;color:var(--gray-text)">${escapeHtml(c.creadoPorNombre || '—')}</td>
+                  <td>
+                    <span class="badge ${c.activo ? 'active' : 'inactive'}" id="cbadge-${c.id}">
+                      ${c.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      <button class="btn-action ${c.activo ? 'warn' : 'ok'}" id="cbtn-${c.id}"
+                              onclick="toggleCodigo(${c.id}, ${c.activo})">
+                        ${c.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                      <button class="btn-action danger" onclick="eliminarCodigo(${c.id})">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      } catch { el.innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>Error al cargar códigos.</div>'; }
+    }
+
+    async function crearCodigo() {
+      const codigo = document.getElementById('nc-codigo').value.trim().toUpperCase();
+      const rol    = document.getElementById('nc-rol').value;
+      const desc   = document.getElementById('nc-desc').value.trim();
+      const maxStr = document.getElementById('nc-max').value.trim();
+      if (!codigo) { toast('El código no puede estar vacío', 'err'); return; }
+      const body = { codigo, rol, descripcion: desc || null };
+      if (maxStr) body.maxUsos = parseInt(maxStr);
+      const res = await fetch('/admin/codigos-registro', {
+        method: 'POST', headers: h, body: JSON.stringify(body)
+      });
+      if (!res.ok) { toast(await res.text() || 'Error al crear código', 'err'); return; }
+      document.getElementById('nc-codigo').value = '';
+      document.getElementById('nc-desc').value   = '';
+      document.getElementById('nc-max').value    = '';
+      toast('Código creado');
+      cargarCodigos();
+    }
+
+    async function toggleCodigo(id, estaActivo) {
+      const res = await fetch(`/admin/codigos-registro/${id}/toggle`, {
+        method: 'PUT', headers: h
+      });
+      if (!res.ok) { toast('Error', 'err'); return; }
+      const { activo } = await res.json();
+      const badge = document.getElementById(`cbadge-${id}`);
+      const btn   = document.getElementById(`cbtn-${id}`);
+      if (badge) { badge.textContent = activo ? 'Activo' : 'Inactivo'; badge.className = `badge ${activo ? 'active' : 'inactive'}`; }
+      if (btn)   { btn.textContent = activo ? 'Desactivar' : 'Activar'; btn.className = `btn-action ${activo ? 'warn' : 'ok'}`; btn.setAttribute('onclick', `toggleCodigo(${id},${activo})`); }
+      toast(activo ? 'Código activado' : 'Código desactivado');
+    }
+
+    async function eliminarCodigo(id) {
+      if (!confirm('¿Eliminar este código permanentemente?')) return;
+      const res = await fetch(`/admin/codigos-registro/${id}`, {
+        method: 'DELETE', headers: h
+      });
+      if (!res.ok) { toast('Error al eliminar', 'err'); return; }
+      document.getElementById(`crow-${id}`)?.remove();
+      toast('Código eliminado');
+    }
+
+    // ── INIT ──
+    async function init() {
+      const statsRes = await fetch("/admin/stats", { headers: h });
+      if (!statsRes.ok) {
+        // Not admin or not logged in
+        window.location.href = "/home.html";
+        return;
+      }
+
+      await Promise.all([
+        cargarStats(),
+        cargarUsuarios(),
+        cargarPubs()
+      ]);
+    }
+
+    init();
+  </script>
+</body>
+</html>

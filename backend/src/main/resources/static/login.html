@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NidoTESVG — Acceso</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --gold: #F5A623;
+    --gold-soft: rgba(245,166,35,0.22);
+    --gold-deep: #b8720a;
+    --black: #0a0a0f;
+  }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(245,166,35,0.09), transparent 34%),
+      radial-gradient(circle at 82% 26%, rgba(245,166,35,0.06), transparent 30%),
+      linear-gradient(135deg, #050507 0%, #0a0a0f 42%, #111015 100%);
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    color: #fff;
+  }
+  body::before,
+  body::after {
+    content: '';
+    position: fixed;
+    inset: -20%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    background:
+      linear-gradient(115deg, transparent 0 34%, rgba(245,166,35,0.055) 35%, transparent 36% 100%),
+      linear-gradient(62deg, transparent 0 58%, rgba(255,255,255,0.025) 59%, transparent 60% 100%);
+    opacity: 0.8;
+    animation: particlesMove 22s linear infinite;
+  }
+  body::after {
+    background:
+      radial-gradient(circle at 24% 38%, rgba(245,166,35,0.12), transparent 22%),
+      radial-gradient(circle at 72% 58%, rgba(245,166,35,0.085), transparent 26%);
+    filter: blur(28px);
+    animation: pulseGlow 7s ease-in-out infinite;
+  }
+  .left {
+    flex: 1.1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .left-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 50%, rgba(245,166,35,0.13) 0%, transparent 62%),
+      radial-gradient(ellipse at 80% 80%, rgba(245,166,35,0.06) 0%, transparent 50%),
+      linear-gradient(145deg, rgba(255,255,255,0.02), transparent 46%);
+  }
+  .left::before {
+    content: '';
+    position: absolute;
+    width: min(44vw, 520px);
+    height: min(44vw, 520px);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -54%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,166,35,0.16), rgba(245,166,35,0.035) 44%, transparent 68%);
+    filter: blur(18px);
+    animation: pulseGlow 5.8s ease-in-out infinite;
+  }
+  .left::after,
+  .right::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgba(245,166,35,0.46) 0 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,0.18) 0 1px, transparent 1.5px);
+    background-size: 96px 96px, 142px 142px;
+    background-position: 12px 18px, 44px 62px;
+    opacity: 0.18;
+    animation: particlesMove 24s linear infinite;
+  }
+  .falcon-bg {
+    position: absolute;
+    width: min(78vw, 860px);
+    height: auto;
+    left: -18%;
+    top: 50%;
+    --float-base: translateY(-50%);
+    transform: var(--float-base);
+    opacity: 0.045;
+    filter: drop-shadow(0 0 36px rgba(245,166,35,0.42));
+    z-index: 1;
+    animation: floatFalcon 12s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .diagonal-lines { position: absolute; inset: 0; overflow: hidden; opacity: 0.16; z-index: 1; }
+  .left-content { position: relative; z-index: 3; text-align: center; filter: drop-shadow(0 18px 45px rgba(0,0,0,0.42)); }
+  .falcon-wrap {
+    width: 170px;
+    height: 148px;
+    margin: 0 auto 20px;
+    display: block;
+    --float-base: translateY(0);
+    filter:
+      drop-shadow(0 0 16px rgba(245,166,35,0.38))
+      drop-shadow(0 16px 28px rgba(0,0,0,0.5));
+    animation: floatFalcon 6.5s ease-in-out infinite;
+  }
+  .brand-name { font-size: 34px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px; }
+  .brand-nido { color: #ffffff; }
+  .brand-tesvg { color: var(--gold); text-shadow: 0 0 22px rgba(245,166,35,0.34); }
+  .brand-sub { font-size: 10px; letter-spacing: 4px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 36px; }
+  .features { display: flex; gap: 28px; margin-bottom: 32px; justify-content: center; }
+  .feature { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .feature-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(145deg, rgba(245,166,35,0.14), rgba(255,255,255,0.03)); border: 1px solid rgba(245,166,35,0.24); display: flex; align-items: center; justify-content: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 30px rgba(0,0,0,0.22); transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease; }
+  .feature:hover .feature-icon { transform: translateY(-3px); border-color: rgba(245,166,35,0.52); box-shadow: 0 0 26px rgba(245,166,35,0.16), 0 12px 34px rgba(0,0,0,0.28); }
+  .feature span { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.35); text-transform: uppercase; }
+  .info-tesvg { background: linear-gradient(145deg, rgba(245,166,35,0.075), rgba(255,255,255,0.025)); border: 1px solid rgba(245,166,35,0.18); border-radius: 16px; padding: 18px 22px; text-align: left; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 18px 48px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.055); }
+  .info-title { font-size: 10px; letter-spacing: 2px; color: rgba(245,166,35,0.6); text-transform: uppercase; margin-bottom: 10px; }
+  .info-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 7px; }
+  .info-row:last-child { margin-bottom: 0; }
+  .info-dot { width: 6px; height: 6px; border-radius: 50%; background: #F5A623; flex-shrink: 0; margin-top: 4px; }
+  .info-row span { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+  .info-row strong { color: rgba(255,255,255,0.75); font-weight: 500; }
+  .quote { font-size: 12px; color: rgba(255,255,255,0.25); font-style: italic; border-left: 2px solid rgba(245,166,35,0.35); padding-left: 12px; text-align: left; }
+  .quote strong { color: rgba(245,166,35,0.6); font-style: normal; }
+  .divider-v { width: 1px; background: linear-gradient(to bottom, transparent, rgba(245,166,35,0.25) 30%, rgba(245,166,35,0.25) 70%, transparent); flex-shrink: 0; }
+  .right { flex: 0.9; display: flex; align-items: center; justify-content: center; padding: 48px 40px; background: rgba(0,0,0,0.22); position: relative; z-index: 1; }
+  .right::before {
+    content: '';
+    position: absolute;
+    width: min(52vw, 560px);
+    height: min(52vw, 560px);
+    right: -16%;
+    top: 50%;
+    transform: translateY(-50%);
+    background:
+      radial-gradient(circle, rgba(245,166,35,0.17), rgba(245,166,35,0.035) 42%, transparent 68%);
+    filter: blur(24px);
+    animation: pulseGlow 6.4s ease-in-out infinite;
+  }
+  .form-card {
+    width: 100%;
+    max-width: 388px;
+    position: relative;
+    z-index: 2;
+    padding: 30px;
+    border-radius: 28px;
+    background:
+      linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.045)),
+      linear-gradient(180deg, rgba(245,166,35,0.055), transparent 48%);
+    border: 1px solid rgba(245,166,35,0.22);
+    box-shadow:
+      0 34px 90px rgba(0,0,0,0.58),
+      0 0 48px rgba(245,166,35,0.09),
+      inset 0 1px 0 rgba(255,255,255,0.16),
+      inset 0 -1px 0 rgba(245,166,35,0.08);
+    backdrop-filter: blur(22px) saturate(142%);
+    -webkit-backdrop-filter: blur(22px) saturate(142%);
+    overflow: hidden;
+    animation: formEnter .75s cubic-bezier(.2,.9,.2,1) both;
+  }
+  .form-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background:
+      linear-gradient(115deg, rgba(245,166,35,0.4), transparent 27%, transparent 72%, rgba(255,255,255,0.14));
+    opacity: 0.38;
+    pointer-events: none;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    padding: 1px;
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+  }
+  .form-card::after {
+    content: '';
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    right: -90px;
+    top: -90px;
+    background: radial-gradient(circle, rgba(245,166,35,0.18), transparent 68%);
+    filter: blur(12px);
+    animation: pulseGlow 5.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .form-header { text-align: center; margin-bottom: 24px; }
+  .form-header h2 { font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
+  .form-header p { font-size: 13px; color: rgba(255,255,255,0.4); }
+  .tabs { display: flex; background: rgba(0,0,0,0.26); border-radius: 14px; padding: 4px; margin-bottom: 22px; border: 1px solid rgba(255,255,255,0.085); box-shadow: inset 0 1px 8px rgba(0,0,0,0.34); }
+  .tab { flex: 1; padding: 9px; border: none; background: transparent; color: rgba(255,255,255,0.48); font-size: 13px; font-weight: 500; border-radius: 11px; cursor: pointer; transition: transform .22s ease, color .22s ease, background .22s ease, box-shadow .22s ease; }
+  .tab:hover { color: rgba(255,255,255,0.76); }
+  .tab.active { background: linear-gradient(135deg, #ffd277, #F5A623 48%, #b8720a); color: #0a0a0f; font-weight: 800; box-shadow: 0 8px 24px rgba(245,166,35,0.34), inset 0 1px 0 rgba(255,255,255,0.35); }
+  .form-section { display: none; }
+  .form-section.active { display: block; animation: fadeUp .36s ease both; }
+  .input-group { position: relative; margin-bottom: 12px; }
+  .input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: rgba(245,166,35,0.62); font-size: 14px; pointer-events: none; z-index: 2; text-shadow: 0 0 12px rgba(245,166,35,0.24); }
+  .input-group input {
+    width: 100%;
+    padding: 13px 14px 13px 40px;
+    background: rgba(7,7,10,0.46);
+    border: 1px solid rgba(255,255,255,0.105);
+    border-radius: 14px;
+    color: #ffffff;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .25s ease, background .25s ease, box-shadow .25s ease, transform .25s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 10px 26px rgba(0,0,0,0.13);
+    backdrop-filter: blur(10px);
+  }
+  .input-group input::placeholder { color: rgba(255,255,255,0.24); }
+  .input-group input:hover { border-color: rgba(245,166,35,0.24); background: rgba(14,13,15,0.56); }
+  .input-group input:focus {
+    border-color: rgba(245,166,35,0.72);
+    background: rgba(245,166,35,0.07);
+    box-shadow:
+      0 0 0 4px rgba(245,166,35,0.09),
+      0 0 26px rgba(245,166,35,0.16),
+      inset 0 1px 0 rgba(255,255,255,0.09);
+    transform: translateY(-1px);
+  }
+  .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; font-size: 14px; transition: color .2s ease, transform .2s ease; }
+  .eye-btn:hover { color: rgba(245,166,35,0.75); transform: translateY(-50%) scale(1.06); }
+  .forgot { text-align: right; margin-bottom: 14px; }
+  .forgot a { font-size: 11px; color: rgba(245,166,35,0.55); text-decoration: none; cursor: pointer; }
+  .btn-main {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #ffe09b 0%, #F5A623 42%, #c47a08 100%);
+    border: none;
+    border-radius: 15px;
+    color: #08080b;
+    font-size: 14px;
+    font-weight: 850;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform .28s cubic-bezier(.2,.9,.2,1), box-shadow .28s ease, filter .28s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 12px 32px rgba(245,166,35,0.28),
+      0 0 32px rgba(245,166,35,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.48),
+      inset 0 -1px 0 rgba(0,0,0,0.18);
+  }
+  .btn-main::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.32), transparent 38%);
+    pointer-events: none;
+  }
+  .btn-main::after { content: ''; position: absolute; top: -60%; left: -70%; width: 58%; height: 220%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); transform: skewX(-20deg); transition: left 0.58s cubic-bezier(.2,.9,.2,1); }
+  .btn-main:hover::after { left: 125%; }
+  .btn-main:hover { transform: translateY(-3px); filter: saturate(1.08) brightness(1.04); box-shadow: 0 20px 48px rgba(245,166,35,0.38), 0 0 42px rgba(245,166,35,0.26), inset 0 1px 0 rgba(255,255,255,0.52); }
+  .btn-main:active { transform: translateY(-1px) scale(0.99); }
+  .btn-main:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .error-msg { font-size: 12px; color: #ff6b6b; text-align: center; margin-top: 8px; display: none; }
+  .security-note { display: flex; align-items: center; gap: 8px; background: rgba(245,166,35,0.06); border: 1px solid rgba(245,166,35,0.12); border-radius: 8px; padding: 10px 12px; margin-top: 14px; }
+  .security-note span { font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.4; }
+  .security-note strong { color: rgba(245,166,35,0.6); }
+  .register-link { text-align: center; font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 14px; }
+  .register-link a { color: #F5A623; text-decoration: none; font-weight: 500; cursor: pointer; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hint { font-size: 10px; color: rgba(255,255,255,0.18); margin-top: 3px; padding-left: 38px; }
+  .hint span { color: rgba(245,166,35,0.45); }
+
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 0.72; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.045); }
+  }
+  @keyframes floatFalcon {
+    0%, 100% { transform: var(--float-base) translateY(0); }
+    50% { transform: var(--float-base) translateY(-10px); }
+  }
+  @keyframes particlesMove {
+    0% { background-position: 12px 18px, 44px 62px; transform: translate3d(0,0,0); }
+    100% { background-position: 108px -78px, 186px -80px; transform: translate3d(0,-18px,0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes formEnter {
+    from { opacity: 0; transform: translateY(18px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (max-width: 980px) {
+    body { overflow: auto; flex-direction: column; }
+    .left { min-height: 44vh; flex: none; padding: 40px 24px 28px; }
+    .right { flex: none; padding: 24px 18px 42px; }
+    .divider-v { display: none; }
+    .falcon-bg { width: 760px; left: -260px; opacity: 0.035; }
+    .features { gap: 16px; margin-bottom: 22px; }
+    .info-tesvg, .quote { max-width: 560px; margin-left: auto; margin-right: auto; }
+    .form-card { max-width: 430px; padding: 26px; border-radius: 24px; }
+  }
+  @media (max-width: 620px) {
+    body { background-attachment: fixed; }
+    .left { min-height: auto; padding: 32px 18px 20px; }
+    .falcon-wrap { width: 136px; height: 120px; margin-bottom: 14px; }
+    .brand-name { font-size: clamp(25px, 8vw, 32px); letter-spacing: 2px; }
+    .brand-sub { font-size: 9px; letter-spacing: 2.7px; margin-bottom: 24px; }
+    .features { gap: 10px; }
+    .feature-icon { width: 40px; height: 40px; border-radius: 11px; }
+    .feature span { font-size: 9px; letter-spacing: 1.4px; }
+    .info-tesvg { padding: 15px 16px; border-radius: 14px; }
+    .info-row span { font-size: 11.5px; }
+    .quote { font-size: 11.5px; }
+    .right { padding: 18px 14px 34px; }
+    .form-card { padding: 22px 18px; border-radius: 22px; max-width: 100%; }
+    .form-header h2 { font-size: 19px; }
+    .field-row { grid-template-columns: 1fr; gap: 0; }
+    .input-group input { padding-top: 12px; padding-bottom: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="left">
+  <div class="left-bg"></div>
+  <svg class="falcon-bg" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M80 55 L5 25 L18 42 L80 62 Z" fill="#F5A623"/>
+    <path d="M80 62 L15 38 L25 52 L80 68 Z" fill="#d4880a"/>
+    <path d="M80 68 L22 50 L30 62 L80 74 Z" fill="#b8720a"/>
+    <path d="M80 55 L155 25 L142 42 L80 62 Z" fill="#F5A623"/>
+    <path d="M80 62 L145 38 L135 52 L80 68 Z" fill="#d4880a"/>
+    <path d="M80 68 L138 50 L130 62 L80 74 Z" fill="#b8720a"/>
+    <path d="M70 45 L80 38 L90 45 L85 75 L80 85 L75 75 Z" fill="#F5A623"/>
+    <path d="M72 44 L80 28 L88 44 L85 50 L80 48 L75 50 Z" fill="#F5A623"/>
+    <path d="M65 78 L80 108 L95 78 L88 74 L80 88 L72 74 Z" fill="#F5A623"/>
+  </svg>
+  <div class="diagonal-lines">
+    <svg width="100%" height="100%" viewBox="0 0 600 800" preserveAspectRatio="none">
+      <line x1="-100" y1="200" x2="700" y2="650" stroke="#F5A623" stroke-width="1"/>
+      <line x1="-100" y1="400" x2="700" y2="850" stroke="#F5A623" stroke-width="0.5"/>
+      <line x1="100" y1="-50" x2="700" y2="450" stroke="#F5A623" stroke-width="0.5"/>
+      <circle cx="500" cy="650" r="3" fill="#F5A623"/>
+      <circle cx="80" cy="150" r="2" fill="#F5A623"/>
+      <circle cx="420" cy="100" r="1.5" fill="#F5A623"/>
+    </svg>
+  </div>
+
+  <div class="left-content">
+    <svg class="falcon-wrap" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="falconGold" x1="20" y1="20" x2="138" y2="102" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#FFE4A8"/>
+          <stop offset="0.42" stop-color="#F5A623"/>
+          <stop offset="1" stop-color="#9B5E06"/>
+        </linearGradient>
+        <linearGradient id="falconShadow" x1="44" y1="30" x2="118" y2="104" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#D4880A"/>
+          <stop offset="1" stop-color="#4E2D03"/>
+        </linearGradient>
+        <filter id="falconGlow" x="-20%" y="-20%" width="140%" height="150%">
+          <feGaussianBlur stdDeviation="2.6" result="blur"/>
+          <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.96 0 1 0 0 0.58 0 0 1 0 0.08 0 0 0 0.8 0"/>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#falconGlow)">
+      <path d="M80 55 L5 25 L18 42 L80 62 Z" fill="url(#falconGold)"/>
+      <path d="M80 62 L15 38 L25 52 L80 68 Z" fill="url(#falconShadow)"/>
+      <path d="M80 68 L22 50 L30 62 L80 74 Z" fill="#8F5707"/>
+      <path d="M80 55 L155 25 L142 42 L80 62 Z" fill="url(#falconGold)"/>
+      <path d="M80 62 L145 38 L135 52 L80 68 Z" fill="url(#falconShadow)"/>
+      <path d="M80 68 L138 50 L130 62 L80 74 Z" fill="#8F5707"/>
+      <path d="M70 45 L80 38 L90 45 L85 75 L80 85 L75 75 Z" fill="url(#falconGold)"/>
+      <path d="M75 45 L80 40 L85 45 L82 72 L80 80 L78 72 Z" fill="url(#falconShadow)"/>
+      <path d="M72 44 L80 28 L88 44 L85 50 L80 48 L75 50 Z" fill="url(#falconGold)"/>
+      <path d="M76 44 L80 32 L84 44 L82 48 L80 46 L78 48 Z" fill="#C77B07"/>
+      <path d="M75 38 L78 35 L80 38 L78 41 Z" fill="#0a0a0f"/>
+      <path d="M77 48 L80 55 L83 48 L80 46 Z" fill="#0a0a0f"/>
+      <path d="M75 82 L80 100 L85 82 L82 78 L80 84 L78 78 Z" fill="url(#falconGold)"/>
+      <path d="M70 80 L80 104 L90 80 L85 76 L80 86 L75 76 Z" fill="#D4880A" opacity="0.78"/>
+      <path d="M65 78 L80 108 L95 78 L88 74 L80 88 L72 74 Z" fill="#F5A623" opacity="0.38"/>
+      <path d="M44 53 L80 64 L116 53" stroke="rgba(255,255,255,0.55)" stroke-width="1" opacity="0.45"/>
+      <path d="M55 73 L80 82 L105 73" stroke="#FFE4A8" stroke-width="0.8" opacity="0.42"/>
+      <line x1="80" y1="62" x2="15" y2="38" stroke="#050507" stroke-width="1.5" opacity="0.7"/>
+      <line x1="80" y1="68" x2="22" y2="50" stroke="#050507" stroke-width="1.5" opacity="0.7"/>
+      <line x1="80" y1="62" x2="145" y2="38" stroke="#050507" stroke-width="1.5" opacity="0.7"/>
+      <line x1="80" y1="68" x2="138" y2="50" stroke="#050507" stroke-width="1.5" opacity="0.7"/>
+      </g>
+    </svg>
+
+    <div class="brand-name"><span class="brand-nido">Nido</span><span class="brand-tesvg">TESVG</span></div>
+    <div class="brand-sub">Red social institucional · TESVG</div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="1.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <span>Conecta</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="1.5" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <span>Comparte</span>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="1.5" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+        <span>Crece</span>
+      </div>
+    </div>
+
+    <div class="info-tesvg">
+      <div class="info-title">Sobre el TESVG</div>
+      <div class="info-row"><div class="info-dot"></div><span><strong>Institución:</strong> Tecnológico de Estudios Superiores de Villa Guerrero</span></div>
+      <div class="info-row"><div class="info-dot"></div><span><strong>Mascota:</strong> Halcón Dorado 🦅</span></div>
+      <div class="info-row"><div class="info-dot"></div><span><strong>Ubicación:</strong> Villa Guerrero, Estado de México</span></div>
+      <div class="info-row"><div class="info-dot"></div><span><strong>Comunidad:</strong> Estudiantes, docentes y personal</span></div>
+    </div>
+
+    <div class="quote"><strong>"Juntos volamos más alto."</strong><br>NidoTESVG · La red de nuestra comunidad</div>
+  </div>
+</div>
+
+<div class="divider-v"></div>
+
+<div class="right">
+  <div class="form-card">
+    <div class="form-header">
+      <h2 id="form-title">Bienvenido de nuevo</h2>
+      <p id="form-sub">Ingresa tus credenciales para continuar</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Iniciar sesión</button>
+      <button class="tab" onclick="switchTab('registro')">Crear cuenta</button>
+    </div>
+
+    <div class="form-section active" id="login-section">
+      <div class="input-group">
+        <span class="input-icon">✉</span>
+        <input type="email" id="loginCorreo" placeholder="tu@tesvg.edu.mx"
+               onkeydown="if(event.key==='Enter')login()">
+      </div>
+      <div class="input-group">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="loginPassword" placeholder="Contraseña"
+               onkeydown="if(event.key==='Enter')login()">
+        <button class="eye-btn" onclick="togglePwd('loginPassword')">👁</button>
+      </div>
+      <div class="forgot"><a href="#">¿Olvidaste tu contraseña?</a></div>
+      <button class="btn-main" id="loginBtn" onclick="login()">Iniciar sesión →</button>
+      <div class="error-msg" id="loginError"></div>
+      <div class="security-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5A623" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Acceso exclusivo para la comunidad <strong>@tesvg.edu.mx</strong></span>
+      </div>
+      <div class="register-link">¿No tienes cuenta? <a onclick="switchTab('registro')">Regístrate aquí</a></div>
+    </div>
+
+    <div class="form-section" id="registro-section">
+      <div class="field-row">
+        <div class="input-group"><span class="input-icon">👤</span><input type="text" id="regUsername" placeholder="Usuario"></div>
+        <div class="input-group"><span class="input-icon">📚</span><input type="text" id="regCarrera" placeholder="Carrera"></div>
+      </div>
+      <div class="input-group">
+        <span class="input-icon">✉</span>
+        <input type="email" id="regCorreo" placeholder="tu@tesvg.edu.mx">
+        <div class="hint">Solo correos <span>@tesvg.edu.mx</span></div>
+      </div>
+      <div class="field-row">
+        <div class="input-group"><span class="input-icon">#</span><input type="text" id="regGrupo" placeholder="Grupo"></div>
+        <div class="input-group"><span class="input-icon">🔒</span><input type="password" id="regPassword" placeholder="Contraseña"></div>
+      </div>
+      <div class="input-group">
+        <span class="input-icon">🔑</span>
+        <input type="text" id="regCodigo" placeholder="Código especial (personal TESVG)">
+        <div class="hint">¿Eres docente o personal? Ingresa tu <span>código de acceso</span></div>
+      </div>
+      <button class="btn-main" id="registroBtn" onclick="registro()">Crear cuenta →</button>
+      <div class="error-msg" id="registroError"></div>
+      <div class="register-link">¿Ya tienes cuenta? <a onclick="switchTab('login')">Inicia sesión</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* Auto-redirect if already authenticated */
+  (function () {
+    try {
+      var t = localStorage.getItem('token');
+      if (!t) return;
+      var pl = t.split('.');
+      if (pl.length !== 3) return;
+      if (JSON.parse(atob(pl[1])).exp * 1000 > Date.now()) {
+        window.location.replace('/home.html');
+      }
+    } catch (_) {}
+  })();
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) =>
+      t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'registro' && i === 1))
+    );
+    document.getElementById('login-section').classList.toggle('active', tab === 'login');
+    document.getElementById('registro-section').classList.toggle('active', tab === 'registro');
+    document.getElementById('form-title').textContent = tab === 'login' ? 'Bienvenido de nuevo' : 'Únete a NidoTESVG';
+    document.getElementById('form-sub').textContent = tab === 'login' ? 'Ingresa tus credenciales para continuar' : 'Crea tu cuenta institucional';
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('registroError').style.display = 'none';
+  }
+
+  function togglePwd(id) {
+    const p = document.getElementById(id);
+    p.type = p.type === 'password' ? 'text' : 'password';
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function login() {
+    const correo   = document.getElementById('loginCorreo').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!correo || !password) { showError('loginError', 'Completa todos los campos'); return; }
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    document.getElementById('loginError').style.display = 'none';
+    try {
+      const res = await fetch('/usuarios/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo, password })
+      });
+      const raw = await res.text();
+      let body;
+      try { body = JSON.parse(raw); } catch(e) { body = { token: raw }; }
+      if (!res.ok || !body.token) {
+        showError('loginError', body.error || 'Credenciales incorrectas');
+        return;
+      }
+      localStorage.setItem('token', body.token.trim());
+      if (body.usuario) {
+        localStorage.setItem('nido_session', JSON.stringify({
+          id:       body.usuario.id           || null,
+          username: body.usuario.username     || body.usuario.correo || '',
+          correo:   body.usuario.correo       || '',
+          foto:     body.usuario.fotoPerfil   || null,
+          rol:      body.usuario.rol          || 'ESTUDIANTE'
+        }));
+      }
+      window.location.replace('/home.html');
+    } catch (e) {
+      showError('loginError', 'Error de conexión con el servidor');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Iniciar sesión →';
+    }
+  }
+
+  async function registro() {
+    const data = {
+      username:     document.getElementById('regUsername').value.trim(),
+      correo:       document.getElementById('regCorreo').value.trim(),
+      password:     document.getElementById('regPassword').value,
+      carrera:      document.getElementById('regCarrera').value.trim(),
+      grupo:        document.getElementById('regGrupo').value.trim(),
+      codigoAcceso: document.getElementById('regCodigo').value.trim()
+    };
+    if (!data.correo || !data.password) { showError('registroError', 'Correo y contraseña son obligatorios'); return; }
+    const btn = document.getElementById('registroBtn');
+    btn.disabled = true; btn.textContent = 'Creando cuenta…';
+    document.getElementById('registroError').style.display = 'none';
+    try {
+      const res = await fetch('/usuarios/registro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const text = await res.text();
+      if (!res.ok) { showError('registroError', text || 'Error al registrar'); return; }
+      const loginRes = await fetch('/usuarios/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ correo: data.correo, password: data.password })
+      });
+      const loginRaw = await loginRes.text();
+      let loginBody;
+      try { loginBody = JSON.parse(loginRaw); } catch(e) { loginBody = { token: loginRaw }; }
+      if (!loginRes.ok || !loginBody.token) {
+        showError('registroError', 'Cuenta creada. Inicia sesión manualmente.');
+        switchTab('login');
+        return;
+      }
+      localStorage.setItem('token', loginBody.token.trim());
+      if (loginBody.usuario) {
+        localStorage.setItem('nido_session', JSON.stringify({
+          id:       loginBody.usuario.id           || null,
+          username: loginBody.usuario.username     || loginBody.usuario.correo || '',
+          correo:   loginBody.usuario.correo       || '',
+          foto:     loginBody.usuario.fotoPerfil   || null,
+          rol:      loginBody.usuario.rol          || 'ESTUDIANTE'
+        }));
+      }
+      window.location.replace('/home.html');
+    } catch (e) {
+      showError('registroError', 'Error de conexión con el servidor');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Crear cuenta →';
+    }
+  }
+</script>
+</body>
+</html>

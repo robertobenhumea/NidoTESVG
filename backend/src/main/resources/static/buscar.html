@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Buscar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── MAIN ── */
+    main { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    /* ── BARRA DE BÚSQUEDA ── */
+    .search-hero {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 24px 28px; margin-bottom: 24px;
+    }
+    .search-hero h1 {
+      font-size: 1.3rem; font-weight: 800; color: var(--navy); margin-bottom: 14px;
+    }
+    .search-hero h1 span { color: var(--gold); }
+
+    .search-bar {
+      display: flex; gap: 10px;
+    }
+    .search-input-wrap {
+      flex: 1; display: flex; align-items: center; gap: 10px;
+      background: var(--gray-bg); border: 1.5px solid var(--gray-border);
+      border-radius: 24px; padding: 0 16px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .search-input-wrap:focus-within {
+      border-color: var(--gold); background: var(--white);
+      box-shadow: 0 0 0 3px rgba(245,166,35,.2);
+    }
+    .search-input-wrap svg { color: var(--gray-text); flex-shrink: 0; }
+    .search-input {
+      flex: 1; border: none; background: transparent;
+      font-size: 1rem; color: var(--text); outline: none; padding: 11px 0;
+    }
+    .btn-search {
+      padding: 10px 22px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: 24px; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: background .2s; white-space: nowrap;
+    }
+    .btn-search:hover { background: var(--gold-dark); }
+    .btn-search:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* ── ESTADO ── */
+    .state-empty {
+      text-align: center; padding: 56px 20px;
+      color: var(--gray-text);
+    }
+    .state-empty svg { opacity: .25; margin-bottom: 12px; }
+    .state-empty p { font-size: .95rem; }
+
+    /* ── SECCIÓN DE RESULTADOS ── */
+    .results-section { margin-bottom: 28px; }
+
+    .section-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .section-title { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .section-count {
+      background: var(--gold); color: var(--navy);
+      font-size: .72rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px;
+    }
+
+    /* ── TARJETA DE USUARIO ── */
+    .user-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 14px 18px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 10px; transition: box-shadow .15s;
+    }
+    .user-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+
+    .user-avatar {
+      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+      background: var(--gold); color: var(--navy);
+      font-weight: 700; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-name {
+      font-size: .95rem; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-meta {
+      font-size: .8rem; color: var(--gray-text); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .btn-follow {
+      padding: 7px 16px; border-radius: 20px; border: none;
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+      transition: background .2s, color .2s; flex-shrink: 0;
+    }
+    .btn-follow.seguir { background: var(--gold); color: var(--navy); }
+    .btn-follow.seguir:hover { background: var(--gold-dark); }
+    .btn-follow.siguiendo { background: var(--gray-bg); color: var(--gray-text); border: 1.5px solid var(--gray-border); }
+    .btn-follow.siguiendo:hover { background: #FFF0F0; color: #C92A2A; border-color: #F5C6C6; }
+    .btn-follow:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── TARJETA DE PUBLICACIÓN ── */
+    .post-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 20px;
+      margin-bottom: 10px; transition: box-shadow .15s;
+    }
+    .post-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .post-avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      background: var(--gold); color: var(--navy);
+      font-weight: 700; font-size: .8rem;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .post-author { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .post-date { font-size: .76rem; color: var(--gray-text); margin-top: 1px; }
+
+    .post-content {
+      font-size: .92rem; line-height: 1.6; color: var(--text);
+      word-break: break-word; white-space: pre-wrap;
+    }
+    .post-content mark {
+      background: rgba(245,166,35,.35); color: inherit;
+      border-radius: 3px; padding: 0 2px;
+    }
+    .post-img {
+      margin-top: 10px; width: 100%; max-height: 260px;
+      object-fit: cover; border-radius: 8px;
+    }
+
+    /* ── SEPARADOR DE SECCIÓN SIN RESULTADOS ── */
+    .no-results {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 24px;
+      text-align: center; color: var(--gray-text); font-size: .9rem;
+    }
+
+    @media (max-width: 520px) {
+      .search-bar { flex-direction: column; }
+      .btn-search { width: 100%; justify-content: center; }
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+    @media (max-width: 760px) {
+      .search-bar { gap: 8px; }
+      .search-input-wrap { flex: 1; }
+      .search-input { font-size: 1rem; min-height: 48px; padding: 0 16px; }
+      .btn-search { min-height: 48px; padding: 0 18px; white-space: nowrap; }
+      .user-card { padding: 12px 14px; min-height: 60px; }
+      .btn-follow { min-height: 38px; padding: 0 14px; white-space: nowrap; flex-shrink: 0; }
+      .post-card { padding: 12px 14px; }
+    }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="cerrarSesion()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+<main>
+
+  <!-- BARRA DE BÚSQUEDA -->
+  <div class="search-hero">
+    <h1>Buscar en <span>NidoTESVG</span></h1>
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" id="searchInput" type="text"
+               placeholder="Buscar usuarios, carreras, grupos o publicaciones…"
+               onkeydown="if(event.key==='Enter') buscar()">
+      </div>
+      <button class="btn-search" id="btnBuscar" onclick="buscar()">Buscar</button>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="resultados"></div>
+
+</main>
+
+<script src="/nido-ui.js"></script>
+<script>
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+  const TOKEN = localStorage.getItem('token');
+  if (!TOKEN) location.href = 'login.html';
+
+  // Leer ?q= de la URL al cargar
+  window.addEventListener('DOMContentLoaded', () => {
+    const q = new URLSearchParams(location.search).get('q') || '';
+    if (q) {
+      document.getElementById('searchInput').value = q;
+      buscar();
+    }
+  });
+
+  async function buscar() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+
+    // Actualizar URL sin recargar
+    history.replaceState(null, '', `?q=${encodeURIComponent(q)}`);
+
+    const btn = document.getElementById('btnBuscar');
+    btn.disabled = true; btn.textContent = 'Buscando…';
+
+    const el = document.getElementById('resultados');
+    el.innerHTML = '<div class="state-empty"><p>Buscando…</p></div>';
+
+    try {
+      const r = await fetch(`/buscar?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: 'Bearer ' + TOKEN }
+      });
+      if (r.status === 401) { location.href = 'login.html'; return; }
+      const data = await r.json();
+      renderResultados(data, q);
+    } catch(e) {
+      el.innerHTML = '<div class="state-empty"><p>Error al buscar. Intenta de nuevo.</p></div>';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Buscar';
+    }
+  }
+
+  function renderResultados({ usuarios, grupos, publicaciones }, q) {
+    const el = document.getElementById('resultados');
+    grupos = grupos || [];
+
+    if (!usuarios.length && !publicaciones.length && !grupos.length) {
+      el.innerHTML = `
+        <div class="state-empty">
+          <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="#F5A623" stroke-width="1.2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="8" y1="11" x2="14" y2="11" stroke-width="1.5"/>
+          </svg>
+          <p>Sin resultados para <strong>"${escHtml(q)}"</strong></p>
+        </div>`;
+      return;
+    }
+
+    let html = '';
+
+    // Usuarios
+    if (usuarios.length) {
+      html += `<div class="results-section">
+        <div class="section-header">
+          <span class="section-title">Personas</span>
+          <span class="section-count">${usuarios.length}</span>
+        </div>`;
+      html += usuarios.map(u => `
+        <div class="user-card" style="cursor:pointer" onclick="location.href='/perfil-publico.html?id=${u.id}'">
+          <div class="user-avatar">${avatarHtml(u.username, u.fotoPerfil)}</div>
+          <div class="user-info">
+            <div class="user-name">${highlight(u.username || u.correo, q)}</div>
+            <div class="user-meta">${[u.carrera, u.grupo].filter(Boolean).map(v => highlight(v, q)).join(' · ') || 'Sin información'}</div>
+          </div>
+          <button class="btn-follow ${u.siguiendo ? 'siguiendo' : 'seguir'}"
+                  id="follow-${u.id}"
+                  onclick="event.stopPropagation();toggleSeguir(${u.id}, this)">
+            ${u.siguiendo ? 'Siguiendo' : 'Seguir'}
+          </button>
+        </div>`).join('');
+      html += '</div>';
+    }
+
+    // Grupos
+    if (grupos.length) {
+      html += `<div class="results-section">
+        <div class="section-header">
+          <span class="section-title">Grupos</span>
+          <span class="section-count">${grupos.length}</span>
+        </div>`;
+      html += grupos.map(g => `
+        <div class="user-card" style="cursor:pointer" onclick="location.href='/grupos.html?id=${g.id}'">
+          <div class="user-avatar" style="background:var(--gold);color:var(--navy);font-size:1.2rem;display:flex;align-items:center;justify-content:center;">👥</div>
+          <div class="user-info">
+            <div class="user-name">${highlight(g.nombre, q)}</div>
+            <div class="user-meta">${escHtml(g.descripcion || '')} ${g.miembros ? '· ' + g.miembros + ' miembros' : ''}</div>
+          </div>
+          <span style="font-size:.78rem;color:var(--gray-text);white-space:nowrap">${escHtml(g.tipo || '')}</span>
+        </div>`).join('');
+      html += '</div>';
+    }
+
+    // Publicaciones
+    if (publicaciones.length) {
+      html += `<div class="results-section">
+        <div class="section-header">
+          <span class="section-title">Publicaciones</span>
+          <span class="section-count">${publicaciones.length}</span>
+        </div>`;
+      html += publicaciones.map(p => `
+        <div class="post-card" style="cursor:pointer" onclick="location.href='/perfil-publico.html?id=${p.usuarioId}'">
+          <div class="post-header">
+            <div class="post-avatar">${avatarHtml(p.autorNombre, p.autorFoto)}</div>
+            <div>
+              <div class="post-author">${escHtml(p.autorNombre || 'Usuario')}</div>
+              <div class="post-date">${formatFecha(p.fecha)}</div>
+            </div>
+          </div>
+          <div class="post-content">${highlight(p.contenido, q)}</div>
+          ${p.imagenUrl ? `<img class="post-img" src="${p.imagenUrl}" alt="imagen">` : ''}
+        </div>`).join('');
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // ── SEGUIR / DEJAR DE SEGUIR ──
+  async function toggleSeguir(userId, btn) {
+    btn.disabled = true;
+    const siguiendo = btn.classList.contains('siguiendo');
+
+    try {
+      const r = await fetch(`/seguidores/toggle/${userId}`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + TOKEN }
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      const ahoraSiguiendo = data.accion === 'siguiendo';
+      btn.classList.toggle('siguiendo', ahoraSiguiendo);
+      btn.classList.toggle('seguir', !ahoraSiguiendo);
+      btn.textContent = ahoraSiguiendo ? 'Siguiendo' : 'Seguir';
+    } catch(e) {
+      // silenciar
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── UTILS ──
+  function avatarHtml(nombre, foto) {
+    if (foto) return `<img src="${foto}" alt="">`;
+    return escHtml((nombre || '?')[0].toUpperCase());
+  }
+
+  function escHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function highlight(text, q) {
+    if (!text || !q) return escHtml(text);
+    const safe = escHtml(text);
+    const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return safe.replace(new RegExp(safeQ, 'gi'), m => `<mark>${m}</mark>`);
+  }
+
+  function formatFecha(fechaStr) {
+    if (!fechaStr) return '';
+    const d = new Date(fechaStr);
+    const hoy = new Date();
+    if (d.toDateString() === hoy.toDateString())
+      return 'Hoy ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function cerrarSesion() { localStorage.removeItem('token'); location.href = 'login.html'; }
+</script>
+</body>
+</html>

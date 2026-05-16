@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — NidoEventos</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex; flex-direction: column; gap: 12px;
+      position: sticky;
+      top: calc(var(--nav-h) + 16px);
+      max-height: calc(100vh - var(--nav-h) - 32px);
+      overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--gray-border); border-radius: 4px; }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .card-title {
+      font-size: .85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--gray-text); margin-bottom: 14px;
+    }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--gray-text); margin-bottom: 4px; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1.5px solid var(--gray-border); font-size: .9rem;
+      font-family: inherit; outline: none; transition: border-color .2s;
+      background: var(--white); color: var(--text);
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,.15); }
+    .form-group textarea { resize: vertical; min-height: 64px; }
+
+    .btn-primary {
+      width: 100%; padding: 10px; background: var(--gold); color: var(--navy);
+      border: none; border-radius: 8px; font-size: .9rem; font-weight: 700;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-primary:hover { background: var(--gold-dark); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── UPCOMING EVENTS ── */
+    .event-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--gray-bg);
+    }
+    .event-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .event-date-badge {
+      min-width: 40px; text-align: center;
+      background: var(--navy); color: var(--white);
+      border-radius: 8px; padding: 4px 6px;
+      flex-shrink: 0;
+    }
+    .event-date-badge .day { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+    .event-date-badge .month { font-size: .65rem; text-transform: uppercase; opacity: .8; }
+
+    .event-info { flex: 1; min-width: 0; }
+    .event-title { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-meta { font-size: .75rem; color: var(--gray-text); margin-top: 2px; }
+    .event-tipo {
+      display: inline-block; font-size: .65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 20px; margin-bottom: 2px;
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .tipo-academico { background: #DBEAFE; color: #1D4ED8; }
+    .tipo-cultural  { background: #FCE7F3; color: #9D174D; }
+    .tipo-deportivo { background: #D1FAE5; color: #065F46; }
+    .tipo-general   { background: var(--gold-light); color: var(--navy); }
+
+    .btn-delete-event {
+      background: none; border: none; color: #ccc; cursor: pointer;
+      font-size: .8rem; padding: 2px 4px; border-radius: 4px;
+      transition: color .15s, background .15s; flex-shrink: 0; margin-top: 2px;
+    }
+    .btn-delete-event:hover { color: #EF4444; background: #FEF2F2; }
+
+    .empty-msg { text-align: center; color: var(--gray-text); font-size: .85rem; padding: 16px 0; }
+
+    /* ── CALENDAR ── */
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .cal-month { font-size: 1.1rem; font-weight: 700; color: var(--navy); }
+
+    .btn-cal-
+    .btn-cal-nav:hover { background: var(--gold-light); }
+
+    .cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 2px; margin-bottom: 4px;
+    }
+    .cal-weekday {
+      text-align: center; font-size: .72rem; font-weight: 700;
+      color: var(--gray-text); padding: 4px 0; text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    .cal-day {
+      min-height: 72px; border-radius: 8px; padding: 5px;
+      background: var(--gray-bg); cursor: pointer;
+      transition: background .15s;
+      border: 2px solid transparent;
+      display: flex; flex-direction: column;
+    }
+    .cal-day:hover { background: var(--gold-light); border-color: #fde6b8; }
+    .cal-day.other-month { opacity: .35; cursor: default; }
+    .cal-day.other-month:hover { background: var(--gray-bg); border-color: transparent; }
+    .cal-day.today { border-color: var(--gold); background: var(--gold-light); }
+    .cal-day.selected { background: var(--navy); border-color: var(--navy); }
+    .cal-day.selected .cal-day-num { color: var(--white); }
+    .cal-day.has-events { background: var(--white); }
+    .cal-day.has-events:hover { background: var(--gold-light); }
+
+    .cal-day-num {
+      font-size: .8rem; font-weight: 700; color: var(--text);
+      line-height: 1; margin-bottom: 3px;
+    }
+    .cal-day.today .cal-day-num { color: var(--navy); }
+
+    .cal-event-dot {
+      font-size: .65rem; font-weight: 600; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      padding: 1px 5px; border-radius: 4px;
+      margin-bottom: 2px; line-height: 1.4;
+    }
+
+    /* ── DAY DETAIL PANEL ── */
+    .day-detail {
+      margin-top: 14px; border-top: 1px solid var(--gray-border); padding-top: 14px;
+      display: none;
+    }
+    .day-detail.visible { display: block; }
+    .day-detail-title { font-size: .9rem; font-weight: 700; margin-bottom: 10px; color: var(--navy); }
+
+    .detail-event {
+      padding: 10px 12px; border-radius: 8px;
+      border-left: 4px solid var(--gold);
+      background: var(--gray-bg); margin-bottom: 8px;
+    }
+    .detail-event-title { font-size: .9rem; font-weight: 700; }
+    .detail-event-meta { font-size: .78rem; color: var(--gray-text); margin-top: 3px; }
+    .detail-event-desc { font-size: .82rem; color: var(--text); margin-top: 5px; white-space: pre-wrap; }
+
+    .detail-event-actions { margin-top: 6px; display: flex; gap: 6px; }
+    .btn-danger-sm {
+      font-size: .75rem; padding: 4px 10px; border-radius: 6px;
+      background: #FEF2F2; color: #EF4444; border: 1px solid #FCA5A5;
+      cursor: pointer; font-weight: 600; transition: background .15s;
+    }
+    .btn-danger-sm:hover { background: #FEE2E2; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+    }
+    @media (max-width: 760px) {
+      /* Calendar grid compacto */
+      .cal-grid { gap: 2px; }
+      .cal-day { min-height: 48px !important; padding: 3px 2px; }
+      .cal-day-num { font-size: .72rem; margin-bottom: 2px; }
+      /* Eventos: solo punto de color, sin texto */
+      .cal-event-dot {
+        font-size: 0;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        padding: 0;
+        margin: 1px auto;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      /* Form crear evento */
+      .form-row { flex-direction: column; gap: 8px; }
+      .form-group input, .form-group select, .form-group textarea {
+        min-height: 46px; font-size: 1rem;
+      }
+      #btn-crear { min-height: 48px; }
+      /* Day detail sidebar */
+      .day-detail { margin-top: 8px; padding-top: 8px; }
+      .event-item { padding: 10px 12px; }
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="logout()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <!-- Create event (admin only) -->
+      <div class="card" id="card-form" style="display:none">
+        <div class="card-title">📅 Nuevo evento</div>
+        <form onsubmit="crearEvento(event)">
+          <div class="form-group">
+            <label>Título *</label>
+            <input id="f-titulo" type="text" placeholder="Nombre del evento" required maxlength="200">
+          </div>
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input id="f-fecha" type="date" required>
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="f-tipo">
+              <option value="general">General</option>
+              <option value="academico">Académico</option>
+              <option value="cultural">Cultural</option>
+              <option value="deportivo">Deportivo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Lugar</label>
+            <input id="f-lugar" type="text" placeholder="Aula, edificio, etc." maxlength="300">
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="f-desc" placeholder="Detalles del evento…" rows="3"></textarea>
+          </div>
+          <button class="btn-primary" id="btn-crear" type="submit">Crear evento</button>
+        </form>
+      </div>
+
+      <!-- Upcoming events -->
+      <div class="card">
+        <div class="card-title">Próximos eventos</div>
+        <div id="upcoming-list"><div class="empty-msg">Cargando…</div></div>
+      </div>
+
+    </aside>
+
+    <!-- CALENDAR MAIN -->
+    <main>
+      <div class="card">
+        <div class="cal-header">
+          <button class="btn-cal-nav" onclick="cambiarMes(-1)">&#8249;</button>
+          <span class="cal-month" id="cal-month-label"></span>
+          <button class="btn-cal-nav" onclick="cambiarMes(1)">&#8250;</button>
+        </div>
+
+        <div class="cal-weekdays">
+          <div class="cal-weekday">Dom</div>
+          <div class="cal-weekday">Lun</div>
+          <div class="cal-weekday">Mar</div>
+          <div class="cal-weekday">Mié</div>
+          <div class="cal-weekday">Jue</div>
+          <div class="cal-weekday">Vie</div>
+          <div class="cal-weekday">Sáb</div>
+        </div>
+
+        <div class="cal-grid" id="cal-grid"></div>
+
+        <!-- Day detail panel -->
+        <div class="day-detail" id="day-detail">
+          <div class="day-detail-title" id="day-detail-title"></div>
+          <div id="day-detail-events"></div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="/nido-ui.js">
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+    const API = "";
+    const token = localStorage.getItem("token")?.trim();
+    if (!token) location.href = "/login.html";
+
+    const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    const TIPO_CLASS = { academico: "tipo-academico", cultural: "tipo-cultural", deportivo: "tipo-deportivo", general: "tipo-general" };
+    const TIPO_COLOR = { academico: "#1D4ED8", cultural: "#9D174D", deportivo: "#065F46", general: "#D4891A" };
+    const TIPO_BG   = { academico: "#DBEAFE", cultural: "#FCE7F3", deportivo: "#D1FAE5", general: "#FEF3DC" };
+
+    let eventos = [];
+    let viewYear, viewMonth;
+    let selectedDate = null;
+    let esAdmin = false;
+    let yo = null;
+
+    function escapeHtml(t) {
+      if (!t) return "";
+      return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function formatDate(iso) {
+      const [y, m, d] = iso.split("-");
+      return `${parseInt(d)} ${MESES[parseInt(m)-1]} ${y}`;
+    }
+
+    function logout() { localStorage.removeItem("token"); location.href = "/login.html"; }
+    function irPerfil() {
+      if (yo) location.href = `/perfil.html?id=${yo.id}`;
+    }
+
+    // ── AUTH / INIT ──────────────────────────────────────────────────────────
+    async function init() {
+      const res = await fetch(`${API}/usuarios/me`, { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { logout(); return; }
+      yo = await res.json();
+
+      const ini = yo.username ? yo.username[0].toUpperCase() : yo.correo[0].toUpperCase();
+      document.getElementById("nav-avatar").textContent = ini;
+
+      esAdmin = yo.rol === "AUTORIDAD" || yo.rol === "ADMIN";
+      if (esAdmin) document.getElementById("card-form").style.display = "block";
+
+      const now = new Date();
+      viewYear  = now.getFullYear();
+      viewMonth = now.getMonth();
+
+      await cargarEventos();
+    }
+
+    // ── LOAD EVENTS ──────────────────────────────────────────────────────────
+    async function cargarEventos() {
+      const res = await fetch(`${API}/eventos`, { headers: { Authorization: "Bearer " + token } });
+      eventos = res.ok ? await res.json() : [];
+      renderCalendario();
+      renderUpcoming();
+    }
+
+    // ── UPCOMING LIST ────────────────────────────────────────────────────────
+    function renderUpcoming() {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const futuros = eventos.filter(e => new Date(e.fechaEvento + "T00:00:00") >= today)
+                             .slice(0, 8);
+      const el = document.getElementById("upcoming-list");
+      if (!futuros.length) { el.innerHTML = '<div class="empty-msg">Sin eventos próximos</div>'; return; }
+      el.innerHTML = futuros.map(e => {
+        const [y, m, d] = e.fechaEvento.split("-");
+        const tipoClass = TIPO_CLASS[e.tipo] || "tipo-general";
+        return `
+          <div class="event-item">
+            <div class="event-date-badge">
+              <div class="day">${parseInt(d)}</div>
+              <div class="month">${MESES[parseInt(m)-1].slice(0,3)}</div>
+            </div>
+            <div class="event-info">
+              <span class="event-tipo ${tipoClass}">${e.tipo || "general"}</span>
+              <div class="event-title">${escapeHtml(e.titulo)}</div>
+              ${e.lugar ? `<div class="event-meta">📍 ${escapeHtml(e.lugar)}</div>` : ""}
+            </div>
+            ${esAdmin ? `<button class="btn-delete-event" onclick="eliminarEvento(${e.id})" title="Eliminar">✕</button>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    // ── CALENDAR RENDER ──────────────────────────────────────────────────────
+    function renderCalendario() {
+      document.getElementById("cal-month-label").textContent = `${MESES[viewMonth]} ${viewYear}`;
+
+      const eventsByDate = {};
+      eventos.forEach(e => {
+        if (!eventsByDate[e.fechaEvento]) eventsByDate[e.fechaEvento] = [];
+        eventsByDate[e.fechaEvento].push(e);
+      });
+
+      const today = new Date();
+      const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const daysInPrev  = new Date(viewYear, viewMonth, 0).getDate();
+
+      const grid = document.getElementById("cal-grid");
+      grid.innerHTML = "";
+
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+      for (let i = 0; i < totalCells; i++) {
+        let day, month, year, isOther = false;
+        if (i < firstDay) {
+          day = daysInPrev - firstDay + i + 1;
+          month = viewMonth === 0 ? 11 : viewMonth - 1;
+          year  = viewMonth === 0 ? viewYear - 1 : viewYear;
+          isOther = true;
+        } else if (i >= firstDay + daysInMonth) {
+          day = i - firstDay - daysInMonth + 1;
+          month = viewMonth === 11 ? 0 : viewMonth + 1;
+          year  = viewMonth === 11 ? viewYear + 1 : viewYear;
+          isOther = true;
+        } else {
+          day = i - firstDay + 1;
+          month = viewMonth;
+          year  = viewYear;
+        }
+
+        const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const evs = eventsByDate[dateStr] || [];
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+        const isSelected = selectedDate === dateStr;
+
+        const cell = document.createElement("div");
+        cell.className = "cal-day" +
+          (isOther    ? " other-month" : "") +
+          (isToday    ? " today"       : "") +
+          (isSelected ? " selected"    : "") +
+          (evs.length && !isOther ? " has-events" : "");
+
+        cell.innerHTML = `<div class="cal-day-num">${day}</div>` +
+          evs.slice(0, 2).map(e => `
+            <div class="cal-event-dot" style="background:${TIPO_BG[e.tipo]||TIPO_BG.general};color:${TIPO_COLOR[e.tipo]||TIPO_COLOR.general}">
+              ${escapeHtml(e.titulo)}
+            </div>`).join("") +
+          (evs.length > 2 ? `<div style="font-size:.63rem;color:var(--gray-text);margin-top:1px">+${evs.length-2} más</div>` : "");
+
+        if (!isOther) {
+          cell.addEventListener("click", () => seleccionarDia(dateStr, evs));
+        }
+
+        grid.appendChild(cell);
+      }
+
+      // re-render detail if a day is selected
+      if (selectedDate) {
+        const evs = eventsByDate[selectedDate] || [];
+        renderDayDetail(selectedDate, evs);
+      }
+    }
+
+    function seleccionarDia(dateStr, evs) {
+      selectedDate = dateStr;
+      renderCalendario();
+      renderDayDetail(dateStr, evs);
+    }
+
+    function renderDayDetail(dateStr, evs) {
+      const panel = document.getElementById("day-detail");
+      const title = document.getElementById("day-detail-title");
+      const list  = document.getElementById("day-detail-events");
+      panel.classList.add("visible");
+
+      title.textContent = `Eventos del ${formatDate(dateStr)}`;
+
+      if (!evs.length) {
+        list.innerHTML = '<div class="empty-msg">Sin eventos este día</div>';
+        return;
+      }
+
+      list.innerHTML = evs.map(e => {
+        const tipoClass = TIPO_CLASS[e.tipo] || "tipo-general";
+        return `
+          <div class="detail-event" style="border-left-color:${TIPO_COLOR[e.tipo]||TIPO_COLOR.general}">
+            <span class="event-tipo ${tipoClass}">${e.tipo || "general"}</span>
+            <div class="detail-event-title">${escapeHtml(e.titulo)}</div>
+            ${e.lugar ? `<div class="detail-event-meta">📍 ${escapeHtml(e.lugar)}</div>` : ""}
+            ${e.creadorNombre ? `<div class="detail-event-meta">👤 ${escapeHtml(e.creadorNombre)}</div>` : ""}
+            ${e.descripcion ? `<div class="detail-event-desc">${escapeHtml(e.descripcion)}</div>` : ""}
+            ${esAdmin ? `
+              <div class="detail-event-actions">
+                <button class="btn-danger-sm" onclick="eliminarEvento(${e.id})">Eliminar</button>
+              </div>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    // ── MONTH NAV ────────────────────────────────────────────────────────────
+    function cambiarMes(delta) {
+      viewMonth += delta;
+      if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+      selectedDate = null;
+      document.getElementById("day-detail").classList.remove("visible");
+      renderCalendario();
+    }
+
+    // ── CREATE EVENT ─────────────────────────────────────────────────────────
+    async function crearEvento(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-crear");
+      btn.disabled = true; btn.textContent = "Creando…";
+
+      const body = {
+        titulo:      document.getElementById("f-titulo").value.trim(),
+        fechaEvento: document.getElementById("f-fecha").value,
+        tipo:        document.getElementById("f-tipo").value,
+        lugar:       document.getElementById("f-lugar").value.trim(),
+        descripcion: document.getElementById("f-desc").value.trim()
+      };
+
+      const res = await fetch(`${API}/eventos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(body)
+      });
+
+      btn.disabled = false; btn.textContent = "Crear evento";
+
+      if (!res.ok) {
+        const msg = await res.text();
+        alert("Error: " + msg);
+        return;
+      }
+
+      document.getElementById("f-titulo").value = "";
+      document.getElementById("f-fecha").value  = "";
+      document.getElementById("f-lugar").value  = "";
+      document.getElementById("f-desc").value   = "";
+
+      await cargarEventos();
+    }
+
+    // ── DELETE EVENT ─────────────────────────────────────────────────────────
+    async function eliminarEvento(id) {
+      if (!confirm("¿Eliminar este evento?")) return;
+      const res = await fetch(`${API}/eventos/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token }
+      });
+      if (!res.ok) { alert("Error al eliminar"); return; }
+      await cargarEventos();
+    }
+
+    // ── START ────────────────────────────────────────────────────────────────
+    init();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoMarket — TESVG</title>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+  <link rel="stylesheet" href="/marketplace-aaa.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #F5A623; --gold-dark: #D4891A; --gold-light: #FEF3DC;
+      --navy: #1A1A2E; --gray-bg: #F0F2F5; --gray-border: #CED0D4;
+      --gray-text: #65676B; --text: #1C1E21; --white: #FFFFFF;
+      --nav-h: 60px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+    body.nido-aaa {
+      background: linear-gradient(145deg, #050507 0%, #0a0a0f 44%, #111015 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+<nav></nav>
+
+<main class="mkt-main">
+
+  <!-- HERO -->
+  <div class="mkt-hero">
+    <div class="mkt-hero-inner">
+      <div class="mkt-brand">
+        <span class="mkt-brand-nido">Nido</span><span class="mkt-brand-market">Market</span>
+        <span class="mkt-brand-badge">Beta</span>
+      </div>
+      <div class="mkt-search-wrap">
+        <input class="mkt-search" id="mkt-search" type="text"
+               placeholder="Buscar en NidoMarket..."
+               oninput="debouncedSearch(this.value)">
+        <svg class="mkt-search-icon" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m16.5 16.5 4 4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="mkt-cats" id="mkt-cats">
+    <button class="mkt-cat active" data-cat="" onclick="filterCat(this,'')">Todo</button>
+    <button class="mkt-cat" data-cat="APUNTES"    onclick="filterCat(this,'APUNTES')">📚 Apuntes</button>
+    <button class="mkt-cat" data-cat="TECNOLOGIA" onclick="filterCat(this,'TECNOLOGIA')">💻 Tecnología</button>
+    <button class="mkt-cat" data-cat="FITNESS"    onclick="filterCat(this,'FITNESS')">🏋️ Fitness</button>
+    <button class="mkt-cat" data-cat="ROPA"       onclick="filterCat(this,'ROPA')">👕 Ropa</button>
+    <button class="mkt-cat" data-cat="COMIDA"     onclick="filterCat(this,'COMIDA')">🍔 Comida</button>
+    <button class="mkt-cat" data-cat="SERVICIOS"  onclick="filterCat(this,'SERVICIOS')">🛠️ Servicios</button>
+    <button class="mkt-cat" data-cat="GAMING"     onclick="filterCat(this,'GAMING')">🎮 Gaming</button>
+    <button class="mkt-cat" data-cat="TRANSPORTE" onclick="filterCat(this,'TRANSPORTE')">🚗 Transporte</button>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="mkt-toolbar">
+    <span id="mkt-count" class="mkt-count">Cargando...</span>
+    <div class="mkt-toolbar-right">
+      <button class="mkt-tab-btn active" id="tab-feed"    onclick="switchTab('feed')">Todos</button>
+      <button class="mkt-tab-btn"        id="tab-favs"    onclick="switchTab('favs')">❤️ Guardados</button>
+      <button class="mkt-tab-btn"        id="tab-mine"    onclick="switchTab('mine')">Mis productos</button>
+      <button class="mkt-tab-btn"        id="tab-compras" onclick="switchTab('compras')">🛒 Mis compras</button>
+      <button class="mkt-tab-btn"        id="tab-solic"   onclick="switchTab('solic')">📬 Solicitudes</button>
+    </div>
+  </div>
+
+  <!-- PRODUCT GRID / LIST -->
+  <div class="mkt-grid" id="mkt-grid"></div>
+
+  <!-- EMPTY STATE -->
+  <div class="mkt-empty" id="mkt-empty" hidden>
+    <div class="mkt-empty-icon">🛍️</div>
+    <div class="mkt-empty-title" id="mkt-empty-title">Sin productos aquí</div>
+    <div class="mkt-empty-sub" id="mkt-empty-sub">Sé el primero en publicar algo</div>
+  </div>
+
+</main>
+
+<!-- FLOATING ACTION BUTTON -->
+<button class="mkt-fab" id="mkt-fab" onclick="openPublish()" title="Publicar producto">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ── PUBLISH MODAL ── -->
+<div class="mkt-overlay" id="publish-overlay" onclick="closePublish(event)">
+  <div class="mkt-modal" role="dialog" aria-modal="true" aria-label="Publicar producto">
+    <div class="mkt-modal-header">
+      <h2>Publicar producto</h2>
+      <button class="mkt-modal-close" onclick="closePublish()" aria-label="Cerrar">×</button>
+    </div>
+
+    <form id="publish-form" onsubmit="submitPublish(event)">
+      <!-- Image upload -->
+      <div class="mkt-img-upload" id="img-upload-area"
+           onclick="document.getElementById('img-input').click()"
+           role="button" aria-label="Agregar foto">
+        <div id="img-placeholder">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span>Toca para agregar foto</span>
+        </div>
+        <img id="img-preview" alt="Vista previa" hidden>
+      </div>
+      <input type="file" id="img-input" accept="image/*" style="display:none"
+             onchange="previewImg(this)">
+
+      <div class="mkt-form-row">
+        <div class="mkt-form-group" style="flex:2">
+          <label for="f-titulo">Título *</label>
+          <input type="text" id="f-titulo" required placeholder="ej. Laptop HP i5, 8GB" maxlength="100">
+        </div>
+        <div class="mkt-form-group" style="flex:1">
+          <label for="f-precio">Precio (MXN)</label>
+          <input type="number" id="f-precio" placeholder="0" min="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="mkt-form-row">
+        <div class="mkt-form-group" style="flex:2">
+          <label for="f-categoria">Categoría *</label>
+          <select id="f-categoria" required>
+            <option value="">Seleccionar categoría...</option>
+            <option value="APUNTES">📚 Apuntes</option>
+            <option value="TECNOLOGIA">💻 Tecnología</option>
+            <option value="FITNESS">🏋️ Fitness</option>
+            <option value="ROPA">👕 Ropa</option>
+            <option value="COMIDA">🍔 Comida</option>
+            <option value="SERVICIOS">🛠️ Servicios</option>
+            <option value="GAMING">🎮 Gaming</option>
+            <option value="TRANSPORTE">🚗 Transporte</option>
+            <option value="OTROS">📦 Otros</option>
+          </select>
+        </div>
+        <div class="mkt-form-group" style="flex:1">
+          <label for="f-cantidad">Cantidad</label>
+          <input type="number" id="f-cantidad" placeholder="1" min="1" max="999" value="1">
+        </div>
+      </div>
+
+      <div class="mkt-form-group">
+        <label for="f-descripcion">Descripción</label>
+        <textarea id="f-descripcion" rows="3"
+                  placeholder="Describe el estado, características o condiciones..." maxlength="500"></textarea>
+      </div>
+
+      <div class="mkt-form-group">
+        <label for="f-ubicacion">Punto de entrega (opcional)</label>
+        <input type="text" id="f-ubicacion" placeholder="ej. Edificio A, cafetería, planta baja" maxlength="80">
+      </div>
+
+      <button type="submit" class="mkt-btn-submit" id="publish-submit">Publicar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── DETAIL MODAL ── -->
+<div class="mkt-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="mkt-detail" role="dialog" aria-modal="true" aria-label="Detalle del producto">
+    <button class="mkt-modal-close mkt-detail-close" onclick="closeDetail()" aria-label="Cerrar">×</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- ── BUY MODAL ── -->
+<div class="mkt-overlay" id="buy-overlay" onclick="closeBuy(event)">
+  <div class="mkt-modal" role="dialog" aria-modal="true" aria-label="Solicitar compra">
+    <div class="mkt-modal-header">
+      <div>
+        <h2>Solicitar compra</h2>
+        <div style="font-size:.76rem;color:var(--gray-text,#65676B);margin-top:2px">Coordina la entrega con el vendedor</div>
+      </div>
+      <button class="mkt-modal-close" onclick="closeBuy()" aria-label="Cerrar">×</button>
+    </div>
+
+    <!-- Product preview -->
+    <div class="mkt-buy-product" id="buy-product-preview"></div>
+
+    <form id="buy-form" onsubmit="submitBuy(event)">
+      <div class="mkt-form-group">
+        <label for="b-nombre">Tu nombre *</label>
+        <input type="text" id="b-nombre" required placeholder="Como prefieres que te llamen" maxlength="60">
+      </div>
+      <div class="mkt-form-row">
+        <div class="mkt-form-group" style="flex:1">
+          <label for="b-aula">Aula / Lugar *</label>
+          <input type="text" id="b-aula" required placeholder="ej. ISC-4A, Biblioteca" maxlength="60">
+        </div>
+        <div class="mkt-form-group" style="flex:1">
+          <label for="b-edificio">Edificio</label>
+          <input type="text" id="b-edificio" placeholder="ej. Edificio A" maxlength="60">
+        </div>
+      </div>
+      <div class="mkt-form-group">
+        <label for="b-horario">¿Cuándo puede ser? *</label>
+        <select id="b-horario" required>
+          <option value="">Seleccionar horario...</option>
+          <option value="Ahora mismo">Ahora mismo</option>
+          <option value="En el recreo">En el recreo</option>
+          <option value="Después de clases">Después de clases</option>
+          <option value="Mañana por la mañana">Mañana por la mañana</option>
+          <option value="Esta tarde">Esta tarde</option>
+          <option value="Fin de semana">Fin de semana</option>
+          <option value="A acordar con el vendedor">A acordar con el vendedor</option>
+        </select>
+      </div>
+      <div class="mkt-form-group">
+        <label for="b-mensaje">Mensaje al vendedor (opcional)</label>
+        <textarea id="b-mensaje" rows="2"
+                  placeholder="Pregunta, condición especial o nota para el vendedor..." maxlength="300"></textarea>
+      </div>
+      <div class="mkt-form-row" style="gap:10px;margin-top:4px">
+        <button type="button" class="mkt-btn-cancel" onclick="closeBuy()">Cancelar</button>
+        <button type="submit" class="mkt-btn-submit" id="buy-submit" style="flex:2">Enviar solicitud</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/nido-ui.js"></script>
+<script>
+  const token = localStorage.getItem("token");
+  if (!token) location.href = "/login.html";
+
+  const API = "";
+  const h   = { "Authorization": "Bearer " + token };
+
+  const CATS = {
+    APUNTES:    { label: 'Apuntes',    emoji: '📚', color: '#3B82F6' },
+    TECNOLOGIA: { label: 'Tecnología', emoji: '💻', color: '#06B6D4' },
+    FITNESS:    { label: 'Fitness',    emoji: '🏋️', color: '#22C55E' },
+    ROPA:       { label: 'Ropa',       emoji: '👕', color: '#A855F7' },
+    COMIDA:     { label: 'Comida',     emoji: '🍔', color: '#F97316' },
+    SERVICIOS:  { label: 'Servicios',  emoji: '🛠️', color: '#14B8A6' },
+    GAMING:     { label: 'Gaming',     emoji: '🎮', color: '#EC4899' },
+    TRANSPORTE: { label: 'Transporte', emoji: '🚗', color: '#EF4444' },
+    OTROS:      { label: 'Otros',      emoji: '📦', color: '#6B7280' },
+  };
+
+  const ESTADOS = {
+    PENDIENTE:  { label: 'Pendiente',  cls: 'mkt-status-pendiente',  icon: '⏳' },
+    ACEPTADA:   { label: 'Aceptada',   cls: 'mkt-status-aceptada',   icon: '✓' },
+    RECHAZADA:  { label: 'Rechazada',  cls: 'mkt-status-rechazada',  icon: '✕' },
+    ENTREGADA:  { label: 'Entregada',  cls: 'mkt-status-entregada',  icon: '📦' },
+  };
+
+  let currentCat    = '';
+  let currentTab    = 'feed';
+  let uploadedImgUrl = '';
+  let currentUserId  = null;
+  let userMap        = {};
+  let searchTimer;
+  let buyProductId   = null;
+
+  /* ── UTILS ── */
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatPrecio(p) {
+    if (p == null || p === 0) return 'Gratis';
+    return '$' + Number(p).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function hueStr(s) {
+    let h = 0;
+    for (const c of String(s||'')) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+    return `hsl(${h % 360},48%,42%)`;
+  }
+
+  function initials(s) {
+    return (s||'').split(/[\s@.]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  }
+
+  function relTime(iso) {
+    if (!iso) return '';
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)   return 'Justo ahora';
+    if (m < 60)  return `Hace ${m} min`;
+    const hr = Math.floor(m / 60);
+    if (hr < 24) return `Hace ${hr}h`;
+    const d = Math.floor(hr / 24);
+    if (d < 7)   return `Hace ${d}d`;
+    return new Date(iso).toLocaleDateString('es-MX', { day:'numeric', month:'short' });
+  }
+
+  function estadoBadge(estado) {
+    const e = ESTADOS[estado] || { label: estado, cls: 'mkt-status-pendiente', icon: '?' };
+    return `<span class="mkt-status ${e.cls}">${e.icon} ${e.label}</span>`;
+  }
+
+  /* ── CURRENT USER ── */
+  async function loadMe() {
+    try {
+      const res = await fetch(`${API}/usuarios/me`, { headers: h });
+      if (!res.ok) return;
+      const u = await res.json();
+      currentUserId = u.id;
+      userMap[u.id] = u;
+    } catch (_) {}
+  }
+
+  async function getUser(id) {
+    if (userMap[id]) return userMap[id];
+    try {
+      const res = await fetch(`${API}/usuarios/${id}`, { headers: h });
+      if (res.ok) { const u = await res.json(); userMap[id] = u; return u; }
+    } catch (_) {}
+    return null;
+  }
+
+  /* ── RENDER PRODUCT CARD ── */
+  function renderCard(p) {
+    const cat = CATS[p.categoria] || CATS.OTROS;
+    const img = p.imagenUrl
+      ? `<img class="mkt-card-img" src="${esc(p.imagenUrl)}" alt="${esc(p.titulo)}" loading="lazy">`
+      : `<div class="mkt-card-img mkt-card-img-placeholder" style="background:linear-gradient(135deg,${cat.color}22,${cat.color}44)"><span>${cat.emoji}</span></div>`;
+
+    const badges = p.estado === 'VENDIDO'
+      ? '<span class="mkt-badge-sold">Vendido</span>'
+      : p.estado === 'PAUSADO' ? '<span class="mkt-badge-paused">Pausado</span>' : '';
+
+    const cantidadBadge = p.cantidad > 1
+      ? `<span style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;font-size:.62rem;font-weight:800;padding:2px 6px;border-radius:6px;backdrop-filter:blur(4px)">×${p.cantidad}</span>`
+      : '';
+
+    return `
+      <article class="mkt-card${p.estado !== 'DISPONIBLE' ? ' mkt-card-inactive' : ''}"
+               onclick="openDetail(${p.id})" data-pid="${p.id}">
+        <div class="mkt-card-img-wrap">
+          ${img}
+          ${badges}
+          ${cantidadBadge}
+          <button class="mkt-card-fav${p.esFavorito ? ' saved' : ''}"
+                  onclick="event.stopPropagation();toggleFav(${p.id},this)"
+                  title="${p.esFavorito ? 'Quitar de guardados' : 'Guardar'}">
+            <svg viewBox="0 0 24 24">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="mkt-card-body">
+          <div class="mkt-card-price">${esc(formatPrecio(p.precio))}</div>
+          <div class="mkt-card-title">${esc(p.titulo)}</div>
+          <div class="mkt-card-cat" style="--cat-color:${cat.color}">${cat.emoji} ${esc(cat.label)}</div>
+          <div class="mkt-card-seller">
+            <div class="mkt-card-seller-av" id="sav-${p.id}"></div>
+            <span class="mkt-card-seller-name" id="sname-${p.id}">...</span>
+            ${p.ubicacion ? `<span class="mkt-card-loc">📍 ${esc(p.ubicacion)}</span>` : ''}
+          </div>
+        </div>
+      </article>`;
+  }
+
+  async function fillSellerInfo(products) {
+    const ids = [...new Set(products.map(p => p.vendedorId).filter(Boolean))];
+    await Promise.allSettled(ids.map(id => getUser(id)));
+    products.forEach(p => {
+      const u = userMap[p.vendedorId];
+      if (!u) return;
+      const av = document.getElementById(`sav-${p.id}`);
+      const nm = document.getElementById(`sname-${p.id}`);
+      if (av) {
+        if (u.fotoPerfil) { av.style.background = `url('${u.fotoPerfil}') center/cover`; }
+        else { av.style.background = hueStr(u.username||u.correo); av.textContent = initials(u.username||u.correo); }
+      }
+      if (nm) nm.textContent = u.username || u.correo || 'Usuario';
+    });
+  }
+
+  /* ── RENDER SOLICITUD CARD (vendor receives) ── */
+  function renderSolicitudCard(s) {
+    const cat   = CATS[s.productoCategoria] || CATS.OTROS;
+    const avBg  = s.compradorFoto ? `url('${esc(s.compradorFoto)}') center/cover no-repeat` : hueStr(s.compradorNombre||'');
+    const avTxt = s.compradorFoto ? '' : initials(s.compradorNombre||'');
+
+    const productImg = s.productoImagen
+      ? `<img src="${esc(s.productoImagen)}" style="width:100%;height:100%;object-fit:cover">`
+      : `<span>${cat.emoji}</span>`;
+
+    let acciones = '';
+    if (s.estado === 'PENDIENTE') {
+      acciones = `
+        <button class="mkt-btn-accept" onclick="actualizarSolicitud(${s.id},'ACEPTADA')">✓ Aceptar</button>
+        <button class="mkt-btn-reject" onclick="actualizarSolicitud(${s.id},'RECHAZADA')">Rechazar</button>`;
+    } else if (s.estado === 'ACEPTADA') {
+      acciones = `
+        <button class="mkt-btn-deliver" onclick="actualizarSolicitud(${s.id},'ENTREGADA')">📦 Marcar entregada</button>`;
+    }
+
+    return `
+      <div class="mkt-solic-card">
+        <div class="mkt-solic-header">
+          <div class="mkt-solic-av" style="background:${avBg}">${esc(avTxt)}</div>
+          <div class="mkt-solic-who">
+            <div class="mkt-solic-name">${esc(s.compradorNombre || s.nombreComprador)}</div>
+            <div class="mkt-solic-date">${relTime(s.fecha)}</div>
+          </div>
+          ${estadoBadge(s.estado)}
+        </div>
+
+        <div class="mkt-solic-product" onclick="openDetail(${s.productoId})">
+          <div class="mkt-solic-product-img">${productImg}</div>
+          <span class="mkt-solic-product-name">${esc(s.productoTitulo || 'Producto')}</span>
+          <span class="mkt-solic-product-price">${esc(formatPrecio(s.productoPrecio))}</span>
+        </div>
+
+        <div class="mkt-solic-delivery">
+          ${s.aula    ? `<span class="mkt-solic-chip">🏫 ${esc(s.aula)}</span>` : ''}
+          ${s.edificio ? `<span class="mkt-solic-chip">🏢 ${esc(s.edificio)}</span>` : ''}
+          ${s.horario  ? `<span class="mkt-solic-chip">⏰ ${esc(s.horario)}</span>` : ''}
+        </div>
+
+        ${s.mensaje ? `<div class="mkt-solic-msg">"${esc(s.mensaje)}"</div>` : ''}
+
+        ${acciones ? `<div class="mkt-solic-actions">${acciones}</div>` : ''}
+      </div>`;
+  }
+
+  /* ── RENDER MI COMPRA CARD (buyer sent) ── */
+  function renderMiCompraCard(s) {
+    const cat      = CATS[s.productoCategoria] || CATS.OTROS;
+    const vendBg   = s.vendedorFoto ? `url('${esc(s.vendedorFoto)}') center/cover no-repeat` : hueStr(s.vendedorNombre||'');
+    const vendTxt  = s.vendedorFoto ? '' : initials(s.vendedorNombre||'');
+
+    const productImg = s.productoImagen
+      ? `<img src="${esc(s.productoImagen)}" style="width:100%;height:100%;object-fit:cover">`
+      : `<span>${cat.emoji}</span>`;
+
+    const cancelBtn = s.estado === 'PENDIENTE'
+      ? `<button class="mkt-btn-cancel-solic" onclick="cancelarSolicitud(${s.id})">Cancelar solicitud</button>`
+      : '';
+
+    return `
+      <div class="mkt-solic-card">
+        <div class="mkt-solic-header">
+          <div class="mkt-solic-av" style="background:${vendBg}">${esc(vendTxt)}</div>
+          <div class="mkt-solic-who">
+            <div class="mkt-solic-name">${esc(s.vendedorNombre || 'Vendedor')}</div>
+            <div class="mkt-solic-date">${relTime(s.fecha)}</div>
+          </div>
+          ${estadoBadge(s.estado)}
+        </div>
+
+        <div class="mkt-solic-product" onclick="openDetail(${s.productoId})">
+          <div class="mkt-solic-product-img">${productImg}</div>
+          <span class="mkt-solic-product-name">${esc(s.productoTitulo || 'Producto')}</span>
+          <span class="mkt-solic-product-price">${esc(formatPrecio(s.productoPrecio))}</span>
+        </div>
+
+        <div class="mkt-solic-delivery">
+          ${s.aula    ? `<span class="mkt-solic-chip">🏫 ${esc(s.aula)}</span>` : ''}
+          ${s.edificio ? `<span class="mkt-solic-chip">🏢 ${esc(s.edificio)}</span>` : ''}
+          ${s.horario  ? `<span class="mkt-solic-chip">⏰ ${esc(s.horario)}</span>` : ''}
+        </div>
+
+        ${s.mensaje ? `<div class="mkt-solic-msg">"${esc(s.mensaje)}"</div>` : ''}
+
+        ${cancelBtn ? `<div class="mkt-solic-actions">${cancelBtn}</div>` : ''}
+      </div>`;
+  }
+
+  /* ── LOAD + RENDER ── */
+  function setListMode(list) {
+    const grid = document.getElementById('mkt-grid');
+    grid.classList.toggle('mkt-list', list);
+    document.getElementById('mkt-fab').style.display = list ? 'none' : '';
+    document.getElementById('mkt-cats').style.display = list ? 'none' : '';
+  }
+
+  function renderProducts(products) {
+    const grid  = document.getElementById('mkt-grid');
+    const empty = document.getElementById('mkt-empty');
+    const count = document.getElementById('mkt-count');
+    if (!products.length) {
+      empty.hidden = false;
+      count.textContent = '0 productos';
+      return;
+    }
+    empty.hidden = true;
+    count.textContent = products.length + ' producto' + (products.length !== 1 ? 's' : '');
+    grid.innerHTML = products.map(renderCard).join('');
+  }
+
+  function renderSolicitudes(list, renderer) {
+    const grid  = document.getElementById('mkt-grid');
+    const empty = document.getElementById('mkt-empty');
+    const count = document.getElementById('mkt-count');
+    if (!list.length) {
+      empty.hidden = false;
+      count.textContent = '0 solicitudes';
+      return;
+    }
+    empty.hidden = true;
+    count.textContent = list.length + ' solicitud' + (list.length !== 1 ? 'es' : '');
+    grid.innerHTML = list.map(renderer).join('');
+  }
+
+  async function loadProducts(cat, q) {
+    setListMode(false);
+    document.getElementById('mkt-grid').innerHTML = '';
+    document.getElementById('mkt-empty').hidden = true;
+    document.getElementById('mkt-count').textContent = 'Cargando...';
+    let url = `${API}/market/productos?`;
+    if (q) url += `q=${encodeURIComponent(q)}&`;
+    else if (cat) url += `categoria=${encodeURIComponent(cat)}&`;
+    try {
+      const res = await fetch(url, { headers: h });
+      const products = res.ok ? await res.json() : [];
+      renderProducts(products);
+      fillSellerInfo(products);
+    } catch (_) { document.getElementById('mkt-count').textContent = 'Error al cargar'; }
+  }
+
+  async function loadFavs() {
+    setListMode(false);
+    document.getElementById('mkt-grid').innerHTML = '';
+    document.getElementById('mkt-empty').hidden = true;
+    document.getElementById('mkt-count').textContent = 'Cargando...';
+    try {
+      const res = await fetch(`${API}/market/favoritos`, { headers: h });
+      const products = res.ok ? await res.json() : [];
+      renderProducts(products);
+      fillSellerInfo(products);
+    } catch (_) {}
+  }
+
+  async function loadMine() {
+    if (!currentUserId) await loadMe();
+    if (!currentUserId) return;
+    setListMode(false);
+    document.getElementById('mkt-grid').innerHTML = '';
+    document.getElementById('mkt-empty').hidden = true;
+    document.getElementById('mkt-count').textContent = 'Cargando...';
+    try {
+      const res = await fetch(`${API}/market/productos/vendedor/${currentUserId}`, { headers: h });
+      const products = res.ok ? await res.json() : [];
+      renderProducts(products);
+      fillSellerInfo(products);
+    } catch (_) {}
+  }
+
+  async function loadMisCompras() {
+    setListMode(true);
+    document.getElementById('mkt-grid').innerHTML = '';
+    document.getElementById('mkt-empty').hidden = true;
+    document.getElementById('mkt-empty-title').textContent = 'Sin compras todavía';
+    document.getElementById('mkt-empty-sub').textContent = 'Cuando solicites un producto aparecerá aquí';
+    document.getElementById('mkt-count').textContent = 'Cargando...';
+    try {
+      const res = await fetch(`${API}/market/solicitudes/enviadas`, { headers: h });
+      const list = res.ok ? await res.json() : [];
+      renderSolicitudes(list, renderMiCompraCard);
+    } catch (_) { document.getElementById('mkt-count').textContent = 'Error al cargar'; }
+  }
+
+  async function loadSolicitudesRecibidas() {
+    setListMode(true);
+    document.getElementById('mkt-grid').innerHTML = '';
+    document.getElementById('mkt-empty').hidden = true;
+    document.getElementById('mkt-empty-title').textContent = 'Sin solicitudes recibidas';
+    document.getElementById('mkt-empty-sub').textContent = 'Cuando alguien quiera comprar uno de tus productos, aparecerá aquí';
+    document.getElementById('mkt-count').textContent = 'Cargando...';
+    try {
+      const res = await fetch(`${API}/market/solicitudes/recibidas`, { headers: h });
+      const list = res.ok ? await res.json() : [];
+      renderSolicitudes(list, renderSolicitudCard);
+    } catch (_) { document.getElementById('mkt-count').textContent = 'Error al cargar'; }
+  }
+
+  /* ── SOLICITUD ACTIONS ── */
+  async function actualizarSolicitud(id, estado) {
+    try {
+      const res = await fetch(`${API}/market/solicitudes/${id}/estado`, {
+        method: 'PUT',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado })
+      });
+      if (res.ok) {
+        const msgs = { ACEPTADA: 'Solicitud aceptada', RECHAZADA: 'Solicitud rechazada', ENTREGADA: 'Marcada como entregada' };
+        if (window.NidoUI) window.NidoUI.toast.ok(msgs[estado] || 'Actualizado');
+        loadSolicitudesRecibidas();
+      }
+    } catch (_) {}
+  }
+
+  async function cancelarSolicitud(id) {
+    if (!confirm('¿Cancelar esta solicitud de compra?')) return;
+    try {
+      const res = await fetch(`${API}/market/solicitudes/${id}/estado`, {
+        method: 'PUT',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'RECHAZADA' })
+      });
+      if (res.ok) {
+        if (window.NidoUI) window.NidoUI.toast.info('Solicitud cancelada');
+        loadMisCompras();
+      }
+    } catch (_) {}
+  }
+
+  /* ── FILTERS ── */
+  function filterCat(btn, cat) {
+    document.querySelectorAll('.mkt-cat').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = cat;
+    if (currentTab === 'feed') loadProducts(cat);
+  }
+
+  function debouncedSearch(val) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (val.trim()) { switchTab('feed'); loadProducts('', val.trim()); }
+      else loadProducts(currentCat);
+    }, 350);
+  }
+
+  function activateTab(tab) {
+    ['feed','favs','mine','compras','solic'].forEach(t =>
+      document.getElementById(`tab-${t}`)?.classList.remove('active'));
+    document.getElementById(`tab-${tab}`)?.classList.add('active');
+    currentTab = tab;
+    // Reset empty state text for product tabs
+    if (['feed','favs','mine'].includes(tab)) {
+      document.getElementById('mkt-empty-title').textContent = 'Sin productos aquí';
+      document.getElementById('mkt-empty-sub').textContent = 'Sé el primero en publicar algo';
+    }
+  }
+
+  function switchTab(tab) {
+    activateTab(tab);
+    if      (tab === 'feed')    loadProducts(currentCat);
+    else if (tab === 'favs')    loadFavs();
+    else if (tab === 'mine')    loadMine();
+    else if (tab === 'compras') loadMisCompras();
+    else if (tab === 'solic')   loadSolicitudesRecibidas();
+  }
+
+  /* ── FAVORITE ── */
+  async function toggleFav(id, btn) {
+    try {
+      const res = await fetch(`${API}/market/favoritos/${id}`, { method: 'POST', headers: h });
+      if (!res.ok) return;
+      const data = await res.json();
+      btn.classList.toggle('saved', data.guardado);
+      const path = btn.querySelector('path');
+      if (path) path.style.fill = data.guardado ? 'currentColor' : 'none';
+    } catch (_) {}
+  }
+
+  /* ── DETAIL MODAL ── */
+  async function openDetail(id) {
+    const overlay = document.getElementById('detail-overlay');
+    const content = document.getElementById('detail-content');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    content.innerHTML = '<div class="mkt-detail-loading">Cargando...</div>';
+
+    try {
+      const res = await fetch(`${API}/market/productos/${id}`, { headers: h });
+      if (!res.ok) { content.innerHTML = '<div class="mkt-detail-loading">Error al cargar</div>'; return; }
+      const p   = await res.json();
+      const u   = await getUser(p.vendedorId);
+      const cat = CATS[p.categoria] || CATS.OTROS;
+      const isMine = p.vendedorId === currentUserId;
+
+      const sAvBg = u?.fotoPerfil ? `url('${u.fotoPerfil}') center/cover no-repeat` : hueStr(u?.username||'?');
+      const sTx   = u?.fotoPerfil ? '' : initials(u?.username || u?.correo || '?');
+      const sName = esc(u?.username || u?.correo || 'Usuario');
+
+      const cantidadInfo = p.cantidad > 1
+        ? `<div style="font-size:.8rem;color:var(--gray-text,#65676B);margin-bottom:10px">📦 ${p.cantidad} disponibles</div>`
+        : '';
+
+      const estadoTag = p.estado === 'VENDIDO'
+        ? '<span class="mkt-badge-sold-lg">Vendido</span>'
+        : p.estado === 'PAUSADO' ? '<span class="mkt-badge-paused" style="position:relative;top:unset;left:unset;margin-bottom:10px;display:inline-block">Pausado</span>' : '';
+
+      content.innerHTML = `
+        <div class="mkt-detail-img-wrap">
+          ${p.imagenUrl
+            ? `<img class="mkt-detail-img" src="${esc(p.imagenUrl)}" alt="${esc(p.titulo)}">`
+            : `<div class="mkt-detail-img mkt-detail-img-placeholder" style="background:linear-gradient(135deg,${cat.color}22,${cat.color}55)">${cat.emoji}</div>`}
+          ${p.estado === 'VENDIDO' ? '<span class="mkt-badge-sold-lg">Vendido</span>' : ''}
+        </div>
+        <div class="mkt-detail-body">
+          ${p.estado !== 'DISPONIBLE' ? estadoTag : ''}
+          <div class="mkt-detail-price">${esc(formatPrecio(p.precio))}</div>
+          <h1 class="mkt-detail-title">${esc(p.titulo)}</h1>
+          <div class="mkt-detail-cat" style="--cat-color:${cat.color}">${cat.emoji} ${esc(cat.label)}</div>
+          ${cantidadInfo}
+          ${p.descripcion ? `<p class="mkt-detail-desc">${esc(p.descripcion)}</p>` : ''}
+          ${p.ubicacion   ? `<div class="mkt-detail-loc">📍 ${esc(p.ubicacion)}</div>` : ''}
+
+          <div class="mkt-detail-seller"
+               onclick="location.href='/perfil-publico.html?id=${p.vendedorId}'" role="link">
+            <div class="mkt-detail-seller-av" style="background:${sAvBg}">${sTx}</div>
+            <div class="mkt-detail-seller-info">
+              <div class="mkt-detail-seller-name">${sName}</div>
+              <div class="mkt-detail-seller-sub">${u?.carrera ? esc(u.carrera)+' · ' : ''}Ver perfil</div>
+            </div>
+          </div>
+
+          <div class="mkt-detail-actions">
+            ${!isMine && p.estado === 'DISPONIBLE' ? `
+              <button class="mkt-btn-buy" onclick="openBuy(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+                <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                Solicitar compra
+              </button>` : ''}
+            ${!isMine && p.estado === 'DISPONIBLE' ? `
+              <button class="mkt-btn-contact" onclick="contactar(${p.vendedorId})">
+                <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.4-5A8 8 0 1 1 21 12Z"/></svg>
+                Chat
+              </button>` : ''}
+            ${!isMine ? `
+              <button class="mkt-btn-fav${p.esFavorito ? ' saved' : ''}" id="detail-fav-${id}"
+                      onclick="toggleFavDetail(${id})">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                       ${p.esFavorito ? 'style="fill:currentColor"' : ''}/>
+                </svg>
+                ${p.esFavorito ? 'Guardado' : 'Guardar'}
+              </button>` : ''}
+            ${isMine ? `
+              <button class="mkt-btn-manage"
+                      onclick="cambiarEstado(${id},'${p.estado}')">
+                ${p.estado === 'DISPONIBLE' ? 'Marcar vendido' : 'Disponible'}
+              </button>
+              <button class="mkt-btn-delete" onclick="deleteProduct(${id})">Eliminar</button>` : ''}
+          </div>
+        </div>`;
+    } catch (_) {
+      content.innerHTML = '<div class="mkt-detail-loading">Error al cargar</div>';
+    }
+  }
+
+  function closeDetail(e) {
+    if (e && e.target !== document.getElementById('detail-overlay')) return;
+    document.getElementById('detail-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  async function toggleFavDetail(id) {
+    const btn = document.getElementById(`detail-fav-${id}`);
+    if (!btn) return;
+    try {
+      const res = await fetch(`${API}/market/favoritos/${id}`, { method: 'POST', headers: h });
+      if (!res.ok) return;
+      const data = await res.json();
+      btn.classList.toggle('saved', data.guardado);
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"${data.guardado?' style="fill:currentColor"':''}/>
+      </svg>${data.guardado ? 'Guardado' : 'Guardar'}`;
+    } catch (_) {}
+  }
+
+  function contactar(vendedorId) {
+    location.href = `/chat.html?userId=${vendedorId}`;
+  }
+
+  async function cambiarEstado(id, estadoActual) {
+    const nuevo = estadoActual === 'DISPONIBLE' ? 'VENDIDO' : 'DISPONIBLE';
+    if (!confirm(`¿${nuevo === 'VENDIDO' ? 'Marcar como vendido' : 'Marcar como disponible'}?`)) return;
+    try {
+      const res = await fetch(`${API}/market/productos/${id}/estado`, {
+        method: 'PUT',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: nuevo })
+      });
+      if (res.ok) { closeDetail(); loadProducts(currentCat); }
+    } catch (_) {}
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
+    try {
+      const res = await fetch(`${API}/market/productos/${id}`, { method: 'DELETE', headers: h });
+      if (res.ok) { closeDetail(); loadProducts(currentCat); }
+    } catch (_) {}
+  }
+
+  /* ── BUY MODAL ── */
+  function openBuy(p) {
+    buyProductId = p.id;
+    const cat = CATS[p.categoria] || CATS.OTROS;
+
+    // Product preview
+    const preview = document.getElementById('buy-product-preview');
+    const img = p.imagenUrl
+      ? `<img src="${esc(p.imagenUrl)}" style="width:100%;height:100%;object-fit:cover">`
+      : `<span style="font-size:1.5rem">${cat.emoji}</span>`;
+    preview.innerHTML = `
+      <div class="mkt-buy-product-img">${img}</div>
+      <div>
+        <div class="mkt-buy-product-title">${esc(p.titulo)}</div>
+        <div class="mkt-buy-product-price">${esc(formatPrecio(p.precio))}</div>
+      </div>`;
+
+    // Pre-fill name from session
+    const session = window.NidoAuth?.getSession?.();
+    const nombreInput = document.getElementById('b-nombre');
+    if (session?.username && !nombreInput.value) {
+      nombreInput.value = session.username;
+    }
+
+    // Close detail, open buy
+    document.getElementById('detail-overlay').classList.remove('open');
+    document.getElementById('buy-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeBuy(e) {
+    if (e && e.target !== document.getElementById('buy-overlay')) return;
+    document.getElementById('buy-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    document.getElementById('buy-form').reset();
+  }
+
+  async function submitBuy(e) {
+    e.preventDefault();
+    if (!buyProductId) return;
+
+    const btn = document.getElementById('buy-submit');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    const body = {
+      productoId:     buyProductId,
+      nombreComprador: document.getElementById('b-nombre').value.trim(),
+      aula:            document.getElementById('b-aula').value.trim(),
+      edificio:        document.getElementById('b-edificio').value.trim(),
+      horario:         document.getElementById('b-horario').value,
+      mensaje:         document.getElementById('b-mensaje').value.trim(),
+    };
+
+    try {
+      const res = await fetch(`${API}/market/solicitudes`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        closeBuy();
+        if (window.NidoUI) window.NidoUI.toast.ok('¡Solicitud enviada! El vendedor recibirá una notificación.');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (window.NidoUI) window.NidoUI.toast.error(err.error || 'No se pudo enviar la solicitud');
+      }
+    } catch (_) {
+      if (window.NidoUI) window.NidoUI.toast.error('Error de conexión');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar solicitud';
+    }
+  }
+
+  /* ── PUBLISH ── */
+  function openPublish() {
+    document.getElementById('publish-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePublish(e) {
+    if (e && e.target !== document.getElementById('publish-overlay')) return;
+    document.getElementById('publish-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    resetForm();
+  }
+
+  function resetForm() {
+    document.getElementById('publish-form').reset();
+    const preview = document.getElementById('img-preview');
+    preview.hidden = true; preview.src = '';
+    document.getElementById('img-placeholder').hidden = false;
+    uploadedImgUrl = '';
+    const btn = document.getElementById('publish-submit');
+    btn.disabled = false; btn.textContent = 'Publicar';
+  }
+
+  async function previewImg(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const preview = document.getElementById('img-preview');
+    preview.src = URL.createObjectURL(file);
+    preview.hidden = false;
+    document.getElementById('img-placeholder').hidden = true;
+
+    const btn = document.getElementById('publish-submit');
+    btn.disabled = true; btn.textContent = 'Subiendo imagen...';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API}/imagenes/subir`, {
+        method: 'POST', headers: h, body: fd
+      });
+      if (res.ok) { const d = await res.json(); uploadedImgUrl = d.url || ''; }
+    } catch (_) {}
+    btn.disabled = false; btn.textContent = 'Publicar';
+  }
+
+  async function submitPublish(e) {
+    e.preventDefault();
+    const titulo      = document.getElementById('f-titulo').value.trim();
+    const precio      = parseFloat(document.getElementById('f-precio').value) || 0;
+    const categoria   = document.getElementById('f-categoria').value;
+    const cantidad    = parseInt(document.getElementById('f-cantidad').value) || 1;
+    const descripcion = document.getElementById('f-descripcion').value.trim();
+    const ubicacion   = document.getElementById('f-ubicacion').value.trim();
+    if (!titulo || !categoria) return;
+
+    const btn = document.getElementById('publish-submit');
+    btn.disabled = true; btn.textContent = 'Publicando...';
+    try {
+      const res = await fetch(`${API}/market/productos`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo, precio, categoria, cantidad, descripcion, ubicacion,
+          imagenUrl: uploadedImgUrl || null
+        })
+      });
+      if (res.ok) {
+        closePublish();
+        activateTab('mine');
+        loadMine();
+        if (window.NidoUI) window.NidoUI.toast.ok('¡Producto publicado!');
+      } else {
+        alert('No se pudo publicar. Intenta de nuevo.');
+      }
+    } catch (_) {
+      alert('Error de conexión.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Publicar';
+    }
+  }
+
+  /* ── KEYBOARD CLOSE ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeDetail();
+      closePublish();
+      closeBuy();
+    }
+  });
+
+  /* ── INIT ── */
+  loadMe();
+  loadProducts();
+</script>
+</body>
+</html>

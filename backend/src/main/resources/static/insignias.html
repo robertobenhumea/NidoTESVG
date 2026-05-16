@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Insignias</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      display: flex; flex-direction: column; gap: 12px;
+      position: sticky;
+      top: calc(var(--nav-h) + 16px);
+      max-height: calc(100vh - var(--nav-h) - 32px);
+      overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--gray-border); border-radius: 4px; }
+
+    .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+    .card-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-text); margin-bottom: 14px; }
+
+    /* ── STATS ── */
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gray-bg); }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { font-size: .82rem; color: var(--gray-text); }
+    .stat-val { font-size: .95rem; font-weight: 700; color: var(--navy); }
+
+    /* ── FILTER TABS ── */
+    .filter-tabs { display: flex; flex-direction: column; gap: 4px; }
+    .filter-tab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; border: none;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      background: none; color: var(--gray-text);
+      transition: background .15s, color .15s; text-align: left;
+    }
+    .filter-tab:hover { background: var(--gray-bg); }
+    .filter-tab.active { background: var(--gold-light); color: var(--navy); }
+    .filter-tab .tab-icon { font-size: 1rem; width: 24px; text-align: center; }
+    .filter-tab .tab-count { margin-left: auto; font-size: .75rem; background: var(--gray-bg); color: var(--gray-text); padding: 1px 7px; border-radius: 20px; }
+    .filter-tab.active .tab-count { background: var(--gold); color: var(--navy); }
+
+    /* ── EVALUAR BTN ── */
+    .btn-evaluar {
+      width: 100%; padding: 10px; background: var(--navy); color: var(--white);
+      border: none; border-radius: 8px; font-size: .88rem; font-weight: 700;
+      cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-evaluar:hover { background: #2C2150; }
+    html[data-theme="light"] .btn-evaluar:hover { background: #14143d; }
+    .btn-evaluar:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--navy); color: var(--white);
+      padding: 12px 24px; border-radius: 10px; font-size: .88rem;
+      font-weight: 600; z-index: 500; display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    }
+    .toast.show { display: flex; align-items: center; gap: 8px; }
+
+    /* ── BADGE GRID ── */
+    .section-title {
+      font-size: .9rem; font-weight: 800; color: var(--navy);
+      margin: 0 0 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title .badge-count {
+      font-size: .75rem; background: var(--gray-bg); color: var(--gray-text);
+      padding: 2px 8px; border-radius: 20px; font-weight: 600;
+    }
+    .section-title .badge-count.earned { background: var(--gold-light); color: var(--navy); }
+
+    .badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    /* ── BADGE CARD ── */
+    .badge-card {
+      background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 16px 12px; text-align: center;
+      border: 2px solid transparent; cursor: default;
+      transition: box-shadow .15s, border-color .15s, transform .15s;
+      position: relative;
+    }
+    .badge-card.earned {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, #FFFBF0, var(--white));
+      box-shadow: 0 2px 12px rgba(245,166,35,.2);
+    }
+    .badge-card.earned:hover {
+      box-shadow: 0 4px 18px rgba(245,166,35,.35);
+      transform: translateY(-2px);
+    }
+    .badge-card:not(.earned) { opacity: .55; filter: grayscale(1); }
+    .badge-card:not(.earned):hover { opacity: .7; }
+
+    .badge-icon { font-size: 2.2rem; line-height: 1; margin-bottom: 8px; display: block; }
+    .badge-name { font-size: .82rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; line-height: 1.3; }
+    .badge-desc { font-size: .72rem; color: var(--gray-text); line-height: 1.4; }
+
+    .badge-earned-mark {
+      position: absolute; top: 7px; right: 7px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .65rem; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* progress bar */
+    .badge-progress {
+      margin-top: 8px; background: var(--gray-bg);
+      border-radius: 10px; height: 5px; overflow: hidden;
+    }
+    .badge-progress-bar {
+      height: 100%; background: var(--gold); border-radius: 10px;
+      transition: width .4s;
+    }
+    .badge-progress-label {
+      font-size: .65rem; color: var(--gray-text); margin-top: 3px;
+    }
+
+    /* ── TIPO LABEL ── */
+    .tipo-chip {
+      display: inline-block; font-size: .65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .3px;
+      padding: 2px 7px; border-radius: 20px; margin-bottom: 6px;
+    }
+    .tipo-publicaciones { background: #DBEAFE; color: #1D4ED8; }
+    .tipo-seguidores    { background: #FCE7F3; color: #9D174D; }
+    .tipo-likes         { background: #FEE2E2; color: #991B1B; }
+    .tipo-comentarios   { background: #D1FAE5; color: #065F46; }
+    .tipo-antigüedad    { background: var(--gold-light); color: var(--navy); }
+
+    /* ── EMPTY ── */
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--gray-text); }
+    .empty-state .icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+    }
+
+    @media (max-width: 760px) {
+      .badges-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+      .badge-card { padding: 12px 8px; }
+      .badge-icon { font-size: 2rem; }
+      .badge-name { font-size: .75rem; }
+      .badge-desc { font-size: .65rem; display: none; }
+      .filter-tabs { display: flex; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; gap: 4px; }
+      .filter-tabs::-webkit-scrollbar { display: none; }
+      .filter-tab { flex-shrink: 0; min-height: 38px; padding: 0 12px; white-space: nowrap; }
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="logout()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <!-- Mis estadísticas -->
+      <div class="card">
+        <div class="card-title">Mis estadísticas</div>
+        <div id="stats-list">
+          <div class="stat-row"><span class="stat-label">Cargando…</span></div>
+        </div>
+      </div>
+
+      <!-- Evaluar -->
+      <div class="card">
+        <button class="btn-evaluar" id="btn-evaluar" onclick="evaluar()">
+          🏅 Evaluar mis logros
+        </button>
+        <p style="font-size:.75rem;color:var(--gray-text);margin-top:8px;text-align:center">
+          Comprueba si ganaste nuevas insignias
+        </p>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card">
+        <div class="card-title">Categorías</div>
+        <div class="filter-tabs" id="filter-tabs">
+          <button class="filter-tab active" data-tipo="" onclick="seleccionarFiltro(this)">
+            <span class="tab-icon">🏅</span> Todas
+            <span class="tab-count" id="cnt-todos">–</span>
+          </button>
+          <button class="filter-tab" data-tipo="publicaciones" onclick="seleccionarFiltro(this)">
+            <span class="tab-icon">📝</span> Publicaciones
+            <span class="tab-count" id="cnt-publicaciones">–</span>
+          </button>
+          <button class="filter-tab" data-tipo="seguidores" onclick="seleccionarFiltro(this)">
+            <span class="tab-icon">👥</span> Seguidores
+            <span class="tab-count" id="cnt-seguidores">–</span>
+          </button>
+          <button class="filter-tab" data-tipo="likes" onclick="seleccionarFiltro(this)">
+            <span class="tab-icon">❤️</span> Likes
+            <span class="tab-count" id="cnt-likes">–</span>
+          </button>
+          <button class="filter-tab" data-tipo="comentarios" onclick="seleccionarFiltro(this)">
+            <span class="tab-icon">💬</span> Comentarios
+            <span class="tab-count" id="cnt-comentarios">–</span>
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main id="main-content">
+      <div class="empty-state"><span class="icon">⏳</span><p>Cargando insignias…</p></div>
+    </main>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/nido-ui.js">
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+    const API = "";
+    const token = localStorage.getItem("token")?.trim();
+    if (!token) location.href = "/login.html";
+
+    const TIPO_LABEL = {
+      publicaciones: "Publicaciones", seguidores: "Seguidores",
+      likes: "Likes", comentarios: "Comentarios", "antigüedad": "Antigüedad"
+    };
+    const TIPO_CLASS = {
+      publicaciones: "tipo-publicaciones", seguidores: "tipo-seguidores",
+      likes: "tipo-likes", comentarios: "tipo-comentarios", "antigüedad": "tipo-antigüedad"
+    };
+
+    let yo = null;
+    let todasInsignias = [];
+    let estadisticas = {};
+    let filtroActual = "";
+
+    function escapeHtml(t) {
+      if (!t) return "";
+      return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleDateString("es-MX", { day:"numeric", month:"short", year:"numeric" });
+    }
+
+    function logout() { localStorage.removeItem("token"); location.href = "/login.html"; }
+    function irPerfil() { if (yo) location.href = `/perfil.html?id=${yo.id}`; }
+
+    function showToast(msg, duration = 3000) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), duration);
+    }
+
+    // ── INIT ────────────────────────────────────────────────────────────────
+    async function init() {
+      const res = await fetch(`${API}/usuarios/me`, { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { logout(); return; }
+      yo = await res.json();
+      const ini = yo.username ? yo.username[0].toUpperCase() : yo.correo[0].toUpperCase();
+      document.getElementById("nav-avatar").textContent = ini;
+      await cargar();
+    }
+
+    // ── LOAD ─────────────────────────────────────────────────────────────────
+    async function cargar() {
+      const res = await fetch(`${API}/insignias/catalogo`, { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { document.getElementById("main-content").innerHTML = '<div class="empty-state"><span class="icon">⚠️</span><p>Error al cargar insignias</p></div>'; return; }
+      const data = await res.json();
+      todasInsignias = data.insignias;
+      estadisticas   = data.estadisticas;
+      renderStats();
+      renderCounts();
+      renderGrid();
+    }
+
+    // ── STATS ────────────────────────────────────────────────────────────────
+    function renderStats() {
+      const ganadas = todasInsignias.filter(i => i.ganada).length;
+      document.getElementById("stats-list").innerHTML = `
+        <div class="stat-row"><span class="stat-label">🏅 Insignias ganadas</span><span class="stat-val">${ganadas} / ${todasInsignias.length}</span></div>
+        <div class="stat-row"><span class="stat-label">📝 Publicaciones</span><span class="stat-val">${estadisticas.publicaciones}</span></div>
+        <div class="stat-row"><span class="stat-label">👥 Seguidores</span><span class="stat-val">${estadisticas.seguidores}</span></div>
+        <div class="stat-row"><span class="stat-label">❤️ Likes recibidos</span><span class="stat-val">${estadisticas.likes}</span></div>
+        <div class="stat-row"><span class="stat-label">💬 Comentarios recibidos</span><span class="stat-val">${estadisticas.comentarios}</span></div>`;
+    }
+
+    // ── COUNTS ───────────────────────────────────────────────────────────────
+    function renderCounts() {
+      document.getElementById("cnt-todos").textContent = todasInsignias.length;
+      ["publicaciones","seguidores","likes","comentarios"].forEach(t => {
+        const el = document.getElementById("cnt-" + t);
+        if (el) el.textContent = todasInsignias.filter(i => i.tipo === t).length;
+      });
+    }
+
+    // ── FILTRO ───────────────────────────────────────────────────────────────
+    function seleccionarFiltro(btn) {
+      document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      filtroActual = btn.dataset.tipo;
+      renderGrid();
+    }
+
+    // ── GRID ─────────────────────────────────────────────────────────────────
+    function renderGrid() {
+      const lista = filtroActual
+        ? todasInsignias.filter(i => i.tipo === filtroActual)
+        : todasInsignias;
+
+      if (!lista.length) {
+        document.getElementById("main-content").innerHTML =
+          '<div class="empty-state"><span class="icon">🏅</span><p>No hay insignias en esta categoría.</p></div>';
+        return;
+      }
+
+      // Group by tipo if showing all
+      if (!filtroActual) {
+        const groups = {};
+        lista.forEach(i => { if (!groups[i.tipo]) groups[i.tipo] = []; groups[i.tipo].push(i); });
+        let html = "";
+        for (const [tipo, items] of Object.entries(groups)) {
+          const ganadas = items.filter(i => i.ganada).length;
+          html += `<div class="section-title">
+            ${TIPO_LABEL[tipo] || tipo}
+            <span class="badge-count ${ganadas > 0 ? 'earned' : ''}">${ganadas}/${items.length}</span>
+          </div>
+          <div class="badge-grid">${items.map(renderCard).join("")}</div>`;
+        }
+        document.getElementById("main-content").innerHTML = html;
+      } else {
+        const ganadas = lista.filter(i => i.ganada).length;
+        document.getElementById("main-content").innerHTML = `
+          <div class="section-title">
+            ${TIPO_LABEL[filtroActual] || filtroActual}
+            <span class="badge-count ${ganadas > 0 ? 'earned' : ''}">${ganadas}/${lista.length}</span>
+          </div>
+          <div class="badge-grid">${lista.map(renderCard).join("")}</div>`;
+      }
+    }
+
+    function renderCard(ins) {
+      const earnedClass = ins.ganada ? "earned" : "";
+      const earnedMark  = ins.ganada ? '<div class="badge-earned-mark">✓</div>' : "";
+      const tipoChip    = `<span class="tipo-chip ${TIPO_CLASS[ins.tipo] || ''}">${TIPO_LABEL[ins.tipo] || ins.tipo}</span>`;
+
+      let progress = "";
+      if (!ins.ganada && ins.umbral) {
+        const stat = estadisticas[ins.tipo] || 0;
+        const pct  = Math.min(100, Math.round((stat / ins.umbral) * 100));
+        progress = `
+          <div class="badge-progress"><div class="badge-progress-bar" style="width:${pct}%"></div></div>
+          <div class="badge-progress-label">${stat} / ${ins.umbral}</div>`;
+      }
+
+      const fechaHtml = ins.ganada && ins.fechaGanada
+        ? `<div class="badge-desc" style="margin-top:4px;color:var(--gold-dark)">✨ ${formatDate(ins.fechaGanada)}</div>`
+        : "";
+
+      const usuariosHtml = ins.totalUsuarios > 0
+        ? `<div class="badge-desc" style="margin-top:3px">${ins.totalUsuarios} usuario${ins.totalUsuarios !== 1 ? "s" : ""}</div>`
+        : "";
+
+      return `
+        <div class="badge-card ${earnedClass}" title="${escapeHtml(ins.descripcion || '')}">
+          ${earnedMark}
+          ${tipoChip}
+          <span class="badge-icon">${escapeHtml(ins.icono || "🏅")}</span>
+          <div class="badge-name">${escapeHtml(ins.nombre)}</div>
+          <div class="badge-desc">${escapeHtml(ins.descripcion || "")}</div>
+          ${fechaHtml}
+          ${usuariosHtml}
+          ${progress}
+        </div>`;
+    }
+
+    // ── EVALUAR ──────────────────────────────────────────────────────────────
+    async function evaluar() {
+      const btn = document.getElementById("btn-evaluar");
+      btn.disabled = true; btn.textContent = "Evaluando…";
+      const res = await fetch(`${API}/insignias/evaluar`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token }
+      });
+      btn.disabled = false; btn.innerHTML = "🏅 Evaluar mis logros";
+
+      if (!res.ok) { showToast("Error al evaluar"); return; }
+      const data = await res.json();
+
+      if (data.nuevas > 0) {
+        const nombres = data.insignias.map(i => `${i.icono} ${i.nombre}`).join(", ");
+        showToast(`🎉 ¡Nueva${data.nuevas > 1 ? "s" : ""} insignia${data.nuevas > 1 ? "s" : ""}! ${nombres}`, 5000);
+      } else {
+        showToast("Sin nuevas insignias por ahora. ¡Sigue participando!");
+      }
+
+      await cargar();
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

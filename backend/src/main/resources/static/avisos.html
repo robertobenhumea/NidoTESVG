@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;h.setAttribute("data-theme",p.darkMode===false?"light":"dark");if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Avisos Institucionales</title>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       AVISOS INSTITUCIONALES — scoped to body.avisos-page
+       ═══════════════════════════════════════════════════════ */
+
+    @keyframes av-modal-in {
+      from { opacity:0; transform:scale(.95) translateY(10px); }
+      to   { opacity:1; transform:scale(1)   translateY(0);    }
+    }
+
+    /* ── TOKENS ─────────────────────────────────────────── */
+    body.avisos-page {
+      --av-bg:      var(--nido-bg, #09090d);
+      --av-surf:    var(--nido-surface-2, rgba(255,255,255,0.046));
+      --av-border:  var(--nido-border, rgba(255,255,255,0.088));
+      --av-text:    var(--nido-text, #eeede9);
+      --av-muted:   rgba(238,237,233,0.50);
+      --av-gold:    var(--nido-gold, #F5A623);
+      --av-sw:      268px;
+
+      --p-urg-c:  #F87171; --p-urg-bg:  rgba(239,68,68,0.13);
+      --p-imp-c:  #FB923C; --p-imp-bg:  rgba(249,115,22,0.13);
+      --p-aca-c:  #60A5FA; --p-aca-bg:  rgba(59,130,246,0.13);
+      --p-evt-c:  #A78BFA; --p-evt-bg:  rgba(139,92,246,0.13);
+      --p-adm-c:  #2DD4BF; --p-adm-bg:  rgba(20,184,166,0.13);
+    }
+    html[data-theme="light"] body.avisos-page {
+      --av-muted:  rgba(28,27,23,0.50);
+      --p-urg-c:  #DC2626; --p-urg-bg:  rgba(220,38,38,0.09);
+      --p-imp-c:  #EA580C; --p-imp-bg:  rgba(234,88,12,0.09);
+      --p-aca-c:  #2563EB; --p-aca-bg:  rgba(37,99,235,0.09);
+      --p-evt-c:  #7C3AED; --p-evt-bg:  rgba(124,58,237,0.09);
+      --p-adm-c:  #0D9488; --p-adm-bg:  rgba(13,148,136,0.09);
+    }
+
+    /* ── BODY / SHELL ───────────────────────────────────── */
+    body.avisos-page {
+      min-height: 100dvh;
+      background: var(--av-bg);
+      padding-top: 0 !important;
+    }
+    .av-shell {
+      display: grid;
+      grid-template-columns: var(--av-sw) 1fr;
+      gap: 0;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding-top: calc(var(--nav-h, 60px) + 14px);
+      padding-bottom: 110px;
+      padding-inline: 18px;
+      min-height: 100dvh;
+    }
+
+    /* ── SIDEBAR ────────────────────────────────────────── */
+    .av-sidebar {
+      position: sticky;
+      top: calc(var(--nav-h, 60px) + 14px);
+      max-height: calc(100dvh - var(--nav-h, 60px) - 28px);
+      overflow-y: auto;
+      padding-right: 16px;
+      padding-bottom: 24px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--av-border) transparent;
+    }
+    .av-sidebar::-webkit-scrollbar { width: 3px; }
+    .av-sidebar::-webkit-scrollbar-thumb { background: var(--av-border); border-radius: 4px; }
+
+    .av-sb-sec { margin-bottom: 26px; }
+    .av-sb-label {
+      font-size: .66rem; font-weight: 800; letter-spacing: .09em;
+      text-transform: uppercase; color: var(--av-muted);
+      padding: 0 8px; margin-bottom: 6px; display: block;
+    }
+
+    /* Compose button */
+    .av-compose-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 10px 14px; border-radius: 12px; margin-bottom: 20px;
+      background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.26);
+      color: var(--av-gold); font-size: .88rem; font-weight: 800;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .av-compose-btn:hover { background: rgba(245,166,35,0.20); box-shadow: 0 4px 18px rgba(245,166,35,0.12); }
+    .av-compose-btn svg { width: 15px; height: 15px; }
+
+    /* Search */
+    .av-search-wrap { position: relative; margin-bottom: 18px; }
+    .av-search-ico {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--av-muted); pointer-events: none;
+    }
+    .av-search-ico svg { width: 14px; height: 14px; display: block; }
+    .av-search {
+      width: 100%; padding: 9px 12px 9px 32px;
+      border-radius: 10px; border: 1px solid var(--av-border);
+      background: var(--av-surf); color: var(--av-text);
+      font-size: .85rem; font-family: inherit; outline: none;
+      transition: border-color .15s;
+    }
+    .av-search:focus { border-color: rgba(245,166,35,0.45); }
+    .av-search::placeholder { color: var(--av-muted); }
+
+    /* Channels */
+    .av-channel {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 10px; border-radius: 10px; width: 100%;
+      border: none; background: none; color: var(--av-muted);
+      font-size: .875rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; text-align: left; transition: background .13s, color .13s;
+    }
+    .av-channel:hover { background: var(--av-surf); color: var(--av-text); }
+    .av-channel.active { background: rgba(245,166,35,0.12); color: var(--av-gold); }
+    .av-ch-ico {
+      width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; background: var(--av-surf);
+    }
+    .av-channel.active .av-ch-ico { background: rgba(245,166,35,0.16); }
+    .av-ch-cnt {
+      margin-left: auto; font-size: .67rem; font-weight: 700;
+      color: var(--av-muted); padding: 2px 6px; border-radius: 10px;
+      background: var(--av-surf);
+    }
+
+    /* Priority chips */
+    .av-chips { display: flex; flex-direction: column; gap: 2px; }
+    .av-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 9px; width: 100%;
+      border: none; background: none; color: var(--av-muted);
+      font-size: .85rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; text-align: left; transition: background .13s, color .13s;
+    }
+    .av-chip:hover { background: var(--av-surf); color: var(--av-text); }
+    .av-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .av-chip.active.p-urg { background: var(--p-urg-bg); color: var(--p-urg-c); }
+    .av-chip.active.p-imp { background: var(--p-imp-bg); color: var(--p-imp-c); }
+    .av-chip.active.p-aca { background: var(--p-aca-bg); color: var(--p-aca-c); }
+    .av-chip.active.p-evt { background: var(--p-evt-bg); color: var(--p-evt-c); }
+    .av-chip.active.p-adm { background: var(--p-adm-bg); color: var(--p-adm-c); }
+    .av-chip.active:not([class*="p-"]) { background: var(--av-surf); color: var(--av-text); }
+
+    /* Career chips */
+    .av-careers { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px; }
+    .av-career {
+      padding: 4px 10px; border-radius: 20px;
+      border: 1px solid var(--av-border);
+      font-size: .75rem; font-weight: 700;
+      color: var(--av-muted); background: none;
+      cursor: pointer; font-family: inherit; transition: all .13s;
+    }
+    .av-career:hover { border-color: var(--av-gold); color: var(--av-text); }
+    .av-career.active {
+      background: rgba(245,166,35,0.13);
+      border-color: rgba(245,166,35,0.30);
+      color: var(--av-gold);
+    }
+
+    /* ── MAIN ───────────────────────────────────────────── */
+    .av-main { padding-left: 16px; min-width: 0; }
+    .av-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .av-head-title { font-size: 1.05rem; font-weight: 800; color: var(--av-text); letter-spacing: -.02em; }
+    .av-head-count { font-size: .78rem; color: var(--av-muted); font-weight: 600; }
+
+    .av-pin-label {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 0 4px;
+      font-size: .7rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--av-muted);
+    }
+    .av-pin-label svg { width: 12px; height: 12px; }
+
+    /* ── AVISO CARD ─────────────────────────────────────── */
+    .av-card {
+      background: var(--av-surf);
+      border: 1px solid var(--av-border);
+      border-left: 3px solid var(--av-gold);
+      border-radius: 16px; padding: 18px 20px; margin-bottom: 10px;
+      transition: box-shadow .15s;
+    }
+    .av-card:hover { box-shadow: 0 6px 28px rgba(0,0,0,.22); }
+    .av-card.pinned { background: rgba(245,166,35,0.04); }
+    .av-card.expirado { opacity: .50; }
+    .av-card.p-urg { border-left-color: var(--p-urg-c); }
+    .av-card.p-imp { border-left-color: var(--p-imp-c); }
+    .av-card.p-aca { border-left-color: var(--p-aca-c); }
+    .av-card.p-evt { border-left-color: var(--p-evt-c); }
+    .av-card.p-adm { border-left-color: var(--p-adm-c); }
+
+    html[data-theme="light"] .av-card {
+      background: #FFFFFF;
+      border-color: #E2E6EF;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    html[data-theme="light"] .av-card.pinned { background: #FFFBF2; }
+
+    .av-card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 10px; margin-bottom: 12px;
+    }
+    .av-badges { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+    /* Priority badge */
+    .av-pb {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 8px; border-radius: 6px;
+      font-size: .63rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .av-pb.urg { background: var(--p-urg-bg); color: var(--p-urg-c); }
+    .av-pb.imp { background: var(--p-imp-bg); color: var(--p-imp-c); }
+    .av-pb.aca { background: var(--p-aca-bg); color: var(--p-aca-c); }
+    .av-pb.evt { background: var(--p-evt-bg); color: var(--p-evt-c); }
+    .av-pb.adm { background: var(--p-adm-bg); color: var(--p-adm-c); }
+    .av-pb.pin { background: rgba(245,166,35,0.12); color: var(--av-gold); }
+
+    /* Career badge */
+    .av-cb {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 6px;
+      font-size: .63rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+      background: rgba(59,130,246,0.12); color: #60A5FA;
+    }
+    .av-cb.global { background: rgba(245,166,35,0.12); color: var(--av-gold); }
+    html[data-theme="light"] .av-cb { background: rgba(37,99,235,0.09); color: #2563EB; }
+    html[data-theme="light"] .av-cb.global { background: rgba(184,122,8,0.09); color: #92600A; }
+
+    /* Role / verified badge */
+    .av-rb {
+      display: inline-flex; align-items: center;
+      padding: 1px 7px; border-radius: 5px; border: 1px solid;
+      font-size: .61rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+      vertical-align: middle; margin-left: 4px;
+    }
+    .av-rb.dir     { background: rgba(245,166,35,0.14); color: var(--av-gold);  border-color: rgba(245,166,35,0.28); }
+    .av-rb.doc     { background: rgba(99,102,241,0.13); color: #818CF8;          border-color: rgba(99,102,241,0.28); }
+    .av-rb.sys     { background: rgba(239,68,68,0.12);  color: #F87171;          border-color: rgba(239,68,68,0.26);  }
+    .av-rb.adm     { background: rgba(16,185,129,0.12); color: #34D399;          border-color: rgba(16,185,129,0.26); }
+    .av-rb.per     { background: rgba(251,146,60,0.12); color: #FB923C;          border-color: rgba(251,146,60,0.26); }
+    html[data-theme="light"] .av-rb.dir { background:rgba(184,122,8,0.11); color:#92600A; border-color:rgba(184,122,8,0.26); }
+    html[data-theme="light"] .av-rb.doc { background:rgba(67,56,202,0.10); color:#4338CA; border-color:rgba(67,56,202,0.22); }
+    html[data-theme="light"] .av-rb.sys { background:rgba(220,38,38,0.10); color:#DC2626; border-color:rgba(220,38,38,0.22); }
+    html[data-theme="light"] .av-rb.adm { background:rgba(5,150,105,0.10); color:#059669; border-color:rgba(5,150,105,0.22); }
+
+    .av-card-title {
+      font-size: 1rem; font-weight: 800; color: var(--av-text);
+      letter-spacing: -.02em; line-height: 1.3; margin-bottom: 8px;
+    }
+    .av-card-body {
+      font-size: .9rem; color: var(--av-muted); line-height: 1.72;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .av-card-body.clamp {
+      display: -webkit-box; -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+      white-space: normal;
+    }
+    .av-expand-btn {
+      display: inline-flex; align-items: center; gap: 3px;
+      margin-top: 4px; font-size: .8rem; font-weight: 700;
+      color: var(--av-gold); background: none; border: none;
+      padding: 0; cursor: pointer; font-family: inherit;
+    }
+
+    .av-card-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid var(--av-border);
+    }
+    html[data-theme="light"] .av-card-foot { border-color: #E8ECF4; }
+    .av-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .av-meta-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: .77rem; color: var(--av-muted); font-weight: 600;
+    }
+    .av-meta-item svg { width: 13px; height: 13px; flex-shrink: 0; opacity: .7; }
+    .av-reads {
+      display: flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 20px;
+      background: var(--av-surf); border: 1px solid var(--av-border);
+      font-size: .75rem; color: var(--av-muted); font-weight: 600;
+    }
+    .av-reads svg { width: 12px; height: 12px; opacity: .65; }
+    .av-expiry { font-size: .77rem; font-weight: 700; color: var(--p-urg-c); }
+    .av-expiry.ok { color: #34D399; }
+    html[data-theme="light"] .av-expiry.ok { color: #059669; }
+
+    .av-del-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 8px; border: none; background: none;
+      color: var(--av-muted); font-size: .77rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: color .13s, background .13s;
+    }
+    .av-del-btn:hover { color: var(--p-urg-c); background: var(--p-urg-bg); }
+    .av-del-btn svg { width: 13px; height: 13px; }
+
+    /* ── EMPTY STATE ─────────────────────────────────────── */
+    .av-empty {
+      text-align: center; padding: 72px 20px; color: var(--av-muted);
+    }
+    .av-empty-ico {
+      width: 56px; height: 56px; border-radius: 18px;
+      background: var(--av-surf); border: 1px solid var(--av-border);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .av-empty-ico svg { width: 26px; height: 26px; opacity: .5; }
+    .av-empty-title { font-size: .95rem; font-weight: 700; color: var(--av-text); margin-bottom: 5px; }
+    .av-empty-sub { font-size: .84rem; }
+
+    /* ── COMPOSE MODAL ───────────────────────────────────── */
+    .av-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.58); backdrop-filter: blur(7px);
+      z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .av-backdrop.open { display: flex; }
+    .av-modal {
+      background: var(--nido-bg, #0c0c14);
+      border: 1px solid var(--av-border);
+      border-radius: 20px; padding: 26px;
+      width: 100%; max-width: 540px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.60);
+      animation: av-modal-in .22s ease both;
+    }
+    html[data-theme="light"] .av-modal { background: #FFFFFF; }
+    .av-modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .av-modal-title { font-size: 1rem; font-weight: 800; color: var(--av-text); letter-spacing: -.02em; }
+    .av-modal-x {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--av-border); background: var(--av-surf);
+      color: var(--av-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color .13s, background .13s;
+    }
+    .av-modal-x:hover { color: var(--av-text); background: rgba(255,255,255,0.08); }
+    html[data-theme="light"] .av-modal-x:hover { background: rgba(0,0,0,.05); }
+    .av-modal-x svg { width: 15px; height: 15px; }
+
+    .av-fg { margin-bottom: 14px; }
+    .av-fg label { display: block; font-size: .77rem; font-weight: 700; color: var(--av-muted); margin-bottom: 5px; }
+    .av-fi, .av-ft, .av-fs {
+      width: 100%; padding: 10px 13px; border-radius: 10px;
+      border: 1px solid var(--av-border);
+      background: rgba(255,255,255,0.04); color: var(--av-text);
+      font-size: .9rem; font-family: inherit; outline: none;
+      transition: border-color .15s;
+    }
+    html[data-theme="light"] .av-fi,
+    html[data-theme="light"] .av-ft,
+    html[data-theme="light"] .av-fs { background: #F5F7FC; border-color: #D8DCE6; color: #1C202E; }
+    .av-fi:focus,.av-ft:focus,.av-fs:focus {
+      border-color: rgba(245,166,35,0.50);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.10);
+    }
+    .av-ft { resize: vertical; min-height: 110px; }
+    .av-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Priority picker */
+    .av-prio-picker { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin-top: 4px; }
+    .av-popt {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 8px 4px; border-radius: 10px;
+      border: 1.5px solid var(--av-border); background: none;
+      color: var(--av-muted); font-size: .63rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .04em;
+      cursor: pointer; font-family: inherit; transition: all .13s;
+    }
+    .av-popt .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .av-popt[data-p="URGENTE"]       .dot { background: var(--p-urg-c); }
+    .av-popt[data-p="IMPORTANTE"]    .dot { background: var(--p-imp-c); }
+    .av-popt[data-p="ACADEMICO"]     .dot { background: var(--p-aca-c); }
+    .av-popt[data-p="EVENTO"]        .dot { background: var(--p-evt-c); }
+    .av-popt[data-p="ADMINISTRATIVO"].dot { background: var(--p-adm-c); }
+    .av-popt.sel[data-p="URGENTE"]       { border-color:var(--p-urg-c); color:var(--p-urg-c); background:var(--p-urg-bg); }
+    .av-popt.sel[data-p="IMPORTANTE"]    { border-color:var(--p-imp-c); color:var(--p-imp-c); background:var(--p-imp-bg); }
+    .av-popt.sel[data-p="ACADEMICO"]     { border-color:var(--p-aca-c); color:var(--p-aca-c); background:var(--p-aca-bg); }
+    .av-popt.sel[data-p="EVENTO"]        { border-color:var(--p-evt-c); color:var(--p-evt-c); background:var(--p-evt-bg); }
+    .av-popt.sel[data-p="ADMINISTRATIVO"]{ border-color:var(--p-adm-c); color:var(--p-adm-c); background:var(--p-adm-bg); }
+
+    .av-submit {
+      width: 100%; padding: 12px; margin-top: 8px;
+      background: linear-gradient(135deg, #ffe0a0, #F5A623 48%, #b8720a);
+      color: #08080b; font-size: .92rem; font-weight: 800;
+      border: none; border-radius: 12px; cursor: pointer; font-family: inherit;
+      box-shadow: 0 4px 20px rgba(245,166,35,0.24);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .av-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(245,166,35,0.32); }
+    .av-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── MOBILE ──────────────────────────────────────────── */
+    @media (max-width: 760px) {
+      .av-shell {
+        grid-template-columns: 1fr;
+        padding-inline: 0;
+        padding-top: calc(var(--nav-h, 60px) + 6px);
+        padding-bottom: 96px;
+      }
+      .av-sidebar { display: none; }
+      .av-main { padding-left: 0; }
+
+      .av-mob-bar {
+        display: flex; gap: 6px; overflow-x: auto;
+        padding: 8px 12px 8px; scrollbar-width: none;
+        border-bottom: 1px solid var(--av-border); margin-bottom: 10px;
+      }
+      .av-mob-bar::-webkit-scrollbar { display: none; }
+      .av-mob-chip {
+        padding: 5px 12px; border-radius: 20px; flex-shrink: 0;
+        border: 1px solid var(--av-border); background: none;
+        font-size: .77rem; font-weight: 700; color: var(--av-muted);
+        cursor: pointer; font-family: inherit; white-space: nowrap;
+        transition: all .13s;
+      }
+      .av-mob-chip.active { background: rgba(245,166,35,0.14); border-color: rgba(245,166,35,0.30); color: var(--av-gold); }
+
+      .av-main-inner { padding-inline: 12px; }
+      .av-card { border-radius: 14px; padding: 15px 16px; }
+
+      .av-fab {
+        display: flex; position: fixed;
+        bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+        right: 16px; width: 50px; height: 50px;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #ffe0a0, #F5A623 48%, #b8720a);
+        box-shadow: 0 8px 24px rgba(245,166,35,0.38);
+        border: none; cursor: pointer; align-items: center; justify-content: center;
+        z-index: 100; transition: transform .15s;
+      }
+      .av-fab:active { transform: scale(.94); }
+      .av-fab svg { width: 22px; height: 22px; stroke: #08080b; stroke-width: 2.3; fill: none; }
+    }
+    @media (min-width: 761px) {
+      .av-mob-bar { display: none; }
+      .av-fab { display: none; }
+      .av-main-inner { /* no extra padding on desktop */ }
+    }
+  </style>
+</head>
+<body class="avisos-page">
+
+<nav></nav>
+
+<div class="av-shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="av-sidebar">
+
+    <button class="av-compose-btn" id="av-compose-btn" style="display:none" onclick="abrirModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Publicar aviso
+    </button>
+
+    <div class="av-search-wrap">
+      <span class="av-search-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+      </span>
+      <input class="av-search" id="av-search" type="text" placeholder="Buscar aviso…" oninput="setBusqueda(this.value)">
+    </div>
+
+    <!-- Canales -->
+    <div class="av-sb-sec">
+      <span class="av-sb-label">Canales</span>
+      <button class="av-channel active" data-canal="todos"     onclick="setCanal(this)"><span class="av-ch-ico">📢</span><span>Todos los avisos</span><span class="av-ch-cnt" id="cnt-todos"></span></button>
+      <button class="av-channel"        data-canal="direccion" onclick="setCanal(this)"><span class="av-ch-ico">🏛</span><span>Dirección</span><span class="av-ch-cnt" id="cnt-dir"></span></button>
+      <button class="av-channel"        data-canal="docentes"  onclick="setCanal(this)"><span class="av-ch-ico">👨‍🏫</span><span>Docentes</span><span class="av-ch-cnt" id="cnt-doc"></span></button>
+      <button class="av-channel"        data-canal="academico" onclick="setCanal(this)"><span class="av-ch-ico">🎓</span><span>Académico</span><span class="av-ch-cnt" id="cnt-aca"></span></button>
+      <button class="av-channel"        data-canal="eventos"   onclick="setCanal(this)"><span class="av-ch-ico">🗓</span><span>Eventos</span><span class="av-ch-cnt" id="cnt-evt"></span></button>
+      <button class="av-channel"        data-canal="administ"  onclick="setCanal(this)"><span class="av-ch-ico">💼</span><span>Administrativo</span><span class="av-ch-cnt" id="cnt-adm"></span></button>
+    </div>
+
+    <!-- Prioridad -->
+    <div class="av-sb-sec">
+      <span class="av-sb-label">Prioridad</span>
+      <div class="av-chips">
+        <button class="av-chip active" data-p=""             onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--av-muted)"></span>Todas</button>
+        <button class="av-chip p-urg"  data-p="URGENTE"      onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--p-urg-c)"></span>Urgente</button>
+        <button class="av-chip p-imp"  data-p="IMPORTANTE"   onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--p-imp-c)"></span>Importante</button>
+        <button class="av-chip p-aca"  data-p="ACADEMICO"    onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--p-aca-c)"></span>Académico</button>
+        <button class="av-chip p-evt"  data-p="EVENTO"       onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--p-evt-c)"></span>Evento</button>
+        <button class="av-chip p-adm"  data-p="ADMINISTRATIVO" onclick="setPrio(this)"><span class="av-chip-dot" style="background:var(--p-adm-c)"></span>Administrativo</button>
+      </div>
+    </div>
+
+    <!-- Carrera -->
+    <div class="av-sb-sec">
+      <span class="av-sb-label">Carrera</span>
+      <div class="av-careers">
+        <button class="av-career active" data-c=""          onclick="setCarrera(this)">Todas</button>
+        <button class="av-career"        data-c="mi-carrera" onclick="setCarrera(this)">Mi carrera</button>
+        <button class="av-career"        data-c="ISC"  onclick="setCarrera(this)">ISC</button>
+        <button class="av-career"        data-c="ISIC" onclick="setCarrera(this)">ISIC</button>
+        <button class="av-career"        data-c="IGE"  onclick="setCarrera(this)">IGE</button>
+        <button class="av-career"        data-c="IM"   onclick="setCarrera(this)">IM</button>
+        <button class="av-career"        data-c="IQ"   onclick="setCarrera(this)">IQ</button>
+        <button class="av-career"        data-c="LA"   onclick="setCarrera(this)">LA</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="av-main">
+    <!-- Mobile filter bar -->
+    <div class="av-mob-bar" id="av-mob-bar">
+      <button class="av-mob-chip active" data-canal="todos"     onclick="setCanal(this)">📢 Todos</button>
+      <button class="av-mob-chip"        data-canal="direccion" onclick="setCanal(this)">🏛 Dirección</button>
+      <button class="av-mob-chip"        data-canal="docentes"  onclick="setCanal(this)">👨‍🏫 Docentes</button>
+      <button class="av-mob-chip"        data-canal="academico" onclick="setCanal(this)">🎓 Académico</button>
+      <button class="av-mob-chip"        data-canal="eventos"   onclick="setCanal(this)">🗓 Eventos</button>
+      <button class="av-mob-chip"        data-canal="administ"  onclick="setCanal(this)">💼 Adm.</button>
+    </div>
+
+    <div class="av-main-inner">
+      <div class="av-head">
+        <span class="av-head-title" id="av-title">Todos los avisos</span>
+        <span class="av-head-count" id="av-count"></span>
+      </div>
+      <div id="avisos-list"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Mobile FAB (admin) -->
+<button class="av-fab" id="av-fab" style="display:none" onclick="abrirModal()" aria-label="Nuevo aviso">
+  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- COMPOSE MODAL -->
+<div class="av-backdrop" id="av-backdrop" onclick="if(event.target===this)cerrarModal()">
+  <div class="av-modal">
+    <div class="av-modal-head">
+      <span class="av-modal-title">Publicar aviso institucional</span>
+      <button class="av-modal-x" onclick="cerrarModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form onsubmit="crearAviso(event)">
+      <div class="av-fg">
+        <label>Título *</label>
+        <input id="f-titulo" class="av-fi" type="text" placeholder="Ej: Suspensión de clases" required maxlength="255">
+      </div>
+      <div class="av-fg">
+        <label>Contenido *</label>
+        <textarea id="f-contenido" class="av-ft" placeholder="Escribe el aviso completo…" required rows="4"></textarea>
+      </div>
+      <div class="av-row">
+        <div class="av-fg">
+          <label>Dirigido a</label>
+          <select id="f-carrera" class="av-fs">
+            <option value="">Todos</option>
+            <option value="ISC">ISC</option>
+            <option value="ISIC">ISIC</option>
+            <option value="IGE">IGE</option>
+            <option value="IM">IM</option>
+            <option value="IQ">IQ</option>
+            <option value="LA">LA</option>
+          </select>
+        </div>
+        <div class="av-fg">
+          <label>Válido hasta</label>
+          <input id="f-expira" class="av-fi" type="date">
+        </div>
+      </div>
+      <div class="av-fg">
+        <label>Prioridad</label>
+        <div class="av-prio-picker" id="prio-picker">
+          <button type="button" class="av-popt" data-p="URGENTE"        onclick="selPrio(this)"><span class="dot"></span>Urgente</button>
+          <button type="button" class="av-popt" data-p="IMPORTANTE"     onclick="selPrio(this)"><span class="dot"></span>Importante</button>
+          <button type="button" class="av-popt" data-p="ACADEMICO"      onclick="selPrio(this)"><span class="dot"></span>Académico</button>
+          <button type="button" class="av-popt" data-p="EVENTO"         onclick="selPrio(this)"><span class="dot"></span>Evento</button>
+          <button type="button" class="av-popt" data-p="ADMINISTRATIVO" onclick="selPrio(this)"><span class="dot"></span>Adm.</button>
+        </div>
+      </div>
+      <button class="av-submit" id="btn-crear" type="submit">Publicar aviso</button>
+    </form>
+  </div>
+</div>
+
+<script src="/nido-ui.js"></script>
+<script src="/nido-layout.js"></script>
+<script>
+  const API   = "";
+  const token = localStorage.getItem("token")?.trim();
+  if (!token) location.href = "/login.html";
+
+  let yo             = null;
+  let esAdmin        = false;
+  let todosAvisos    = [];
+  let filtroCanal    = "todos";
+  let filtroPrio     = "";
+  let filtroCarrera  = "";
+  let filtroBusqueda = "";
+  let prioSel        = "";
+
+  const CANAL_DEF = {
+    todos:     { label:"Todos los avisos", fn: ()=>true },
+    direccion: { label:"Dirección",        fn: a=>["AUTORIDAD","ADMIN"].includes(a.autorRol||a.creadorRol||"") },
+    docentes:  { label:"Docentes",         fn: a=>(a.autorRol||a.creadorRol||"")==="DOCENTE" },
+    academico: { label:"Académico",        fn: a=>(a.prioridad||"").toUpperCase()==="ACADEMICO" },
+    eventos:   { label:"Eventos",          fn: a=>(a.prioridad||"").toUpperCase()==="EVENTO" },
+    administ:  { label:"Administrativo",   fn: a=>(a.prioridad||"").toUpperCase()==="ADMINISTRATIVO"||["ADMINISTRATIVO","PERSONAL"].includes(a.autorRol||a.creadorRol||"") },
+  };
+
+  function escH(t) {
+    if (!t) return "";
+    return (""+t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("es-MX",{day:"numeric",month:"short",year:"numeric"});
+  }
+  function diasRestantes(iso) { return Math.ceil((new Date(iso)-new Date())/86400000); }
+
+  /* ── FILTERS ── */
+  function setCanal(btn) {
+    filtroCanal = btn.dataset.canal;
+    document.querySelectorAll('[data-canal]').forEach(b=>b.classList.toggle('active', b.dataset.canal===filtroCanal));
+    document.getElementById('av-title').textContent = (CANAL_DEF[filtroCanal]||CANAL_DEF.todos).label;
+    applyFilters();
+  }
+  function setPrio(btn) {
+    filtroPrio = btn.dataset.p || "";
+    document.querySelectorAll('.av-chip').forEach(b=>b.classList.toggle('active', b.dataset.p===filtroPrio));
+    applyFilters();
+  }
+  function setCarrera(btn) {
+    filtroCarrera = btn.dataset.c || "";
+    document.querySelectorAll('.av-career').forEach(b=>b.classList.toggle('active', b.dataset.c===filtroCarrera));
+    applyFilters();
+  }
+  function setBusqueda(val) {
+    filtroBusqueda = val.trim().toLowerCase();
+    applyFilters();
+  }
+
+  /* ── APPLY ── */
+  function applyFilters() {
+    const cFn = (CANAL_DEF[filtroCanal]||CANAL_DEF.todos).fn;
+    const result = todosAvisos.filter(a=>{
+      if (!cFn(a)) return false;
+      if (filtroPrio && (a.prioridad||"").toUpperCase()!==filtroPrio) return false;
+      if (filtroCarrera) {
+        const mc = filtroCarrera==="mi-carrera" ? (yo?.carrera||"") : filtroCarrera;
+        if (mc && a.carrera && a.carrera!==mc) return false;
+        if (mc && !a.carrera) return false;
+      }
+      if (filtroBusqueda) {
+        const hay=((a.titulo||"")+" "+(a.contenido||"")+" "+(a.creadorNombre||a.autorNombre||"")).toLowerCase();
+        if (!hay.includes(filtroBusqueda)) return false;
+      }
+      return true;
+    });
+    const n = result.length;
+    document.getElementById('av-count').textContent = n ? `${n} aviso${n!==1?"s":""}` : "";
+    renderAvisos(result);
+  }
+
+  /* ── COUNTS ── */
+  function updateCounts(avisos) {
+    const pairs = [
+      ["cnt-todos", ()=>avisos.length],
+      ["cnt-dir",   ()=>avisos.filter(CANAL_DEF.direccion.fn).length],
+      ["cnt-doc",   ()=>avisos.filter(CANAL_DEF.docentes.fn).length],
+      ["cnt-aca",   ()=>avisos.filter(CANAL_DEF.academico.fn).length],
+      ["cnt-evt",   ()=>avisos.filter(CANAL_DEF.eventos.fn).length],
+      ["cnt-adm",   ()=>avisos.filter(CANAL_DEF.administ.fn).length],
+    ];
+    pairs.forEach(([id,fn])=>{ const el=document.getElementById(id); if(el) el.textContent=fn()||""; });
+  }
+
+  /* ── BADGES ── */
+  function rolBadge(rol) {
+    if (!rol) return "";
+    const M={AUTORIDAD:["dir","Dirección"],ADMIN:["sys","Sistema"],DOCENTE:["doc","Docente"],ADMINISTRATIVO:["adm","Adm."],PERSONAL:["per","Personal"]};
+    const e=M[rol.toUpperCase()]; if(!e) return "";
+    return `<span class="av-rb ${e[0]}">${e[1]}</span>`;
+  }
+  function prioBadge(p) {
+    if (!p) return "";
+    const M={URGENTE:["urg","🔴 Urgente"],IMPORTANTE:["imp","🟠 Importante"],ACADEMICO:["aca","🔵 Académico"],EVENTO:["evt","🟣 Evento"],ADMINISTRATIVO:["adm","🩵 Administrativo"]};
+    const e=M[p.toUpperCase()]; if(!e) return "";
+    return `<span class="av-pb ${e[0]}">${e[1]}</span>`;
+  }
+  const PCLASS={URGENTE:"p-urg",IMPORTANTE:"p-imp",ACADEMICO:"p-aca",EVENTO:"p-evt",ADMINISTRATIVO:"p-adm"};
+
+  /* ── RENDER ── */
+  function renderAvisos(avisos) {
+    const el=document.getElementById("avisos-list");
+    if(!avisos.length) {
+      el.innerHTML=`<div class="av-empty">
+        <div class="av-empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></div>
+        <div class="av-empty-title">Sin avisos</div>
+        <div class="av-empty-sub">No hay avisos para los filtros actuales.</div>
+      </div>`;
+      return;
+    }
+    const sorted=[...avisos].sort((a,b)=>{
+      if(a.fijado&&!b.fijado)return -1; if(!a.fijado&&b.fijado)return 1;
+      return new Date(b.fecha||b.creadoEn||0)-new Date(a.fecha||a.creadoEn||0);
+    });
+    const pinned=sorted.filter(a=>a.fijado), rest=sorted.filter(a=>!a.fijado);
+    let html="";
+    if(pinned.length) {
+      html+=`<div class="av-pin-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 4-1 1-4 4-2 1-1 1 6 6 1-1 1-2 4-4 1-1M9 15l-5 5"/></svg>Fijados</div>`;
+      html+=pinned.map(a=>card(a,true)).join("");
+    }
+    html+=rest.map(a=>card(a,false)).join("");
+    el.innerHTML=html;
+  }
+
+  function card(a, pinned) {
+    const prio=(a.prioridad||"").toUpperCase();
+    const autor=a.creadorNombre||a.autorNombre||"Desconocido";
+    const rol=a.autorRol||a.creadorRol||"";
+    const pc=PCLASS[prio]||"";
+    const cb=a.carrera?`<span class="av-cb">${escH(a.carrera)}</span>`:`<span class="av-cb global">Todos</span>`;
+    let expiry="";
+    if(a.expiraEn&&!a.expirado){
+      const d=diasRestantes(a.expiraEn);
+      expiry=`<span class="av-expiry ok">⏳ ${d<=0?"Expira hoy":d===1?"Expira mañana":"Expira en "+d+" días"}</span>`;
+    } else if(a.expirado) {
+      expiry=`<span class="av-expiry">Venció ${fmtDate(a.expiraEn)}</span>`;
+    }
+    const reads=a.lecturas!=null?`<span class="av-reads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>${a.lecturas} ${a.lecturas===1?"lectura":"lecturas"}</span>`:"";
+    const delBtn=esAdmin?`<button class="av-del-btn" onclick="eliminarAviso(${a.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>Eliminar</button>`:"";
+    return `<div class="av-card${pinned?" pinned":""}${a.expirado?" expirado":""}${pc?" "+pc:""}">
+      <div class="av-card-top">
+        <div class="av-badges">
+          ${pinned?'<span class="av-pb pin">📌 Fijado</span>':""}
+          ${prioBadge(prio)}
+          ${cb}
+        </div>
+        ${delBtn}
+      </div>
+      <div class="av-card-title">${escH(a.titulo)}</div>
+      <div class="av-card-body clamp" id="cb-${a.id}">${escH(a.contenido)}</div>
+      <button class="av-expand-btn" onclick="toggleExpand(${a.id},this)">Ver más ▾</button>
+      <div class="av-card-foot">
+        <div class="av-meta">
+          <span class="av-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+            ${escH(autor)}${rolBadge(rol)}
+          </span>
+          <span class="av-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            ${fmtDate(a.fecha||a.creadoEn)}
+          </span>
+          ${expiry}
+        </div>
+        ${reads}
+      </div>
+    </div>`;
+  }
+
+  function toggleExpand(id, btn) {
+    const el=document.getElementById("cb-"+id); if(!el) return;
+    const c=el.classList.toggle("clamp");
+    btn.textContent=c?"Ver más ▾":"Ver menos ▴";
+  }
+
+  /* ── MODAL ── */
+  function abrirModal()  { document.getElementById("av-backdrop").classList.add("open"); }
+  function cerrarModal() { document.getElementById("av-backdrop").classList.remove("open"); }
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") cerrarModal(); });
+
+  function selPrio(btn) {
+    document.querySelectorAll(".av-popt").forEach(b=>b.classList.remove("sel"));
+    btn.classList.add("sel");
+    prioSel=btn.dataset.p;
+  }
+
+  /* ── INIT ── */
+  async function init() {
+    const res=await fetch(`${API}/usuarios/me`,{headers:{Authorization:"Bearer "+token}});
+    if(!res.ok){location.href="/login.html";return;}
+    yo=await res.json();
+    esAdmin=yo.rol==="AUTORIDAD"||yo.rol==="ADMIN";
+    if(esAdmin){
+      document.getElementById("av-compose-btn").style.display="";
+      const fab=document.getElementById("av-fab"); if(fab) fab.style.display="";
+    }
+    await cargarAvisos();
+  }
+
+  async function cargarAvisos() {
+    document.getElementById("avisos-list").innerHTML=
+      Array(4).fill(`<div class="av-card" style="pointer-events:none;animation:none">
+        <div style="height:12px;border-radius:6px;background:var(--av-border);width:28%;margin-bottom:12px"></div>
+        <div style="height:17px;border-radius:8px;background:var(--av-border);width:65%;margin-bottom:8px"></div>
+        <div style="height:11px;border-radius:6px;background:var(--av-border);width:90%;margin-bottom:5px"></div>
+        <div style="height:11px;border-radius:6px;background:var(--av-border);width:55%"></div>
+      </div>`).join("");
+    const res=await fetch(`${API}/avisos`,{headers:{Authorization:"Bearer "+token}});
+    todosAvisos=res.ok?await res.json():[];
+    updateCounts(todosAvisos);
+    applyFilters();
+  }
+
+  async function crearAviso(e) {
+    e.preventDefault();
+    const btn=document.getElementById("btn-crear");
+    btn.disabled=true; btn.textContent="Publicando…";
+    const body={
+      titulo:    document.getElementById("f-titulo").value.trim(),
+      contenido: document.getElementById("f-contenido").value.trim(),
+      carrera:   document.getElementById("f-carrera").value||null,
+      expiraEn:  document.getElementById("f-expira").value||null,
+      prioridad: prioSel||null,
+    };
+    const res=await fetch(`${API}/avisos`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
+      body:JSON.stringify(body)
+    });
+    btn.disabled=false; btn.textContent="Publicar aviso";
+    if(!res.ok){ NidoUI?.toast?.error?.("Error al publicar")??alert("Error: "+await res.text()); return; }
+    cerrarModal();
+    NidoUI?.toast?.ok?.("Aviso publicado correctamente");
+    ["f-titulo","f-contenido","f-expira"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("f-carrera").value="";
+    prioSel=""; document.querySelectorAll(".av-popt").forEach(b=>b.classList.remove("sel"));
+    await cargarAvisos();
+  }
+
+  async function eliminarAviso(id) {
+    if(!confirm("¿Eliminar este aviso?")) return;
+    const res=await fetch(`${API}/avisos/${id}`,{method:"DELETE",headers:{Authorization:"Bearer "+token}});
+    if(!res.ok){ NidoUI?.toast?.error?.("Error al eliminar")??alert("Error al eliminar"); return; }
+    NidoUI?.toast?.ok?.("Aviso eliminado");
+    await cargarAvisos();
+  }
+
+  init();
+</script>
+</body>
+</html>

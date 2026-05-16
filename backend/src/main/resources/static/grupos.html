@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Grupos</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 56px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position: sticky;
+      top: calc(var(--nav-h) + 16px);
+      max-height: calc(100vh - var(--nav-h) - 32px);
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--gray-border); border-radius: 4px; }
+
+    .sidebar-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 18px;
+    }
+
+    .sidebar-title {
+      font-size: .85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--gray-text); margin-bottom: 12px;
+    }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+    .tab {
+      flex: 1; padding: 7px 0; border-radius: 8px; border: none;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      background: var(--gray-bg); color: var(--gray-text);
+      transition: background .15s, color .15s;
+    }
+    .tab.active { background: var(--gold); color: var(--navy); }
+
+    /* ── GRUPO CARD (sidebar) ── */
+    .grupo-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 8px; cursor: pointer;
+      transition: background .15s; border: 1.5px solid transparent;
+    }
+    .grupo-item:hover { background: var(--gray-bg); }
+    .grupo-item.active { background: var(--gold-light); border-color: var(--gold); }
+    .grupo-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--navy), #2C2150);
+      color: var(--gold); font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-weight: 800;
+    }
+    .grupo-info { flex: 1; min-width: 0; }
+    .grupo-name { font-size: .88rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .grupo-meta { font-size: .73rem; color: var(--gray-text); margin-top: 1px; }
+    .tipo-badge {
+      font-size: .65rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 10px; white-space: nowrap;
+    }
+    .tipo-carrera { background: #E3F2FD; color: #1565C0; }
+    .tipo-materia { background: #E8F5E9; color: #2E7D32; }
+    .tipo-general { background: var(--gold-light); color: var(--gold-dark); }
+
+    .grupo-item-empty { padding: 20px; text-align: center; color: var(--gray-text); font-size: .85rem; }
+
+    /* ── BTN CREATE ── */
+    .btn-create-grupo {
+      width: 100%; padding: 10px; border-radius: 8px; border: 1.5px dashed var(--gold);
+      background: none; color: var(--navy); font-size: .88rem; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-create-grupo:hover { background: var(--gold-light); }
+
+    /* ── MAIN PANEL ── */
+    .main-panel { min-width: 0; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 60px 24px;
+      text-align: center; color: var(--gray-text);
+    }
+    .empty-state .icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+    .empty-state p { font-size: .95rem; }
+
+    /* ── GROUP HEADER ── */
+    .group-header {
+      background: linear-gradient(135deg, var(--navy) 0%, #2C2150 60%, var(--gold-dark) 100%);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 24px 28px; margin-bottom: 14px; color: var(--white);
+    }
+    .group-header-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .group-header-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: rgba(245,166,35,.25); border: 2px solid var(--gold);
+      color: var(--gold); font-size: 1.6rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .group-header-info { flex: 1; min-width: 0; }
+    .group-header-name { font-size: 1.4rem; font-weight: 800; letter-spacing: -.3px; margin-bottom: 4px; }
+    .group-header-desc { font-size: .88rem; color: rgba(255,255,255,.75); line-height: 1.5; margin-bottom: 8px; }
+    .group-header-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: .78rem; color: rgba(255,255,255,.6); }
+    .group-header-meta span strong { color: var(--gold); }
+    .group-header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+
+    .btn-join {
+      padding: 8px 20px; border-radius: 20px; border: 1.5px solid var(--gold);
+      font-size: .85rem; font-weight: 700; cursor: pointer; transition: all .15s;
+    }
+    .btn-join.seguir { background: var(--gold); color: var(--navy); }
+    .btn-join.seguir:hover { background: var(--gold-dark); }
+    .btn-join.siguiendo { background: transparent; color: var(--gold); }
+    .btn-join.siguiendo:hover { background: rgba(245,166,35,.1); }
+    .btn-join:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-del-group {
+      padding: 8px 14px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.3);
+      background: transparent; color: rgba(255,255,255,.7);
+      font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .15s;
+    }
+    .btn-del-group:hover { background: rgba(255,0,0,.15); border-color: #f88; color: #f88; }
+
+    /* ── COMPOSE ── */
+    .compose-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 14px;
+    }
+    .compose-top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+    .compose-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .82rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .compose-textarea {
+      flex: 1; padding: 10px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .92rem; font-family: inherit; color: var(--text);
+      resize: none; outline: none; min-height: 52px; transition: border-color .2s, box-shadow .2s;
+      background: var(--gray-bg);
+    }
+    .compose-textarea:focus {
+      border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,.18);
+      background: var(--white); min-height: 80px;
+    }
+    .compose-footer { display: flex; justify-content: flex-end; }
+    .btn-publish {
+      padding: 8px 22px; border-radius: 20px; border: none;
+      background: var(--gold); color: var(--navy);
+      font-size: .88rem; font-weight: 700; cursor: pointer; transition: background .15s;
+    }
+    .btn-publish:hover { background: var(--gold-dark); }
+    .btn-publish:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── POSTS ── */
+    .post-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 12px;
+    }
+    .post-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .post-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      font-size: .75rem; font-weight: 700; color: #fff;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .post-author { font-size: .92rem; font-weight: 700; color: var(--text); }
+    .post-date   { font-size: .73rem; color: var(--gray-text); margin-top: 1px; }
+    .post-content {
+      font-size: .93rem; line-height: 1.6; color: var(--text);
+      word-break: break-word; white-space: pre-wrap;
+    }
+    .post-img {
+      margin-top: 12px; width: 100%; max-height: 400px;
+      object-fit: cover; border-radius: 8px; cursor: zoom-in;
+    }
+    .posts-empty { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 36px; text-align: center; color: var(--gray-text); font-size: .9rem; }
+
+    /* ── MEMBERS ── */
+    .members-toggle {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden;
+    }
+    .members-toggle-btn {
+      width: 100%; padding: 13px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      border: none; background: none; cursor: pointer; font-size: .88rem; font-weight: 700; color: var(--text);
+    }
+    .members-toggle-btn:hover { background: var(--gray-bg); }
+    .members-panel { display: none; padding: 0 18px 14px; }
+    .members-panel.open { display: block; }
+    .member-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 4px; border-radius: 8px; transition: background .12s;
+    }
+    .member-row:hover { background: var(--gray-bg); }
+    .member-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      font-size: .72rem; font-weight: 700; color: #fff;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .member-name { font-size: .88rem; font-weight: 600; color: var(--text); }
+    .member-role {
+      margin-left: auto; font-size: .68rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 10px; background: var(--gold-light); color: var(--gold-dark);
+    }
+    .member-role.admin { background: var(--navy); color: var(--gold); }
+    .btn-kick {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: none; color: var(--gray-text); font-size: .85rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .12s, color .12s; flex-shrink: 0;
+    }
+    .btn-kick:hover { background: #FFF0F0; color: #C92A2A; }
+
+    /* ── MODAL CREAR GRUPO ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 500;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: var(--radius);
+      width: 100%; max-width: 440px; margin: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.22); overflow: hidden;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, var(--navy) 0%, #2C2150 100%);
+      padding: 18px 22px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 1.05rem; font-weight: 800; color: var(--white); }
+    .modal-close {
+      background: none; border: none; color: rgba(255,255,255,.7);
+      font-size: 1.3rem; cursor: pointer; line-height: 1; padding: 0 4px;
+    }
+    .modal-close:hover { color: var(--white); }
+    .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+    .field-label { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-text); margin-bottom: 5px; }
+    .field-input, .field-select, .field-textarea {
+      width: 100%; padding: 10px 13px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .93rem; font-family: inherit; color: var(--text);
+      outline: none; background: var(--gray-bg); transition: border-color .2s, box-shadow .2s;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,166,35,.18); background: var(--white);
+    }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer { padding: 0 22px 22px; display: flex; justify-content: flex-end; gap: 10px; }
+    .btn-cancel { padding: 9px 20px; border-radius: 8px; border: none; background: var(--gray-bg); color: var(--text); font-size: .88rem; font-weight: 600; cursor: pointer; }
+    .btn-cancel:hover { background: #dde0e4; }
+    .btn-save { padding: 9px 22px; border-radius: 8px; border: none; background: var(--gold); color: var(--navy); font-size: .88rem; font-weight: 700; cursor: pointer; transition: background .15s; }
+    .btn-save:hover { background: var(--gold-dark); }
+    .btn-save:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── SKELETON ── */
+    .skeleton { background: linear-gradient(90deg, #e8eaed 25%, #f4f5f6 50%, #e8eaed 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-line { height: 13px; margin-bottom: 8px; }
+
+    /* ── LIGHTBOX ── */
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 700; align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 4px 40px rgba(0,0,0,.5); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+    }
+    @media (max-width: 760px) {
+      /* Group list items */
+      .grupo-item { min-height: 60px; padding: 12px 14px; gap: 10px; }
+      .grupo-icon { width: 48px; height: 48px; font-size: 1.3rem; flex-shrink: 0; }
+      .grupo-name { font-size: .95rem; }
+      /* Group header */
+      .group-header { padding: 16px 14px; }
+      .group-header-name { font-size: 1.15rem; }
+      .group-header-actions { gap: 6px; }
+      .group-header-actions button, .group-header-actions a {
+        min-height: 44px; padding: 0 16px;
+      }
+      /* Create modal */
+      .modal-content { padding: 18px 14px; }
+      .modal-title { font-size: 1.05rem; }
+      .field-input, .field-textarea, .field-select {
+        min-height: 46px; font-size: 1rem; padding: 10px 12px;
+      }
+      .btn-save { min-height: 48px; font-size: 1rem; }
+      /* Tabs en sidebar */
+      .sidebar-tabs { display: flex; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+      .sidebar-tabs::-webkit-scrollbar { display: none; }
+      .tab { flex-shrink: 0; min-height: 40px; padding: 0 14px; }
+    }
+  
+    /* ── NAVBAR COMPACTO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; z-index: 200;
+    }
+    .nav-logo {
+      font-size: 1.35rem; font-weight: 800; color: var(--navy);
+      text-decoration: none; letter-spacing: -.5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .nav-logo span { background: var(--gold); color: var(--navy); padding: 1px 7px; border-radius: 6px; }
+    .nav-search {
+      flex: 1; position: relative; max-width: 420px; margin: 0 auto;
+    }
+    .nav-search-input {
+      width: 100%; padding: 7px 36px 7px 14px;
+      border: 1.5px solid var(--gray-border); border-radius: 20px;
+      font-size: .875rem; background: var(--gray-bg); outline: none;
+      transition: border-color .18s;
+    }
+    .nav-search-input:focus { border-color: var(--gold); }
+    .nav-search-icon {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; font-size: .9rem;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .nav-icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; text-decoration: none; color: var(--navy);
+      background: none; border: none; cursor: pointer;
+      transition: background .15s; flex-shrink: 0;
+    }
+    .nav-icon-btn:hover { background: var(--gold-light); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* + dropdown */
+    .nav-plus-wrap { position: relative; }
+    .nav-plus-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: 1.25rem; font-weight: 700; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-plus-btn:hover { background: var(--gold-dark); }
+    .nav-plus-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--white); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15); min-width: 180px;
+      padding: 6px 0; z-index: 300; animation: nido-fade-up .2s ease both;
+    }
+    .nav-plus-wrap.open .nav-plus-dropdown { display: block; }
+    .nav-plus-dropdown a {
+      display: block; padding: 9px 18px;
+      font-size: .875rem; font-weight: 600; color: var(--navy);
+      text-decoration: none; transition: background .12s;
+    }
+    .nav-plus-dropdown a:hover { background: var(--gold-light); }
+    /* close dropdown when clicking outside */
+    .nav-plus-wrap:not(.open) .nav-plus-dropdown { display: none; }
+
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+    <div class="nav-search">
+      <input class="nav-search-input" type="text" id="nav-q"
+             placeholder="Buscar en NidoTESVG…"
+             onkeydown="if(event.key==='Enter'&&this.value.trim())location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+      <span class="nav-search-icon">🔍</span>
+    </div>
+    <div class="nav-actions">
+      <!-- + menu -->
+      <div class="nav-plus-wrap">
+        <button class="nav-plus-btn" onclick="this.parentElement.classList.toggle('open')" title="Más secciones">⊕</button>
+        <div class="nav-plus-dropdown">
+          <a href="/grupos.html">👥 Grupos</a>
+          <a href="/calendario.html">📅 NidoEventos</a>
+          <a href="/avisos.html">📋 Avisos</a>
+          <a href="/insignias.html">🏅 Insignias</a>
+          <a href="/ranking.html">🏆 Ranking</a>
+          <a href="/recursos.html">📚 NidoApuntes</a>
+        </div>
+      </div>
+      <a class="nav-icon-btn" href="/correo.html" title="PlumasMail">✉️</a>
+      <a class="nav-icon-btn" href="/chat.html" title="HalconMensajero">💬</a>
+      <a class="nav-icon-btn" href="/configuracion.html" title="Configuración">⚙️</a>
+      <a class="nav-icon-btn" href="/perfil.html" title="Mi perfil">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+      <button class="nav-icon-btn nav-logout-btn" onclick="logout()" title="Salir">🚪</button>
+    </div>
+  </nav>
+
+  <!-- MODAL CREAR GRUPO -->
+  <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Crear nuevo grupo</span>
+        <button class="modal-close" onclick="cerrarModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="field-label">Nombre del grupo *</div>
+          <input class="field-input" id="m-nombre" placeholder="Ej: Ingeniería Industrial 2024" maxlength="100">
+        </div>
+        <div>
+          <div class="field-label">Tipo</div>
+          <select class="field-select" id="m-tipo">
+            <option value="general">General</option>
+            <option value="carrera">Por carrera</option>
+            <option value="materia">Por materia</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Descripción</div>
+          <textarea class="field-textarea" id="m-desc" placeholder="¿De qué trata este grupo?"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-save" id="btn-save-grupo" onclick="crearGrupo()">Crear grupo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <!-- LAYOUT -->
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <div class="tabs">
+          <button class="tab active" id="tab-mis"    onclick="switchTab('mis')">Mis grupos</button>
+          <button class="tab"        id="tab-todos"  onclick="switchTab('todos')">Explorar</button>
+        </div>
+        <div id="grupos-lista">
+          <div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div class="skeleton" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton sk-line" style="width:70%"></div><div class="skeleton sk-line" style="width:40%"></div></div></div>
+          <div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div class="skeleton" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton sk-line" style="width:55%"></div><div class="skeleton sk-line" style="width:35%"></div></div></div>
+          <div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div class="skeleton" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton sk-line" style="width:65%"></div><div class="skeleton sk-line" style="width:45%"></div></div></div>
+        </div>
+        <button class="btn-create-grupo" style="margin-top:12px" onclick="abrirModal()">＋ Crear grupo</button>
+      </div>
+    </aside>
+
+    <!-- MAIN PANEL -->
+    <div class="main-panel" id="main-panel">
+      <div class="empty-state">
+        <span class="icon">👥</span>
+        <p>Selecciona un grupo para ver su contenido<br>o crea uno nuevo para tu carrera o materia.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/nido-ui.js">
+    // Close + dropdown on outside click
+    document.addEventListener('click', function(e) {
+      const w = document.querySelector('.nav-plus-wrap');
+      if (w && !w.contains(e.target)) w.classList.remove('open');
+    });
+</script>
+<script>
+    const token = localStorage.getItem("token")?.trim();
+    if (!token) location.href = "/login.html";
+
+    let currentTab    = "mis";
+    let currentGrupoId = null;
+    let todosGrupos   = [];
+    let miId          = null;
+    let miNombre      = null;
+    let miFoto        = null;
+
+    function logout() { localStorage.removeItem("token"); location.href = "/login.html"; }
+
+    function initials(s) { return (s || "?").split(/[@.\s]/)[0].slice(0,2).toUpperCase(); }
+    function hue(s) { let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))&0xFFFFFF; return `hsl(${h%360},60%,40%)`; }
+    function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    function timeAgo(d) {
+      if (!d) return "";
+      const diff = (Date.now() - new Date(d)) / 1000;
+      if (diff < 60) return "Justo ahora";
+      if (diff < 3600) return `Hace ${Math.floor(diff/60)} min`;
+      if (diff < 86400) return `Hace ${Math.floor(diff/3600)} h`;
+      return new Date(d).toLocaleDateString("es", { day:"numeric", month:"short", year:"numeric" });
+    }
+    function tipoLabel(t) { return { carrera:"Carrera", materia:"Materia", general:"General" }[t] ?? t; }
+    function tipoBadge(t) { return `<span class="tipo-badge tipo-${t}">${tipoLabel(t)}</span>`; }
+    function grupoIcon(g) { return (g.nombre||"G")[0].toUpperCase(); }
+    function avatarStyle(foto, nombre) {
+      return foto ? `background:url('${foto}') center/cover no-repeat` : `background:${hue(nombre||"u")}`;
+    }
+
+    async function api(method, path, body) {
+      const opts = { method, headers: { Authorization: "Bearer " + token } };
+      if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+      const r = await fetch("" + path, opts);
+      if (r.status === 401) { location.href = "/login.html"; return null; }
+      return r;
+    }
+
+    async function init() {
+      const r = await api("GET", "/usuarios/perfil");
+      if (r && r.ok) {
+        const u = await r.json();
+        miId = u.id; miNombre = u.username || u.correo; miFoto = u.fotoPerfil || null;
+      }
+      await cargarGrupos();
+
+      // Si hay ?g= en la URL, abrir ese grupo
+      const params = new URLSearchParams(location.search);
+      const gId = params.get("g");
+      if (gId) abrirGrupo(Number(gId));
+    }
+
+    async function cargarGrupos() {
+      const r = await api("GET", "/grupos");
+      if (!r || !r.ok) return;
+      todosGrupos = await r.json();
+      renderLista();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById("tab-mis").classList.toggle("active", tab === "mis");
+      document.getElementById("tab-todos").classList.toggle("active", tab === "todos");
+      renderLista();
+    }
+
+    function renderLista() {
+      const lista = document.getElementById("grupos-lista");
+      const grupos = currentTab === "mis"
+        ? todosGrupos.filter(g => g.soyMiembro)
+        : todosGrupos;
+
+      if (!grupos.length) {
+        lista.innerHTML = `<div class="grupo-item-empty">${currentTab === "mis"
+          ? "Aún no perteneces a ningún grupo. ¡Explora y únete!"
+          : "No hay grupos creados todavía."}</div>`;
+        return;
+      }
+
+      lista.innerHTML = grupos.map(g => `
+        <div class="grupo-item${g.id === currentGrupoId ? ' active' : ''}" onclick="abrirGrupo(${g.id})">
+          <div class="grupo-icon">${grupoIcon(g)}</div>
+          <div class="grupo-info">
+            <div class="grupo-name">${esc(g.nombre)}</div>
+            <div class="grupo-meta">${tipoBadge(g.tipo)} · ${g.totalMiembros} miembro${g.totalMiembros !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function abrirGrupo(id) {
+      currentGrupoId = id;
+      renderLista();
+      history.replaceState(null, "", "?g=" + id);
+
+      const panel = document.getElementById("main-panel");
+      panel.innerHTML = `
+        <div class="group-header">
+          <div class="skeleton sk-line" style="width:200px;height:24px;margin-bottom:8px"></div>
+          <div class="skeleton sk-line" style="width:300px;height:14px"></div>
+        </div>
+        ${[0,1,2].map(()=>`<div class="post-card"><div class="skeleton sk-line" style="width:60%"></div><div class="skeleton sk-line" style="width:90%"></div></div>`).join("")}
+      `;
+
+      const r = await api("GET", `/grupos/${id}`);
+      if (!r || !r.ok) {
+        panel.innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><p>No se pudo cargar el grupo.</p></div>`;
+        return;
+      }
+      const g = await r.json();
+      renderGrupo(g);
+    }
+
+    function renderGrupo(g) {
+      const panel = document.getElementById("main-panel");
+      const esMiembro = g.soyMiembro;
+      const esAdmin   = g.miRol === "admin";
+
+      const joinBtn = `
+        <button class="btn-join ${esMiembro ? 'siguiendo' : 'seguir'}"
+          id="btn-join-${g.id}" onclick="toggleUnirse(${g.id})">
+          ${esMiembro ? (esAdmin ? '👑 Admin' : '✓ Miembro') : '＋ Unirse'}
+        </button>`;
+      const delBtn = esAdmin ? `<button class="btn-del-group" onclick="eliminarGrupo(${g.id})">🗑 Eliminar grupo</button>` : '';
+
+      // Miembros
+      const membersHtml = g.miembros.map(m => {
+        const nombre = m.nombre || "Usuario";
+        const bg = avatarStyle(m.fotoPerfil, nombre);
+        return `
+          <div class="member-row">
+            <div class="member-avatar" style="${bg}">${m.fotoPerfil ? '' : initials(nombre)}</div>
+            <div>
+              <div class="member-name">${esc(nombre)}</div>
+              ${m.carrera ? `<div style="font-size:.72rem;color:var(--gray-text)">${esc(m.carrera)}</div>` : ''}
+            </div>
+            <span class="member-role${m.rol === 'admin' ? ' admin' : ''}">${m.rol === 'admin' ? 'Admin' : 'Miembro'}</span>
+            ${esAdmin && m.usuarioId !== miId ? `<button class="btn-kick" onclick="expulsar(${g.id},${m.usuarioId})" title="Expulsar">×</button>` : ''}
+          </div>`;
+      }).join("");
+
+      // Posts
+      const postsHtml = g.posts.length ? g.posts.map(p => {
+        const bg = avatarStyle(p.autorFoto, p.autorNombre);
+        return `
+          <div class="post-card">
+            <div class="post-head">
+              <div class="post-avatar" style="${bg}">${p.autorFoto ? '' : initials(p.autorNombre)}</div>
+              <div>
+                <div class="post-author">${esc(p.autorNombre)}</div>
+                <div class="post-date">${timeAgo(p.fecha)}</div>
+              </div>
+            </div>
+            ${p.contenido ? `<p class="post-content">${esc(p.contenido)}</p>` : ''}
+            ${p.imagenUrl ? `<img class="post-img" src="${p.imagenUrl}" alt="imagen" onclick="abrirLightbox('${p.imagenUrl}')">` : ''}
+          </div>`;
+      }).join("") : `<div class="posts-empty">Aún no hay publicaciones en este grupo.</div>`;
+
+      // Compose (solo si es miembro)
+      const myBg = avatarStyle(miFoto, miNombre || "Yo");
+      const composeHtml = esMiembro ? `
+        <div class="compose-card">
+          <div class="compose-top">
+            <div class="compose-avatar" style="${myBg}">${miFoto ? '' : initials(miNombre || 'Yo')}</div>
+            <textarea class="compose-textarea" id="compose-text-${g.id}"
+              placeholder="Escribe algo para el grupo…"
+              oninput="autoResize(this)"></textarea>
+          </div>
+          <div class="compose-footer">
+            <button class="btn-publish" id="btn-pub-${g.id}" onclick="publicarEnGrupo(${g.id})">Publicar</button>
+          </div>
+        </div>` : '';
+
+      panel.innerHTML = `
+        <div class="group-header">
+          <div class="group-header-top">
+            <div style="display:flex;gap:14px;align-items:flex-start;flex:1;min-width:0">
+              <div class="group-header-icon">${grupoIcon(g)}</div>
+              <div class="group-header-info">
+                <div class="group-header-name">${esc(g.nombre)}</div>
+                ${g.descripcion ? `<div class="group-header-desc">${esc(g.descripcion)}</div>` : ''}
+                <div class="group-header-meta">
+                  ${tipoBadge(g.tipo)}
+                  <span><strong>${g.totalMiembros}</strong> miembro${g.totalMiembros !== 1 ? 's' : ''}</span>
+                  <span>Creado por <strong>${esc(g.creadorNombre)}</strong></span>
+                  <span>${timeAgo(g.fecha)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="group-header-actions">
+              ${joinBtn}
+              ${delBtn}
+            </div>
+          </div>
+        </div>
+
+        <div class="members-toggle">
+          <button class="members-toggle-btn" onclick="toggleMiembros(this)">
+            <span>👥 Miembros (${g.totalMiembros})</span>
+            <span id="arrow-miembros">▾</span>
+          </button>
+          <div class="members-panel" id="panel-miembros">
+            ${membersHtml}
+          </div>
+        </div>
+
+        ${composeHtml}
+
+        <div id="posts-container-${g.id}">
+          ${postsHtml}
+        </div>
+      `;
+    }
+
+    function toggleMiembros(btn) {
+      const panel = document.getElementById("panel-miembros");
+      const arrow = document.getElementById("arrow-miembros");
+      panel.classList.toggle("open");
+      arrow.textContent = panel.classList.contains("open") ? "▴" : "▾";
+    }
+
+    async function toggleUnirse(grupoId) {
+      const btn = document.getElementById("btn-join-" + grupoId);
+      if (btn) btn.disabled = true;
+      const r = await api("POST", `/grupos/${grupoId}/unirse`);
+      if (btn) btn.disabled = false;
+      if (!r) return;
+      if (r.status === 409) { const msg = await r.text(); alert(msg); return; }
+      if (!r.ok) { alert("Error al procesar la solicitud."); return; }
+      await cargarGrupos();
+      abrirGrupo(grupoId);
+    }
+
+    async function publicarEnGrupo(grupoId) {
+      const textarea = document.getElementById("compose-text-" + grupoId);
+      const btn      = document.getElementById("btn-pub-" + grupoId);
+      const contenido = textarea.value.trim();
+      if (!contenido) return;
+      btn.disabled = true; btn.textContent = "Publicando…";
+      const r = await api("POST", `/grupos/${grupoId}/publicar`, { contenido });
+      btn.disabled = false; btn.textContent = "Publicar";
+      if (!r || !r.ok) { alert("Error al publicar."); return; }
+      const p = await r.json();
+      textarea.value = ""; textarea.style.minHeight = "";
+      const container = document.getElementById("posts-container-" + grupoId);
+      if (!container) return;
+      const bg = avatarStyle(p.autorFoto, p.autorNombre);
+      const newPost = document.createElement("div");
+      newPost.className = "post-card";
+      newPost.innerHTML = `
+        <div class="post-head">
+          <div class="post-avatar" style="${bg}">${p.autorFoto ? '' : initials(p.autorNombre)}</div>
+          <div>
+            <div class="post-author">${esc(p.autorNombre)}</div>
+            <div class="post-date">Justo ahora</div>
+          </div>
+        </div>
+        ${p.contenido ? `<p class="post-content">${esc(p.contenido)}</p>` : ''}
+      `;
+      container.insertBefore(newPost, container.firstChild);
+      // Quitar "sin publicaciones" si existía
+      const empty = container.querySelector(".posts-empty");
+      if (empty) empty.remove();
+    }
+
+    async function eliminarGrupo(grupoId) {
+      if (!confirm("¿Eliminar este grupo? Esta acción no se puede deshacer.")) return;
+      const r = await api("DELETE", `/grupos/${grupoId}`);
+      if (!r || !r.ok) { alert("No se pudo eliminar el grupo."); return; }
+      currentGrupoId = null;
+      history.replaceState(null, "", location.pathname);
+      document.getElementById("main-panel").innerHTML = `
+        <div class="empty-state"><span class="icon">✅</span><p>Grupo eliminado correctamente.</p></div>`;
+      await cargarGrupos();
+    }
+
+    async function expulsar(grupoId, usuarioId) {
+      if (!confirm("¿Expulsar a este miembro del grupo?")) return;
+      const r = await api("DELETE", `/grupos/${grupoId}/miembro/${usuarioId}`);
+      if (!r || !r.ok) { alert("No se pudo expulsar al miembro."); return; }
+      abrirGrupo(grupoId);
+    }
+
+    // ── MODAL CREAR GRUPO ──
+    function abrirModal() {
+      document.getElementById("modal-overlay").classList.add("open");
+      document.getElementById("m-nombre").focus();
+    }
+    function cerrarModal() {
+      document.getElementById("modal-overlay").classList.remove("open");
+      document.getElementById("m-nombre").value = "";
+      document.getElementById("m-desc").value   = "";
+      document.getElementById("m-tipo").value   = "general";
+    }
+
+    async function crearGrupo() {
+      const nombre = document.getElementById("m-nombre").value.trim();
+      const desc   = document.getElementById("m-desc").value.trim();
+      const tipo   = document.getElementById("m-tipo").value;
+      if (!nombre) { document.getElementById("m-nombre").focus(); return; }
+      const btn = document.getElementById("btn-save-grupo");
+      btn.disabled = true; btn.textContent = "Creando…";
+      const r = await api("POST", "/grupos", { nombre, descripcion: desc, tipo });
+      btn.disabled = false; btn.textContent = "Crear grupo";
+      if (!r || !r.ok) { alert("Error al crear el grupo."); return; }
+      const g = await r.json();
+      cerrarModal();
+      await cargarGrupos();
+      switchTab("mis");
+      abrirGrupo(g.id);
+    }
+
+    // ── HELPERS ──
+    function autoResize(el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+
+    function abrirLightbox(url) {
+      document.getElementById("lightbox-img").src = url;
+      document.getElementById("lightbox").classList.add("open");
+    }
+
+    init();
+  </script>
+</body>
+</html>
