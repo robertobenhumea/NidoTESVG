@@ -116,6 +116,40 @@ async function networkFirst(req, cacheName) {
   }
 }
 
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { body: e.data?.text() || '' }; }
+
+  const title   = data.title || 'NidoTESVG';
+  const options = {
+    body:    data.body  || '',
+    icon:    '/icons/icon-192.png',
+    badge:   '/icons/icon-72.png',
+    data:    { url: data.url || '/home.html' },
+    tag:     'nido-notif',
+    renotify: true,
+    vibrate: [200, 100, 200],
+  };
+
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/home.html';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
+});
+
 async function networkFirstHTML(req) {
   try {
     const res = await fetch(req);

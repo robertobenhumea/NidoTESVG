@@ -67,7 +67,8 @@ public class SecurityConfig {
                         "/insignias/**",
                         "/recursos/**",
                         "/ranking/**",
-                        "/market/**"
+                        "/market/**",
+                        "/push/**"
                 ).authenticated()
                 .anyRequest().permitAll()
             )

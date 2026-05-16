@@ -7,10 +7,84 @@
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then(function (reg) {
           setInterval(function () { reg.update(); }, 1800000);
+          schedulePushSubscription(reg);
         })
         .catch(function () {});
     });
   }
+
+  // ── Web Push subscription ────────────────────────────────────────────────
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var output = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+
+  function schedulePushSubscription(reg) {
+    if (!('PushManager' in window)) return;
+    var token = localStorage.getItem('nido_token');
+    if (!token) return;
+    // Defer subscription until after page is interactive
+    setTimeout(function () { trySubscribePush(reg); }, 3000);
+  }
+
+  function trySubscribePush(reg) {
+    if (Notification.permission === 'denied') return;
+
+    fetch('/push/vapid-public-key', {
+      headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('nido_token') || '') }
+    })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data || !data.publicKey) return;
+      return reg.pushManager.getSubscription().then(function (existing) {
+        if (existing) return sendSubscriptionToServer(existing);
+        return Notification.requestPermission().then(function (permission) {
+          if (permission !== 'granted') return;
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(data.publicKey)
+          }).then(sendSubscriptionToServer);
+        });
+      });
+    })
+    .catch(function () {});
+  }
+
+  function sendSubscriptionToServer(sub) {
+    var token = localStorage.getItem('nido_token');
+    if (!token) return;
+    return fetch('/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(sub)
+    }).catch(function () {});
+  }
+
+  window.unsubscribePush = function () {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      reg.pushManager.getSubscription().then(function (sub) {
+        if (!sub) return;
+        var token = localStorage.getItem('nido_token');
+        fetch('/push/subscribe', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (token || '')
+          },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        }).catch(function () {});
+        sub.unsubscribe();
+      });
+    });
+  };
 
   // ── Install prompt ───────────────────────────────────────────────────────
   // Skip if already running as installed PWA
