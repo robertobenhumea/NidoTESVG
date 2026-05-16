@@ -295,7 +295,7 @@
   position: fixed; inset: 0;
   background: rgba(0,0,0,.55);
   display: flex; align-items: flex-end; justify-content: center;
-  z-index: 500;
+  z-index: 10000; /* above bottom nav (9999) */
   opacity: 0; pointer-events: none;
   transition: opacity .25s ease;
 }
@@ -305,11 +305,17 @@
 .mkt-modal {
   background: var(--white, #fff);
   border-radius: 24px 24px 0 0;
-  width: 100%; max-width: 520px; max-height: 92vh;
+  width: 100%; max-width: 520px;
+  /* dvh for iOS Safari dynamic toolbar, fallback to vh */
+  max-height: min(92vh, 92dvh);
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   transform: translateY(40px);
   transition: transform .3s cubic-bezier(.34,1.26,.64,1);
   padding: 20px;
+  /* safe area for iPhone home indicator */
+  padding-bottom: max(20px, calc(20px + env(safe-area-inset-bottom, 0px)));
 }
 .mkt-overlay.open .mkt-modal { transform: translateY(0); }
 @media (min-width: 600px) {
@@ -1134,3 +1140,60 @@ body.nido-aaa .mkt-btn-cancel-solic {
   color: rgba(255,255,255,.55);
 }
 body.nido-aaa .mkt-btn-cancel-solic:hover { border-color: #f87171; color: #f87171; }
+
+/* ── VENDOR CONTACT BUTTON (solicitud card) ── */
+.mkt-btn-contact-buyer {
+  height: 36px; padding: 0 14px;
+  background: none;
+  border: 1.5px solid rgba(245,166,35,.45);
+  border-radius: 10px;
+  color: var(--gold, #F5A623);
+  font-size: .8rem; font-weight: 700;
+  cursor: pointer; transition: .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.mkt-btn-contact-buyer:hover { background: rgba(245,166,35,.1); border-color: var(--gold, #F5A623); }
+body.nido-aaa .mkt-btn-contact-buyer { border-color: rgba(245,166,35,.35); color: var(--gold, #F5A623); }
+
+/* ── BUY SUCCESS STATE ── */
+@keyframes mkt-pop {
+  0%   { transform: scale(.4); opacity: 0; }
+  65%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.mkt-buy-success {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px 20px;
+  text-align: center;
+}
+.mkt-buy-success-icon {
+  width: 72px; height: 72px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  animation: mkt-pop .45s cubic-bezier(.34,1.56,.64,1) both;
+  box-shadow: 0 8px 28px rgba(34,197,94,.35);
+}
+.mkt-buy-success-icon svg { width: 34px; height: 34px; stroke: #fff; stroke-width: 3; fill: none; }
+.mkt-buy-success-title {
+  font-size: 1.1rem; font-weight: 800;
+  color: var(--text, #1C1E21);
+}
+.mkt-buy-success-sub {
+  font-size: .84rem; color: var(--gray-text, #65676B); max-width: 260px; line-height: 1.5;
+}
+body.nido-aaa .mkt-buy-success-title { color: #fff; }
+body.nido-aaa .mkt-buy-success-sub { color: rgba(255,255,255,.5); }
+
+/* ── MOBILE MODAL IMPROVEMENTS ── */
+@media (max-width: 600px) {
+  .mkt-modal {
+    /* Prevent keyboard jump on iOS */
+    position: sticky;
+    bottom: 0;
+  }
+  .mkt-form-row:last-child {
+    /* Always keep buttons above keyboard / safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

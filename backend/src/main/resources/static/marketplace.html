@@ -412,7 +412,10 @@
         <button class="mkt-btn-reject" onclick="actualizarSolicitud(${s.id},'RECHAZADA')">Rechazar</button>`;
     } else if (s.estado === 'ACEPTADA') {
       acciones = `
-        <button class="mkt-btn-deliver" onclick="actualizarSolicitud(${s.id},'ENTREGADA')">📦 Marcar entregada</button>`;
+        <button class="mkt-btn-deliver" onclick="actualizarSolicitud(${s.id},'ENTREGADA')">📦 Marcar entregada</button>
+        <button class="mkt-btn-contact-buyer" onclick="contactar(${s.compradorId})">
+          <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.4-5A8 8 0 1 1 21 12Z"/></svg>Contactar
+        </button>`;
     }
 
     return `
@@ -751,6 +754,7 @@
     const content = document.getElementById('detail-content');
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
+    _setBottomNavHidden(true);
     content.innerHTML = '<div class="mkt-detail-loading">Cargando...</div>';
 
     try {
@@ -835,6 +839,7 @@
     if (e && e.target !== document.getElementById('detail-overlay')) return;
     document.getElementById('detail-overlay').classList.remove('open');
     document.body.style.overflow = '';
+    _setBottomNavHidden(false);
   }
 
   async function toggleFavDetail(id) {
@@ -876,9 +881,22 @@
   }
 
   /* ── BUY MODAL ── */
+  function _setBottomNavHidden(hidden) {
+    const nav = document.querySelector('.nido-bottom-nav');
+    if (!nav) return;
+    nav.classList.toggle('nido-nav-hidden', hidden);
+    nav.style.pointerEvents = hidden ? 'none' : '';
+  }
+
   function openBuy(p) {
     buyProductId = p.id;
     const cat = CATS[p.categoria] || CATS.OTROS;
+
+    // Restore form if previous success state is shown
+    const form = document.getElementById('buy-form');
+    const successEl = document.getElementById('buy-success');
+    if (successEl) successEl.remove();
+    if (form) form.style.display = '';
 
     // Product preview
     const preview = document.getElementById('buy-product-preview');
@@ -899,10 +917,11 @@
       nombreInput.value = session.username;
     }
 
-    // Close detail, open buy
+    // Close detail, open buy, hide bottom nav
     document.getElementById('detail-overlay').classList.remove('open');
     document.getElementById('buy-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    _setBottomNavHidden(true);
   }
 
   function closeBuy(e) {
@@ -910,6 +929,10 @@
     document.getElementById('buy-overlay').classList.remove('open');
     document.body.style.overflow = '';
     document.getElementById('buy-form').reset();
+    const successEl = document.getElementById('buy-success');
+    if (successEl) successEl.remove();
+    document.getElementById('buy-form').style.display = '';
+    _setBottomNavHidden(false);
   }
 
   async function submitBuy(e) {
@@ -920,7 +943,7 @@
     btn.disabled = true; btn.textContent = 'Enviando...';
 
     const body = {
-      productoId:     buyProductId,
+      productoId:      buyProductId,
       nombreComprador: document.getElementById('b-nombre').value.trim(),
       aula:            document.getElementById('b-aula').value.trim(),
       edificio:        document.getElementById('b-edificio').value.trim(),
@@ -935,15 +958,32 @@
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        closeBuy();
-        if (window.NidoUI) window.NidoUI.toast.ok('¡Solicitud enviada! El vendedor recibirá una notificación.');
+        // Show in-modal success state
+        const form = document.getElementById('buy-form');
+        form.style.display = 'none';
+        const success = document.createElement('div');
+        success.id = 'buy-success';
+        success.className = 'mkt-buy-success';
+        success.innerHTML = `
+          <div class="mkt-buy-success-icon">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="mkt-buy-success-title">¡Solicitud enviada!</div>
+          <div class="mkt-buy-success-sub">El vendedor recibirá una notificación y pronto te contactará para coordinar la entrega.</div>
+        `;
+        form.parentNode.insertBefore(success, form.nextSibling);
+        setTimeout(() => {
+          closeBuy();
+          // Refresh buy tab if currently active
+          if (currentTab === 'compras') loadMisCompras();
+        }, 2400);
       } else {
         const err = await res.json().catch(() => ({}));
         if (window.NidoUI) window.NidoUI.toast.error(err.error || 'No se pudo enviar la solicitud');
+        btn.disabled = false; btn.textContent = 'Enviar solicitud';
       }
     } catch (_) {
       if (window.NidoUI) window.NidoUI.toast.error('Error de conexión');
-    } finally {
       btn.disabled = false; btn.textContent = 'Enviar solicitud';
     }
   }
@@ -952,12 +992,14 @@
   function openPublish() {
     document.getElementById('publish-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    _setBottomNavHidden(true);
   }
 
   function closePublish(e) {
     if (e && e.target !== document.getElementById('publish-overlay')) return;
     document.getElementById('publish-overlay').classList.remove('open');
     document.body.style.overflow = '';
+    _setBottomNavHidden(false);
     resetForm();
   }
 
