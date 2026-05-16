@@ -406,7 +406,9 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--gray-border);
     }
     .post-header .post-user-link {
       display: flex;
@@ -462,28 +464,77 @@
 
     .post-content {
       font-size: .95rem;
-      line-height: 1.6;
+      line-height: 1.65;
       color: var(--text);
       word-break: break-word;
       white-space: pre-wrap;
+      margin-top: 2px;
     }
 
     .post-img {
-      width: 100%; max-height: 420px;
-      object-fit: cover; border-radius: 8px;
+      width: 100%; max-height: 460px;
+      object-fit: cover; border-radius: 10px;
       margin-top: 10px; display: block;
       cursor: zoom-in;
+      transition: transform .2s ease, box-shadow .2s ease;
     }
+    .post-img:hover { transform: scale(1.01); box-shadow: 0 4px 18px rgba(0,0,0,.18); }
 
-    /* ── LIGHTBOX ── */
+    /* ── LIGHTBOX PREMIUM ── */
     .lightbox {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.88); z-index: 300;
+      background: rgba(0,0,0,.94); z-index: 300;
       align-items: center; justify-content: center;
-      cursor: zoom-out;
     }
-    .lightbox.open { display: flex; }
-    .lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 6px; object-fit: contain; }
+    .lightbox.open { display: flex; animation: lbIn .2s ease; }
+    @keyframes lbIn { from { opacity: 0; } to { opacity: 1; } }
+    .lb-backdrop { position: absolute; inset: 0; cursor: zoom-out; }
+    .lb-close {
+      position: absolute; top: 16px; right: 16px; z-index: 3;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(255,255,255,.14); border: none; color: #fff;
+      font-size: 1.5rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s; line-height: 1;
+    }
+    .lb-close:hover { background: rgba(255,255,255,.28); }
+    .lb-spinner-wrap {
+      position: absolute; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      pointer-events: none; z-index: 1;
+    }
+    .lb-spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.18);
+      border-top-color: var(--gold);
+      animation: lbSpin .7s linear infinite;
+    }
+    @keyframes lbSpin { to { transform: rotate(360deg); } }
+    .lightbox img {
+      max-width: 94vw; max-height: 90vh; border-radius: 8px;
+      object-fit: contain; position: relative; z-index: 2;
+      animation: lbImgIn .25s ease;
+    }
+    @keyframes lbImgIn {
+      from { transform: scale(.92); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* ── POST CONTENT FORMATTING ── */
+    .post-link { color: var(--gold); text-decoration: none; word-break: break-all; }
+    .post-link:hover { text-decoration: underline; }
+    .post-mention { color: var(--gold); font-weight: 600; }
+    .post-tag { color: #1864AB; font-weight: 600; }
+    html[data-theme="dark"] .post-tag { color: #74C0FC; }
+    .anuncio-content .post-tag { color: var(--gold); }
+    .btn-ver-mas {
+      background: none; border: none; color: var(--gold);
+      font-size: .85rem; font-weight: 700; cursor: pointer;
+      padding: 0 2px; display: inline;
+    }
+    .btn-ver-mas:hover { text-decoration: underline; }
+    .post-img, .anuncio-img, .original-img { animation: imgFadeIn .35s ease; }
+    @keyframes imgFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     /* ── LIKE ── */
     .post-footer {
@@ -894,7 +945,11 @@
       height: 154px;
       border-radius: 14px;
       flex-shrink: 0;
+      transition: transform .2s ease, box-shadow .2s ease;
     }
+    .story-card:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+    .story-card:hover .story-thumb-bg { transform: scale(1.06); }
+    .story-card:active { transform: scale(.97); }
 
     /* Kept for viewer compatibility only */
     .story-ring { display: none; }
@@ -1359,9 +1414,16 @@
 
   </div><!-- /page-wrap -->
 
-  <!-- LIGHTBOX -->
-  <div class="lightbox" id="lightbox" onclick="document.getElementById('lightbox').classList.remove('open')">
-    <img id="lightbox-img" src="" alt="imagen">
+  <!-- LIGHTBOX PREMIUM -->
+  <div class="lightbox" id="lightbox">
+    <div class="lb-backdrop" onclick="cerrarLightbox()"></div>
+    <button class="lb-close" onclick="cerrarLightbox()" aria-label="Cerrar">&times;</button>
+    <div class="lb-spinner-wrap" id="lb-loading">
+      <div class="lb-spinner"></div>
+    </div>
+    <img id="lightbox-img" src="" alt="imagen"
+         onload="document.getElementById('lb-loading').hidden=true"
+         onerror="document.getElementById('lb-loading').hidden=true">
   </div>
 
   <!-- REACTION PICKER -->
@@ -1780,8 +1842,8 @@
             <span class="anuncio-badge">📢 Anuncio oficial</span>
             <span class="anuncio-author">${escapeHtml(nombre)}${NidoUI.rolBadge(anuncioRol, {style:'filter:brightness(1.3)'})}</span>
           </div>
-          <p class="anuncio-content">${escapeHtml(post.contenido)}</p>
-          ${post.imagenUrl ? `<img class="anuncio-img" src="${post.imagenUrl}" alt="imagen" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}
+          <p class="anuncio-content">${formatContent(post.contenido, 'an' + post.id)}</p>
+          ${post.imagenUrl ? `<img class="anuncio-img" src="${post.imagenUrl}" alt="imagen" loading="lazy" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}
           <div class="anuncio-footer">
             <button class="btn-like${miTipo ? ' liked' : ''}"
               style="${miTipo ? 'color:' + REACTION_COLOR[miTipo] : ''}"
@@ -1855,7 +1917,7 @@
           const oBg   = oFoto ? `url('${oFoto}') center/cover no-repeat` : (orig ? hueFromStr(oNombre) : '#aaa');
           const oText = oFoto ? "" : (oNombre ? oNombre[0].toUpperCase() : "?");
           contenidoHtml = `
-            ${post.contenido ? `<p class="share-comment">${escapeHtml(post.contenido)}</p>` : ''}
+            ${post.contenido ? `<p class="share-comment">${formatContent(post.contenido, 'sc' + post.id)}</p>` : ''}
             <div class="original-post-card">
               ${orig ? `
                 <div class="original-author-row">
@@ -1867,14 +1929,14 @@
                     </div>
                   </a>
                 </div>
-                <p class="original-content">${escapeHtml(orig.contenido)}</p>
-                ${orig.imagenUrl ? `<img class="original-img" src="${orig.imagenUrl}" alt="imagen" onclick="abrirLightbox('${orig.imagenUrl}')">` : ''}
+                <p class="original-content">${formatContent(orig.contenido, 'oc' + orig.id)}</p>
+                ${orig.imagenUrl ? `<img class="original-img" src="${orig.imagenUrl}" alt="imagen" loading="lazy" onclick="abrirLightbox('${orig.imagenUrl}')">` : ''}
               ` : `<em style="color:var(--gray-text);font-size:.85rem">Publicación original no disponible</em>`}
             </div>`;
         } else {
           contenidoHtml = `
-            <p class="post-content">${escapeHtml(post.contenido)}</p>
-            ${post.imagenUrl ? `<img class="post-img" src="${post.imagenUrl}" alt="imagen" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}`;
+            <p class="post-content">${formatContent(post.contenido, post.id)}</p>
+            ${post.imagenUrl ? `<img class="post-img" src="${post.imagenUrl}" alt="imagen" loading="lazy" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}`;
         }
 
         div.innerHTML = `
@@ -1888,7 +1950,6 @@
               </div>
             </a>
           </div>
-          <hr class="divider">
           ${contenidoHtml}
           ${renderPoll(post.id)}
           <div class="post-footer">
@@ -2295,10 +2356,47 @@
       return (str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
 
-    function abrirLightbox(url) {
-      document.getElementById('lightbox-img').src = url;
-      document.getElementById('lightbox').classList.add('open');
+    function linkifyEscaped(html) {
+      return html
+        .replace(/https?:\/\/[^\s<>"& -]+/g,
+          u => `<a href="${u}" target="_blank" rel="noopener noreferrer" class="post-link">${u}</a>`)
+        .replace(/@(\w{2,20})/g, '<span class="post-mention">@$1</span>')
+        .replace(/#(\w{2,30})/g, '<span class="post-tag">#$1</span>');
     }
+
+    function formatContent(raw, pid, maxLen = 360) {
+      if (!raw) return '';
+      const escaped = escapeHtml(raw);
+      if (raw.length <= maxLen) return linkifyEscaped(escaped);
+      const shortHtml = linkifyEscaped(escapeHtml(raw.slice(0, maxLen)));
+      const fullHtml  = linkifyEscaped(escaped);
+      return `<span id="pcs-${pid}">${shortHtml}…<button class="btn-ver-mas" onclick="expandPostContent('${pid}')">Ver más</button></span>` +
+             `<span id="pcf-${pid}" hidden>${fullHtml}</span>`;
+    }
+
+    function expandPostContent(pid) {
+      const s = document.getElementById('pcs-' + pid);
+      const f = document.getElementById('pcf-' + pid);
+      if (s) s.hidden = true;
+      if (f) f.hidden = false;
+    }
+
+    function abrirLightbox(url) {
+      const img = document.getElementById('lightbox-img');
+      const loading = document.getElementById('lb-loading');
+      loading.hidden = false;
+      img.src = '';
+      img.src = url;
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function cerrarLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') cerrarLightbox();
+    });
 
     // ── STORIES STATE ──
     let storyGroups = [];          // [{userId, stories:[...]}, ...]
