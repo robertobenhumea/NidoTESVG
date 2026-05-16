@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable icon: safe zone is inner 80% circle (r≈205 at center 256,256).
+       N fits within x 148-364, y 148-364 — well inside safe zone. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111018"/>
+      <stop offset="100%" stop-color="#09090d"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe0a0"/>
+      <stop offset="48%" stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#b8720a"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="46%" r="50%">
+      <stop offset="0%" stop-color="#F5A623" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#F5A623" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-22%" y="-22%" width="144%" height="144%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Full background (covers all crop shapes) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#halo)"/>
+
+  <!-- N — tighter points to stay in safe zone -->
+  <polyline
+    points="152,364 152,148 360,364 360,148"
+    fill="none"
+    stroke="url(#g)"
+    stroke-width="56"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    filter="url(#glow)"
+  />
+</svg>
