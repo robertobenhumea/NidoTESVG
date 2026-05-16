@@ -166,6 +166,12 @@ public class LikeComentarioController {
             return ResponseEntity.badRequest().body("El comentario no puede estar vacío");
         }
 
+        // Verificar que la publicación permite comentarios
+        com.tesvg.backend.model.Publicacion pub2 = publicacionRepository.findById(publicacionId).orElse(null);
+        if (pub2 != null && !pub2.getAllowComments()) {
+            return ResponseEntity.status(403).body("Los comentarios están desactivados en esta publicación");
+        }
+
         Comentario comentario = new Comentario();
         comentario.setUsuarioId(usuario.getId());
         comentario.setPublicacionId(publicacionId);

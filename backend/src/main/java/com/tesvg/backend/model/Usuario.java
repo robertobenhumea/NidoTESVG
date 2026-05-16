@@ -57,7 +57,7 @@ public class Usuario {
     private int tokenVersion = 0;
 
     public enum Rol {
-        ESTUDIANTE, DOCENTE, AUTORIDAD, ADMINISTRATIVO, PERSONAL, ADMIN
+        ESTUDIANTE, DOCENTE, AUTORIDAD, ADMINISTRATIVO, PERSONAL, ADMIN, DIRECCION
     }
 
     // GETTERS Y SETTERS

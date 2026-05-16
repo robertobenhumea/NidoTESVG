@@ -46,7 +46,7 @@ public class PublicacionController {
         return ResponseEntity.ok(publicacionRepository.save(publicacion));
     }
 
-    // Crear anuncio — solo AUTORIDAD o ADMIN
+    // Crear anuncio — solo AUTORIDAD, ADMIN o DIRECCION
     @PostMapping("/anuncio")
     public ResponseEntity<?> crearAnuncio(@RequestBody Publicacion publicacion,
                                           HttpServletRequest request) {
@@ -54,16 +54,64 @@ public class PublicacionController {
         Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (usuario.getRol() != Usuario.Rol.AUTORIDAD && usuario.getRol() != Usuario.Rol.ADMIN) {
+        Usuario.Rol rol = usuario.getRol();
+        if (rol != Usuario.Rol.AUTORIDAD && rol != Usuario.Rol.ADMIN && rol != Usuario.Rol.DIRECCION) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("No tienes permiso para publicar anuncios");
+                    .body("No tienes permiso para publicar anuncios oficiales");
         }
 
         publicacion.setUsuarioId(usuario.getId());
         publicacion.setFecha(LocalDateTime.now());
         publicacion.setEsAnuncio(true);
+        // imagenUrl, fijada, allowComments are accepted as-is from request body
+        if (publicacion.getAllowComments() == null) publicacion.setAllowComments(true);
 
         return ResponseEntity.ok(publicacionRepository.save(publicacion));
+    }
+
+    // Editar anuncio — autor o ADMIN pueden editar contenido e imagenUrl
+    @PutMapping("/anuncio/{id}")
+    public ResponseEntity<?> editarAnuncio(@PathVariable Long id,
+                                           @RequestBody Publicacion body,
+                                           HttpServletRequest request) {
+        String correo = (String) request.getAttribute("correo");
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Publicacion pub = publicacionRepository.findById(id).orElse(null);
+        if (pub == null || !Boolean.TRUE.equals(pub.getEsAnuncio())) return ResponseEntity.notFound().build();
+
+        Usuario.Rol rol = usuario.getRol();
+        boolean isAdmin  = rol == Usuario.Rol.ADMIN;
+        boolean isAuthor = pub.getUsuarioId().equals(usuario.getId());
+        if (!isAdmin && !isAuthor) return ResponseEntity.status(403).build();
+
+        if (body.getContenido() != null)  pub.setContenido(body.getContenido());
+        if (body.getImagenUrl() != null)  pub.setImagenUrl(body.getImagenUrl());
+        if (body.getAllowComments() != null) pub.setAllowComments(body.getAllowComments());
+        if (body.getFijada() != null)     pub.setFijada(body.getFijada());
+
+        return ResponseEntity.ok(publicacionRepository.save(pub));
+    }
+
+    // Eliminar anuncio — autor o ADMIN
+    @DeleteMapping("/anuncio/{id}")
+    public ResponseEntity<?> eliminarAnuncio(@PathVariable Long id,
+                                              HttpServletRequest request) {
+        String correo = (String) request.getAttribute("correo");
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Publicacion pub = publicacionRepository.findById(id).orElse(null);
+        if (pub == null || !Boolean.TRUE.equals(pub.getEsAnuncio())) return ResponseEntity.notFound().build();
+
+        Usuario.Rol rol = usuario.getRol();
+        if (rol != Usuario.Rol.ADMIN && !pub.getUsuarioId().equals(usuario.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        publicacionRepository.delete(pub);
+        return ResponseEntity.ok(Map.of("eliminado", true));
     }
 
     // Feed general — sin page param → lista completa (compat perfil/buscar)

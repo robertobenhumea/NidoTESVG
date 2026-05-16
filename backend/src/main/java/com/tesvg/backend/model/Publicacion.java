@@ -43,6 +43,9 @@ public class Publicacion {
     @Column(name = "publicacion_original_id")
     private Long publicacionOriginalId;
 
+    @Column(name = "allow_comments", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean allowComments = true;
+
     public enum Tipo {
         texto, imagen, video
     }
@@ -72,4 +75,6 @@ public class Publicacion {
     public void setCompartida(Boolean compartida) { this.compartida = compartida; }
     public Long getPublicacionOriginalId() { return publicacionOriginalId; }
     public void setPublicacionOriginalId(Long publicacionOriginalId) { this.publicacionOriginalId = publicacionOriginalId; }
+    public Boolean getAllowComments() { return allowComments == null || allowComments; }
+    public void setAllowComments(Boolean allowComments) { this.allowComments = allowComments; }
 }

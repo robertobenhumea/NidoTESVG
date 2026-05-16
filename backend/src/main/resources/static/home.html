@@ -371,7 +371,7 @@
       color: rgba(255,255,255,.45);
     }
 
-    /* ── COMPOSE MODE BAR (segmented control — base fallback) ── */
+    /* ── COMPOSE MODE BAR ── */
     .compose-mode-bar {
       display: none; /* activado via JS para admins */
       gap: 4px;
@@ -399,6 +399,51 @@
       background: var(--gold-light);
       color: var(--navy);
       border-color: var(--gold);
+    }
+
+    /* ── ANUNCIO COMPOSE OPTIONS ── */
+    .compose-anuncio-opts {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: rgba(245,166,35,.08);
+      border: 1px solid rgba(245,166,35,.3);
+      border-radius: 10px;
+    }
+    .composer-anuncio-mode .compose-anuncio-opts { display: flex; }
+    .composer-anuncio-mode #btn-poll { display: none; }
+    .anuncio-opt-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .82rem;
+      color: var(--gray-text);
+      cursor: pointer;
+    }
+    .anuncio-opt-row input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer;
+    }
+    .anuncio-opt-hint {
+      font-size: .72rem;
+      color: var(--gray-text);
+      opacity: .7;
+      margin-top: 2px;
+    }
+
+    /* ── ANUNCIO CARD — comments disabled ── */
+    .anuncio-no-comments {
+      font-size: .72rem;
+      color: rgba(255,255,255,.4);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .btn-comment[disabled] {
+      opacity: .4;
+      cursor: not-allowed;
     }
 
     /* ── POST HEADER ── */
@@ -1415,6 +1460,19 @@
                 <input class="poll-expira-input" id="poll-expira" type="datetime-local">
               </div>
             </div>
+            <!-- Anuncio options (shown only in anuncio mode) -->
+            <div class="compose-anuncio-opts" id="compose-anuncio-opts">
+              <label class="anuncio-opt-row">
+                <input type="checkbox" id="anuncio-fijada">
+                <span>📌 Fijar en el feed</span>
+              </label>
+              <div class="anuncio-opt-hint">El anuncio aparecerá al inicio del feed para todos.</div>
+              <label class="anuncio-opt-row" style="margin-top:4px">
+                <input type="checkbox" id="anuncio-disable-comments">
+                <span>🔇 Desactivar comentarios</span>
+              </label>
+              <div class="anuncio-opt-hint">Los miembros no podrán comentar en este anuncio.</div>
+            </div>
           </div>
         </div>
       </section>
@@ -1574,7 +1632,7 @@
         aplicarAvatar(document.getElementById("nav-avatar"), user.fotoPerfil, nombre);
         aplicarAvatar(document.getElementById("compose-avatar"), user.fotoPerfil, nombre);
         const navUn = document.getElementById("nav-username"); if (navUn) navUn.textContent = nombre;
-        if (user.rol === "AUTORIDAD" || user.rol === "ADMIN") {
+        if (user.rol === "AUTORIDAD" || user.rol === "ADMIN" || user.rol === "DIRECCION") {
           document.getElementById("compose-mode-bar").style.display = "flex";
         }
         // Show admin link only for ADMIN role
@@ -1677,16 +1735,13 @@
         textarea.placeholder = 'Escribe el anuncio oficial para toda la comunidad…';
         postBtn.classList.remove('active');
         anuncioBtn.classList.add('active');
-        actions.style.display = 'none';
         publishBtn.textContent = 'Publicar anuncio';
-        if (pendingImgUrl) quitarImagen();
-        if (pollActive)    togglePollBuilder();
+        if (pollActive) togglePollBuilder();
       } else {
         card.classList.remove('composer-anuncio-mode');
         textarea.placeholder = '¿Qué estás pensando?';
         postBtn.classList.add('active');
         anuncioBtn.classList.remove('active');
-        actions.style.display = '';
         publishBtn.textContent = 'Publicar';
       }
       textarea.focus();
@@ -1706,10 +1761,16 @@
       btn.disabled = true;
       btn.textContent = "Publicando…";
 
+      const fijada         = document.getElementById("anuncio-fijada")?.checked ?? false;
+      const allowComments  = !(document.getElementById("anuncio-disable-comments")?.checked ?? false);
+
+      const payload = { contenido, fijada, allowComments };
+      if (pendingImgUrl) { payload.imagenUrl = pendingImgUrl; payload.tipo = "imagen"; }
+
       const res = await fetch("/publicaciones/anuncio", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ contenido })
+        body: JSON.stringify(payload)
       });
 
       btn.disabled = false;
@@ -1719,6 +1780,11 @@
 
       NidoUI.toast.ok('Anuncio publicado');
       document.getElementById("contenido").value = "";
+      const fijadaEl = document.getElementById("anuncio-fijada");
+      const noCommEl = document.getElementById("anuncio-disable-comments");
+      if (fijadaEl) fijadaEl.checked = false;
+      if (noCommEl) noCommEl.checked = false;
+      quitarImagen();
       cargarFeed();
     }
 
@@ -1884,11 +1950,13 @@
               <span class="like-count">${totalLikes}</span>
             </button>
             ${renderReactionCounts(countsObj)}
-            <button class="btn-comment" onclick="toggleComentarios(${post.id})">
-              💬 <span id="cc-${post.id}">${postComments.length > 0 ? postComments.length : 'Comentar'}</span>
-            </button>
+            ${post.allowComments !== false
+              ? `<button class="btn-comment" onclick="toggleComentarios(${post.id})">💬 <span id="cc-${post.id}">${postComments.length > 0 ? postComments.length : 'Comentar'}</span></button>`
+              : `<button class="btn-comment" disabled title="Comentarios desactivados">💬 Comentar</button><span class="anuncio-no-comments">🔇 Comentarios desactivados</span>`
+            }
             <span class="anuncio-date">${timeAgo(post.fecha)}</span>
           </div>
+          ${post.allowComments !== false ? `
           <div class="comments-section" id="cs-${post.id}">
             <div class="comments-list" id="cl-${post.id}">
               ${postComments.map(c => renderOneComment(c)).join('')}
@@ -1899,7 +1967,7 @@
                      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agregarComentario(${post.id})}">
               <button class="btn-send-comment" onclick="agregarComentario(${post.id})">➤</button>
             </div>
-          </div>
+          </div>` : ''}
         `;
         feed.appendChild(div);
       });

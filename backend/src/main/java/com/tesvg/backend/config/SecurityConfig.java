@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
                 .requestMatchers(
                         "/publicaciones/anuncio"
-                ).hasAnyAuthority("AUTORIDAD", "ADMIN")
+                ).hasAnyAuthority("AUTORIDAD", "ADMIN", "DIRECCION")
                 .requestMatchers(
                         "/usuarios/**",
                         "/publicaciones/**",
