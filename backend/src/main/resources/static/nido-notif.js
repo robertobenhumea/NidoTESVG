@@ -169,10 +169,18 @@
       : _notifs.filter(function(n){ return (TIPO[n.tipo] || {}).cat === _filter; });
 
     if (!items.length) {
-      list.innerHTML = '<div class="nf-empty">'
-        + ICO.inbox
-        + '<span>Sin notificaciones' + (_filter !== 'all' ? ' en esta categoría' : '') + '</span>'
-        + '</div>';
+      if (window.NidoUI?.empty) {
+        window.NidoUI.empty(list, {
+          icon: 'notif',
+          title: 'Sin notificaciones',
+          sub: _filter !== 'all' ? 'No hay nada en esta categoría' : 'Estás al día con todo',
+          color: 'var(--gold, #F5A623)',
+        });
+      } else {
+        list.innerHTML = '<div class="nf-empty">' + ICO.inbox
+          + '<span>Sin notificaciones' + (_filter !== 'all' ? ' en esta categoría' : '') + '</span>'
+          + '</div>';
+      }
       return;
     }
 
@@ -254,7 +262,7 @@
     openPanel();
     buildPanel();
     var list = document.getElementById('nf-list');
-    if (list) list.innerHTML = '<div class="nf-loading">Cargando...</div>';
+    if (list) list.innerHTML = (window.NidoUI?.sk?.notifItem || '<div class="nf-loading">Cargando...</div>').repeat(window.NidoUI?.sk?.notifItem ? 5 : 1);
     _notifs = await fetchAll();
     renderList();
   };

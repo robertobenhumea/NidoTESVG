@@ -623,6 +623,8 @@
 
   // ── SIDEBAR ──
   async function cargarConversaciones() {
+    const el = document.getElementById('contactList');
+    el.innerHTML = (window.NidoUI?.sk?.chatItem || '').repeat(5);
     const convs = await api('GET', '/mensajes/conversaciones');
     contactosCache = convs;
     renderContactos(convs);
@@ -631,7 +633,11 @@
   function renderContactos(lista) {
     const el = document.getElementById('contactList');
     if (lista.length === 0) {
-      el.innerHTML = '<p style="padding:20px 16px;font-size:.85rem;color:var(--gray-text)">Sin conversaciones aún</p>';
+      window.NidoUI?.empty(el, {
+        icon: 'chat',
+        title: 'Sin conversaciones',
+        sub: 'Busca a alguien para empezar a chatear',
+      });
       return;
     }
     el.innerHTML = lista.map(c => `

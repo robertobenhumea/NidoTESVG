@@ -152,10 +152,140 @@
         <div class="nido-skeleton" style="width:88px;height:32px;border-radius:20px;flex-shrink:0;"></div>
       </div>`,
 
+    mktCard: `
+      <div class="nido-sk-card" style="padding:0;overflow:hidden;border-radius:14px;">
+        <div class="nido-skeleton" style="height:180px;border-radius:0;margin-bottom:0;"></div>
+        <div style="padding:14px 16px 16px;">
+          <div class="nido-skeleton" style="height:13px;width:70%;margin-bottom:8px;"></div>
+          <div class="nido-skeleton" style="height:11px;width:45%;margin-bottom:12px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="nido-skeleton" style="height:18px;width:36%;border-radius:6px;"></div>
+            <div class="nido-skeleton" style="height:32px;width:72px;border-radius:20px;"></div>
+          </div>
+        </div>
+      </div>`,
+
+    chatItem: `
+      <div class="nido-sk-card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:2px;border-radius:0;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div class="nido-skeleton nido-sk-avatar" style="width:48px;height:48px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <div class="nido-skeleton" style="height:13px;width:44%;"></div>
+            <div class="nido-skeleton" style="height:10px;width:14%;"></div>
+          </div>
+          <div class="nido-skeleton" style="height:10px;width:72%;"></div>
+        </div>
+      </div>`,
+
+    correoItem: `
+      <div class="nido-sk-card" style="display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:2px;border-radius:0;">
+        <div class="nido-skeleton nido-sk-avatar" style="width:40px;height:40px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:7px;">
+            <div class="nido-skeleton" style="height:12px;width:38%;"></div>
+            <div class="nido-skeleton" style="height:10px;width:12%;"></div>
+          </div>
+          <div class="nido-skeleton" style="height:11px;width:80%;margin-bottom:5px;"></div>
+          <div class="nido-skeleton" style="height:10px;width:55%;"></div>
+        </div>
+      </div>`,
+
+    grupoCard: `
+      <div class="nido-sk-card" style="padding:0;overflow:hidden;border-radius:14px;">
+        <div class="nido-skeleton" style="height:110px;border-radius:0;"></div>
+        <div style="padding:14px 16px 16px;">
+          <div class="nido-skeleton" style="height:14px;width:55%;margin-bottom:8px;"></div>
+          <div class="nido-skeleton" style="height:10px;width:75%;margin-bottom:10px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="nido-skeleton" style="height:11px;width:30%;"></div>
+            <div class="nido-skeleton" style="height:30px;width:80px;border-radius:20px;"></div>
+          </div>
+        </div>
+      </div>`,
+
+    notifItem: `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div class="nido-skeleton" style="width:42px;height:42px;border-radius:50%;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div class="nido-skeleton" style="height:12px;width:80%;margin-bottom:7px;"></div>
+          <div class="nido-skeleton" style="height:10px;width:45%;"></div>
+        </div>
+      </div>`,
+
+    storyCircle: `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+        <div class="nido-skeleton" style="width:64px;height:64px;border-radius:50%;"></div>
+        <div class="nido-skeleton" style="height:9px;width:52px;border-radius:4px;"></div>
+      </div>`,
+
+    commentItem: `
+      <div style="display:flex;gap:10px;padding:10px 0;">
+        <div class="nido-skeleton nido-sk-avatar" style="width:36px;height:36px;flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div class="nido-skeleton" style="height:56px;border-radius:12px;margin-bottom:6px;"></div>
+          <div style="display:flex;gap:16px;">
+            <div class="nido-skeleton" style="height:10px;width:40px;"></div>
+            <div class="nido-skeleton" style="height:10px;width:40px;"></div>
+          </div>
+        </div>
+      </div>`,
+
     repeat(template, n) {
       return template.repeat(n);
     },
   };
+
+  /* ── EMPTY STATES ─────────────────────────────────────── */
+  const EMPTY_ICONS = {
+    feed:       `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="14" width="48" height="36" rx="6" stroke="currentColor" stroke-width="2.5"/><line x1="16" y1="24" x2="48" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="32" x2="40" y2="32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="40" x2="32" y2="40" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    chat:       `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 14h44a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H22l-10 8V18a4 4 0 0 1 4-4z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><line x1="20" y1="26" x2="44" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="34" x2="36" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    mail:       `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="14" width="48" height="36" rx="5" stroke="currentColor" stroke-width="2.5"/><polyline points="8,14 32,36 56,14" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+    notif:      `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32 8a18 18 0 0 1 18 18v10l4 6H10l4-6V26A18 18 0 0 1 32 8z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M27 50a5 5 0 0 0 10 0" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    market:     `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 20h44l-4 28H14L10 20z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 20V16a10 10 0 0 1 20 0v4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    buscar:     `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="28" r="16" stroke="currentColor" stroke-width="2.5"/><line x1="40" y1="40" x2="54" y2="54" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    grupos:     `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="26" r="10" stroke="currentColor" stroke-width="2.5"/><circle cx="42" cy="26" r="10" stroke="currentColor" stroke-width="2.5"/><path d="M8 52c0-8.8 7.2-16 16-16s16 7.2 16 16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M42 36c6 0 14 4 14 16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    ranking:    `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="34" width="12" height="22" rx="3" stroke="currentColor" stroke-width="2.5"/><rect x="26" y="22" width="12" height="34" rx="3" stroke="currentColor" stroke-width="2.5"/><rect x="44" y="10" width="12" height="46" rx="3" stroke="currentColor" stroke-width="2.5"/></svg>`,
+    recursos:   `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 8h24l12 12v36H16V8z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><polyline points="40,8 40,20 52,20" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><line x1="24" y1="34" x2="40" y2="34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="42" x2="36" y2="42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    default:    `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="22" stroke="currentColor" stroke-width="2.5"/><line x1="32" y1="22" x2="32" y2="34" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="32" cy="42" r="2" fill="currentColor"/></svg>`,
+  };
+
+  function emptyState(container, opts = {}) {
+    const {
+      icon  = 'default',
+      title = 'Nada por aquí',
+      sub   = '',
+      cta   = null,    // { label, onClick }
+      color = 'var(--gold, #F5A623)',
+    } = opts;
+
+    const svg = EMPTY_ICONS[icon] || EMPTY_ICONS.default;
+    const ctaHtml = cta
+      ? `<button class="btn-primary nido-empty-cta">${cta.label}</button>`
+      : '';
+
+    const el = document.createElement('div');
+    el.className = 'nido-empty-state';
+    el.innerHTML = `
+      <div class="nido-empty-icon" style="color:${color}">${svg}</div>
+      <div class="nido-empty-title">${title}</div>
+      ${sub ? `<div class="nido-empty-sub">${sub}</div>` : ''}
+      ${ctaHtml}
+    `;
+
+    if (typeof container === 'string') {
+      container = document.querySelector(container);
+    }
+    if (container) {
+      container.innerHTML = '';
+      container.appendChild(el);
+    }
+
+    if (cta?.onClick) {
+      el.querySelector('.nido-empty-cta')?.addEventListener('click', cta.onClick);
+    }
+
+    return el;
+  }
 
   /* ── RIPPLE ───────────────────────────────────────────── */
   function addRipple(e) {
@@ -234,7 +364,7 @@
     return `<span style="${style}">${cfg.icon} ${cfg.label}</span>`;
   }
 
-  window.NidoUI = { toast, sk, apiErr, rolBadge, ROL_BADGE };
+  window.NidoUI = { toast, sk, apiErr, rolBadge, ROL_BADGE, empty: emptyState };
 })();
 
 /* ── NIDO AUTH — session persistence helper ── */

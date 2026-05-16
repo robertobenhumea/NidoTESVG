@@ -84,12 +84,8 @@
   <!-- PRODUCT GRID / LIST -->
   <div class="mkt-grid" id="mkt-grid"></div>
 
-  <!-- EMPTY STATE -->
-  <div class="mkt-empty" id="mkt-empty" hidden>
-    <div class="mkt-empty-icon">🛍️</div>
-    <div class="mkt-empty-title" id="mkt-empty-title">Sin productos aquí</div>
-    <div class="mkt-empty-sub" id="mkt-empty-sub">Sé el primero en publicar algo</div>
-  </div>
+  <!-- EMPTY STATE — rendered by NidoUI.empty() -->
+  <div id="mkt-empty" hidden></div>
 
 </main>
 
@@ -489,18 +485,33 @@
     document.getElementById('mkt-cats').style.display = list ? 'none' : '';
   }
 
+  function mktSkeleton() {
+    const grid = document.getElementById('mkt-grid');
+    document.getElementById('mkt-empty').hidden = true;
+    grid.innerHTML = (NidoUI?.sk?.mktCard || '').repeat(6);
+    grid.classList.add('nido-stagger');
+  }
+
   function renderProducts(products) {
     const grid  = document.getElementById('mkt-grid');
     const empty = document.getElementById('mkt-empty');
     const count = document.getElementById('mkt-count');
     if (!products.length) {
+      grid.innerHTML = '';
       empty.hidden = false;
+      NidoUI?.empty(empty, {
+        icon: 'market',
+        title: 'Sin productos aquí',
+        sub: 'Sé el primero en publicar algo en el Marketplace',
+        cta: { label: 'Publicar producto', onClick: () => document.getElementById('mkt-fab')?.click() },
+      });
       count.textContent = '0 productos';
       return;
     }
     empty.hidden = true;
     count.textContent = products.length + ' producto' + (products.length !== 1 ? 's' : '');
     grid.innerHTML = products.map(renderCard).join('');
+    grid.classList.add('nido-stagger');
   }
 
   function renderSolicitudes(list, renderer) {
@@ -508,19 +519,25 @@
     const empty = document.getElementById('mkt-empty');
     const count = document.getElementById('mkt-count');
     if (!list.length) {
+      grid.innerHTML = '';
       empty.hidden = false;
+      NidoUI?.empty(empty, {
+        icon: 'market',
+        title: 'Sin solicitudes todavía',
+        sub: 'Cuando solicites o recibas pedidos aparecerán aquí',
+      });
       count.textContent = '0 solicitudes';
       return;
     }
     empty.hidden = true;
     count.textContent = list.length + ' solicitud' + (list.length !== 1 ? 'es' : '');
     grid.innerHTML = list.map(renderer).join('');
+    grid.classList.add('nido-stagger');
   }
 
   async function loadProducts(cat, q) {
     setListMode(false);
-    document.getElementById('mkt-grid').innerHTML = '';
-    document.getElementById('mkt-empty').hidden = true;
+    mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
     let url = `${API}/market/productos?`;
     if (q) url += `q=${encodeURIComponent(q)}&`;
@@ -535,52 +552,54 @@
 
   async function loadFavs() {
     setListMode(false);
-    document.getElementById('mkt-grid').innerHTML = '';
-    document.getElementById('mkt-empty').hidden = true;
+    mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
     try {
       const res = await fetch(`${API}/market/favoritos`, { headers: h });
       const products = res.ok ? await res.json() : [];
       renderProducts(products);
       fillSellerInfo(products);
-    } catch (_) {}
+    } catch (_) { NidoUI?.toast.error('Error al cargar favoritos'); }
   }
 
   async function loadMine() {
     if (!currentUserId) await loadMe();
     if (!currentUserId) return;
     setListMode(false);
-    document.getElementById('mkt-grid').innerHTML = '';
-    document.getElementById('mkt-empty').hidden = true;
+    mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
     try {
       const res = await fetch(`${API}/market/productos/vendedor/${currentUserId}`, { headers: h });
       const products = res.ok ? await res.json() : [];
       renderProducts(products);
       fillSellerInfo(products);
-    } catch (_) {}
+    } catch (_) { NidoUI?.toast.error('Error al cargar tus productos'); }
   }
 
   async function loadMisCompras() {
     setListMode(true);
-    document.getElementById('mkt-grid').innerHTML = '';
-    document.getElementById('mkt-empty').hidden = true;
-    document.getElementById('mkt-empty-title').textContent = 'Sin compras todavía';
-    document.getElementById('mkt-empty-sub').textContent = 'Cuando solicites un producto aparecerá aquí';
+    mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
     try {
       const res = await fetch(`${API}/market/solicitudes/enviadas`, { headers: h });
       const list = res.ok ? await res.json() : [];
-      renderSolicitudes(list, renderMiCompraCard);
+      if (!list.length) {
+        NidoUI?.empty(document.getElementById('mkt-empty'), {
+          icon: 'market', title: 'Sin compras todavía',
+          sub: 'Cuando solicites un producto aparecerá aquí',
+        });
+        document.getElementById('mkt-empty').hidden = false;
+        document.getElementById('mkt-grid').innerHTML = '';
+        document.getElementById('mkt-count').textContent = '0 compras';
+      } else {
+        renderSolicitudes(list, renderMiCompraCard);
+      }
     } catch (_) { document.getElementById('mkt-count').textContent = 'Error al cargar'; }
   }
 
   async function loadSolicitudesRecibidas() {
     setListMode(true);
-    document.getElementById('mkt-grid').innerHTML = '';
-    document.getElementById('mkt-empty').hidden = true;
-    document.getElementById('mkt-empty-title').textContent = 'Sin solicitudes recibidas';
-    document.getElementById('mkt-empty-sub').textContent = 'Cuando alguien quiera comprar uno de tus productos, aparecerá aquí';
+    mktSkeleton();
     document.getElementById('mkt-count').textContent = 'Cargando...';
     try {
       const res = await fetch(`${API}/market/solicitudes/recibidas`, { headers: h });

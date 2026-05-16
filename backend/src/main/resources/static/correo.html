@@ -985,7 +985,7 @@
       document.querySelectorAll('.slink').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
       document.getElementById('carpeta-title').textContent = CARPETA_TITLES[carpeta] || carpeta;
-      document.getElementById('mail-list').innerHTML = '<div class="mail-empty"><span class="icon">⌛</span><p>Cargando…</p></div>';
+      document.getElementById('mail-list').innerHTML = (window.NidoUI?.sk?.correoItem || '<div class="mail-empty"><span class="icon">⌛</span><p>Cargando…</p></div>').repeat(window.NidoUI?.sk?.correoItem ? 6 : 1);
       clearReading();
 
       document.querySelector('.btn-vaciar')?.remove();
@@ -1030,7 +1030,14 @@
 
     function renderList(correos, modo) {
       const el = document.getElementById('mail-list');
-      if (!correos.length) { el.innerHTML = '<div class="mail-empty"><span class="icon">📭</span><p>Sin correos aquí</p></div>'; return; }
+      if (!correos.length) {
+        window.NidoUI?.empty(el, {
+          icon: 'mail',
+          title: 'Sin correos aquí',
+          sub: 'Tu bandeja está vacía por ahora',
+        });
+        return;
+      }
       el.innerHTML = correos.map(c => renderMailItem(c, modo)).join('');
     }
 

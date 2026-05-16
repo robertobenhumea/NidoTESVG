@@ -580,6 +580,8 @@
     }
 
     async function cargarGrupos() {
+      const lista = document.getElementById("grupos-lista");
+      lista.innerHTML = (window.NidoUI?.sk?.grupoCard || '').repeat(4);
       const r = await api("GET", "/grupos");
       if (!r || !r.ok) return;
       todosGrupos = await r.json();
@@ -600,9 +602,11 @@
         : todosGrupos;
 
       if (!grupos.length) {
-        lista.innerHTML = `<div class="grupo-item-empty">${currentTab === "mis"
-          ? "Aún no perteneces a ningún grupo. ¡Explora y únete!"
-          : "No hay grupos creados todavía."}</div>`;
+        window.NidoUI?.empty(lista, {
+          icon: 'grupos',
+          title: currentTab === "mis" ? 'Aún no eres parte de ningún grupo' : 'No hay grupos todavía',
+          sub: currentTab === "mis" ? 'Explora grupos y únete a tu comunidad' : 'Sé el primero en crear uno',
+        }) || (lista.innerHTML = `<div class="grupo-item-empty">${currentTab === "mis" ? "Aún no perteneces a ningún grupo." : "No hay grupos todavía."}</div>`);
         return;
       }
 

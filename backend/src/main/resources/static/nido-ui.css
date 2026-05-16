@@ -87,6 +87,11 @@ html[data-theme="light"] body.nido-aaa .nido-skeleton {
   background-size: 600px 100%;
   animation: nido-shimmer 1.5s ease-in-out infinite;
 }
+html[data-theme="light"] body.nido-aaa .nido-sk-card {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
 .nido-sk-avatar { border-radius: 50% !important; flex-shrink: 0; }
 .nido-sk-card {
   background: #fff;
@@ -218,8 +223,10 @@ body.nido-aaa .nido-sk-card {
 /* ── TARJETAS — hover lift ────────────────────────────── */
 .aviso-card, .recurso-card, .user-card,
 .post-card, .rank-card, .event-item,
-.grupo-card, .correo-item, .badge-card.earned {
-  transition: transform .2s ease, box-shadow .2s ease !important;
+.grupo-card, .correo-item, .badge-card.earned,
+.mkt-card, .product-card, .chat-conv-item,
+.nf-item, .notif-item {
+  transition: transform .2s ease, box-shadow .2s ease, background .15s ease !important;
 }
 .aviso-card:hover   { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(0,0,0,.11) !important; }
 .recurso-card:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(0,0,0,.11) !important; }
@@ -227,6 +234,21 @@ body.nido-aaa .nido-sk-card {
 .post-card:hover    { box-shadow: 0 4px 16px rgba(0,0,0,.1) !important; }
 .rank-card:hover    { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(0,0,0,.1)  !important; }
 .badge-card.earned:hover { box-shadow: 0 6px 18px rgba(245,166,35,.3) !important; }
+.mkt-card:hover, .product-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.14) !important;
+}
+.chat-conv-item:hover { background: rgba(255,255,255,.05) !important; }
+html[data-theme="light"] body.nido-aaa .chat-conv-item:hover { background: rgba(0,0,0,.04) !important; }
+
+/* ── STAGGER — tarjetas dinámicas ────────────────────── */
+.nido-stagger > *:nth-child(1)  { animation: nido-fade-up .28s .00s ease both; }
+.nido-stagger > *:nth-child(2)  { animation: nido-fade-up .28s .05s ease both; }
+.nido-stagger > *:nth-child(3)  { animation: nido-fade-up .28s .10s ease both; }
+.nido-stagger > *:nth-child(4)  { animation: nido-fade-up .28s .14s ease both; }
+.nido-stagger > *:nth-child(5)  { animation: nido-fade-up .28s .18s ease both; }
+.nido-stagger > *:nth-child(6)  { animation: nido-fade-up .28s .22s ease both; }
+.nido-stagger > *:nth-child(n+7){ animation: nido-fade-up .28s .25s ease both; }
 
 /* ── INPUTS — focus glow universal ───────────────────── */
 input:not([type="file"]):not([type="checkbox"]):not([type="radio"]):focus,
@@ -284,6 +306,49 @@ select:focus {
 
 /* ── EMPTY STATES ─────────────────────────────────────── */
 .empty-state, .state-empty { animation: nido-fade-in .3s ease both; }
+
+.nido-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 24px 48px;
+  text-align: center;
+  animation: nido-fade-up .38s cubic-bezier(.2,.9,.2,1) both;
+}
+.nido-empty-icon {
+  width: 72px; height: 72px;
+  margin-bottom: 20px;
+  opacity: .55;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.nido-empty-state:hover .nido-empty-icon {
+  opacity: .72;
+  transform: translateY(-3px);
+}
+.nido-empty-icon svg { width: 100%; height: 100%; }
+.nido-empty-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text, #E4E6EB);
+  margin-bottom: 6px;
+  letter-spacing: -.01em;
+}
+.nido-empty-sub {
+  font-size: .85rem;
+  color: var(--gray-text, #B0B3B8);
+  max-width: 280px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.nido-empty-cta {
+  margin-top: 4px;
+  padding: 0 22px;
+  height: 38px;
+  font-size: .88rem;
+}
+html[data-theme="light"] body.nido-aaa .nido-empty-title { color: #1C1B17; }
+html[data-theme="light"] body.nido-aaa .nido-empty-sub   { color: rgba(28,27,23,.55); }
 
 /* ── LOADING SPINNER ──────────────────────────────────── */
 .nido-spinner {
