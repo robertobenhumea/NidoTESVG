@@ -1013,98 +1013,130 @@
       display: flex; gap: 10px; align-items: flex-start; min-width: max-content;
     }
 
-    /* ═══════════════ STORY CARDS ═══════════════ */
+    /* ═══════════════ STORY CARDS — Facebook tall-card style ═══════════════ */
+    .stories-row { align-items: stretch; }
+
     .story-card {
-      position: relative; overflow: visible; cursor: pointer;
-      user-select: none; display: flex; flex-direction: column; align-items: center;
-      width: 76px; flex-shrink: 0; gap: 5px;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* thumbnail */
-    .story-thumb {
-      width: 68px; height: 68px; border-radius: 50%; overflow: hidden;
-      position: relative; flex-shrink: 0;
+      position: relative; overflow: hidden; cursor: pointer;
+      user-select: none; flex-shrink: 0;
+      width: 88px; border-radius: 14px;
       background: var(--navy);
-      transition: transform .18s ease;
+      transition: transform .2s cubic-bezier(.34,1.26,.64,1), box-shadow .2s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0,0,0,.14);
     }
-    .story-card:active .story-thumb { transform: scale(.92); }
+    .story-card:hover { transform: scale(1.04); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
+    .story-card:active { transform: scale(.96); }
 
-    /* gradient ring for unseen */
-    .story-thumb::before {
-      content: ''; position: absolute; inset: -3px; border-radius: 50%;
-      background: conic-gradient(var(--gold), #ff9500, var(--gold) 180deg, #F5A623 270deg, var(--gold));
+    /* full-height thumbnail fill */
+    .story-thumb-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      transition: transform .3s ease;
+    }
+    .story-card:hover .story-thumb-bg { transform: scale(1.05); }
+
+    /* gradient overlay: top fades in, bottom is dark for text */
+    .story-thumb-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg,
+        rgba(0,0,0,.28) 0%,
+        transparent 35%,
+        transparent 55%,
+        rgba(0,0,0,.75) 100%);
+    }
+
+    /* gold gradient ring for unseen (as border) */
+    .story-card:not(.story-seen):not(.story-card-create)::before {
+      content: '';
+      position: absolute; inset: -2.5px; border-radius: 16.5px;
+      background: linear-gradient(135deg, var(--gold) 0%, #ff9500 50%, var(--gold) 100%);
       z-index: -1;
     }
-    /* white gap between ring and photo */
-    .story-thumb::after {
-      content: ''; position: absolute; inset: -1.5px; border-radius: 50%;
-      background: var(--white);
-      z-index: -1;
-      border: 2.5px solid var(--white);
-    }
-    .story-card.story-seen .story-thumb::before {
-      background: #ccc;
-    }
+    .story-card.story-seen { opacity: .85; }
+    .story-card.story-seen::before { display: none; }
 
-    .story-thumb-img {
-      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
-    }
-    .story-thumb-initials {
-      position: absolute; inset: 0; border-radius: 50%;
+    /* small avatar in top-left */
+    .story-card-avatar {
+      position: absolute; top: 10px; left: 8px;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 2.5px solid var(--gold);
+      background: var(--navy);
+      background-size: cover; background-position: center;
+      font-size: .6rem; font-weight: 800; color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: .78rem; font-weight: 800; color: var(--navy);
+      overflow: hidden; flex-shrink: 0;
+      box-shadow: 0 1px 6px rgba(0,0,0,.45);
+      z-index: 5;
     }
+    .story-card.story-seen .story-card-avatar { border-color: rgba(255,255,255,.35); }
 
-    /* own story "+add more" badge on avatar */
-    .story-add-more {
-      position: absolute; bottom: 0; right: 0;
-      width: 22px; height: 22px; border-radius: 50%; z-index: 10;
-      background: var(--gold); color: var(--navy);
-      font-size: .85rem; font-weight: 900; line-height: 1;
-      display: flex; align-items: center; justify-content: center;
-      border: 2.5px solid var(--white);
-      box-shadow: 0 1px 6px rgba(0,0,0,.35);
-      cursor: pointer;
-      transition: transform .15s;
-    }
-    .story-add-more:hover { transform: scale(1.15); }
-
-    /* create card (no stories yet) */
-    .story-card-create .story-thumb {
-      border: 2px dashed rgba(245,166,35,.5);
-      background: rgba(245,166,35,.07);
-    }
-    .story-card-create .story-thumb::before,
-    .story-card-create .story-thumb::after { display: none; }
-    .story-card-create .story-plus {
-      position: absolute; inset: 0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.6rem; color: var(--gold); font-weight: 300;
-    }
-
+    /* name label at bottom */
     .story-thumb-label {
-      font-size: .68rem; font-weight: 600; color: var(--navy);
-      text-align: center; line-height: 1.2;
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 8px 6px 10px;
+      font-size: .67rem; font-weight: 700; color: #fff;
+      text-align: center; line-height: 1.25;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      max-width: 72px;
+      text-shadow: 0 1px 4px rgba(0,0,0,.7);
+      z-index: 5;
     }
-    .story-card.story-seen .story-thumb-label { color: #888; }
+
+    /* ── CREATE STORY card — always visible ── */
+    .story-card-create {
+      background: var(--white);
+      border: 1.5px solid rgba(0,0,0,.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .story-card-create::before { display: none; }
+    .story-card-create:hover { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+    .story-card-create .story-thumb-bg { border-radius: 0; }
+    /* user photo fills top 60% */
+    .story-card-create .sc-photo-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 70%; border-radius: 0;
+      background-size: cover; background-position: center;
+      background-color: var(--navy);
+    }
+    /* white bottom section with + button */
+    .story-card-create .sc-add-section {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 38%; background: var(--white);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end;
+      padding-bottom: 8px; gap: 2px;
+    }
+    .story-card-create .sc-plus-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      border: 3px solid var(--white);
+      font-size: 1.1rem; font-weight: 900; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(245,166,35,.55);
+      margin-top: -18px; /* overlaps the seam */
+      transition: transform .15s, box-shadow .15s;
+    }
+    .story-card-create:hover .sc-plus-btn {
+      transform: scale(1.12);
+      box-shadow: 0 4px 14px rgba(245,166,35,.7);
+    }
+    .story-card-create .sc-add-label {
+      font-size: .62rem; font-weight: 700; color: var(--navy);
+      text-align: center; line-height: 1.2;
+      padding: 0 4px;
+    }
+
+    /* ── height helper — controlled by JS class ── */
+    .story-card { height: 156px; }
 
     /* skeleton shimmer */
     .story-sk {
-      width: 68px; height: 68px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.12) 50%, rgba(0,0,0,.06) 75%);
+      width: 88px; height: 156px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.13) 50%, rgba(0,0,0,.06) 75%);
       background-size: 200% 100%;
       animation: story-shimmer 1.4s infinite;
     }
-    .story-sk-wrap {
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-    }
-    .story-sk-label {
-      width: 52px; height: 10px; border-radius: 5px;
-      background: rgba(0,0,0,.07);
-    }
+    .story-sk-wrap { display: inline-block; }
     @keyframes story-shimmer { to { background-position: -200% 0; } }
 
     /* ═══════════════ STORY VIEWER ═══════════════ */
@@ -1218,25 +1250,67 @@
       position: absolute; inset: 0;
       width: 100%; height: 100%; object-fit: cover;
     }
-    /* blurred image behind main for cinematic bg */
+    /* cinematic blurred bg fill */
     .story-content .sv-bg-blur {
       position: absolute; inset: -10px;
       background-size: cover; background-position: center;
-      filter: blur(22px) brightness(.55) saturate(1.4);
+      filter: blur(24px) brightness(.5) saturate(1.5);
     }
+
+    /* ── PERMANENT GRADIENT SCRIM — keeps header & text ALWAYS readable ── */
+    /* top scrim: covers progress bar + header (never shows behind image) */
+    .story-content .sv-scrim-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 180px; z-index: 3; pointer-events: none;
+      background: linear-gradient(180deg,
+        rgba(0,0,0,.72) 0%,
+        rgba(0,0,0,.45) 40%,
+        transparent 100%);
+    }
+    /* bottom scrim: covers caption text area */
+    .story-content .sv-scrim-bottom {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 220px; z-index: 3; pointer-events: none;
+      background: linear-gradient(0deg,
+        rgba(0,0,0,.78) 0%,
+        rgba(0,0,0,.45) 45%,
+        transparent 100%);
+    }
+    /* only show scrims when an image is present */
+    .story-content.has-image .sv-scrim-top,
+    .story-content.has-image .sv-scrim-bottom { display: block; }
+    .story-content:not(.has-image) .sv-scrim-top,
+    .story-content:not(.has-image) .sv-scrim-bottom { display: none; }
+
+    /* text: centered for text-only, bottom-anchored for image+text */
     .story-text-display {
-      position: relative; z-index: 2;
-      padding: 28px 22px;
+      position: absolute; z-index: 4;
       font-weight: 700; color: #fff;
-      text-align: center; word-break: break-word; line-height: 1.55;
-      text-shadow: 0 2px 12px rgba(0,0,0,.55);
+      text-align: center; word-break: break-word; line-height: 1.5;
+      text-shadow: 0 1px 4px rgba(0,0,0,.9), 0 3px 12px rgba(0,0,0,.65);
+      padding: 12px 18px;
+      max-width: 340px;
+    }
+    /* image+text: stick to bottom above swipe hint */
+    .story-content.has-image .story-text-display {
+      bottom: 56px; left: 12px; right: 12px;
+      background: rgba(0,0,0,.32);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      max-width: none;
+    }
+    /* text-only: center */
+    .story-content:not(.has-image) .story-text-display {
+      top: 50%; transform: translateY(-50%);
+      left: 0; right: 0;
     }
     /* dynamic sizes based on content length */
-    .story-text-display.sv-txt-xs { font-size: 1.05rem; }
-    .story-text-display.sv-txt-sm { font-size: 1.3rem; }
-    .story-text-display.sv-txt-md { font-size: 1.65rem; }
-    .story-text-display.sv-txt-lg { font-size: 2rem; }
-    .story-text-display.sv-txt-xl { font-size: 2.6rem; }
+    .story-text-display.sv-txt-xs { font-size: 1rem; }
+    .story-text-display.sv-txt-sm { font-size: 1.25rem; }
+    .story-text-display.sv-txt-md { font-size: 1.55rem; }
+    .story-text-display.sv-txt-lg { font-size: 1.9rem; }
+    .story-text-display.sv-txt-xl { font-size: 2.4rem; }
 
     /* tap zones — invisible but cover left/right thirds */
     .sv-tap-left, .sv-tap-right {
@@ -2998,9 +3072,16 @@
       } catch (_) {}
     }
 
-    function _storyThumb(foto, nombre) {
-      if (foto) return `<img class="story-thumb-img" src="${escapeHtml(foto)}" alt="">`;
-      return `<div class="story-thumb-initials" style="background:${hueFromStr(nombre)}">${escapeHtml(initials(nombre))}</div>`;
+    function _cardAvatar(foto, nombre, extraCls) {
+      const bg = foto ? `background-image:url('${escapeHtml(foto)}')` : `background:${hueFromStr(nombre)}`;
+      const tx = foto ? '' : escapeHtml(initials(nombre));
+      return `<div class="story-card-avatar${extraCls ? ' ' + extraCls : ''}" style="${bg}">${tx}</div>`;
+    }
+
+    function _cardBgStyle(imagenUrl, foto, nombre) {
+      if (imagenUrl) return `background-image:url('${escapeHtml(imagenUrl)}')`;
+      if (foto)      return `background-image:url('${escapeHtml(foto)}')`;
+      return `background:${hueFromStr(nombre)}`;
     }
 
     function renderStoriesRow() {
@@ -3011,54 +3092,52 @@
       const myGroup = storyGroups.find(g => g.userId === currentUserId);
       const myIdx   = myGroup ? storyGroups.indexOf(myGroup) : -1;
 
-      // ── own story card ──
+      // ── CARD 1: "Crear historia" — ALWAYS FIXED FIRST ──
+      const photoStyle = myUser.foto
+        ? `background-image:url('${escapeHtml(myUser.foto)}')`
+        : `background:${hueFromStr(myUser.nombre)}`;
+      let html = `
+        <div class="story-card story-card-create" onclick="abrirCrearStory()">
+          <div class="sc-photo-top" style="${photoStyle}"></div>
+          <div class="sc-add-section">
+            <div class="sc-plus-btn">+</div>
+            <div class="sc-add-label">Crear historia</div>
+          </div>
+        </div>`;
+
+      // ── CARD 2: own story (only when user has active stories) ──
       if (myGroup) {
-        // Has stories: show thumbnail + "+" add-more badge
         const latest = myGroup.stories.find(s => s.imagenUrl) ?? myGroup.stories[0];
-        const thumb  = latest?.imagenUrl
-          ? `<img class="story-thumb-img" src="${escapeHtml(latest.imagenUrl)}" alt="">`
-          : _storyThumb(myUser.foto, myUser.nombre);
-        var ownHtml = `
-          <div class="story-card" onclick="verStories(${myIdx})" title="Ver tu historia">
-            <div class="story-thumb">
-              ${thumb}
-              <button class="story-add-more" onclick="event.stopPropagation();abrirCrearStory()" title="Añadir historia">+</button>
-            </div>
-            <span class="story-thumb-label">Tu historia</span>
-          </div>`;
-      } else {
-        // No stories: show create card
-        var ownHtml = `
-          <div class="story-card story-card-create" onclick="abrirCrearStory()">
-            <div class="story-thumb">
-              ${_storyThumb(myUser.foto, myUser.nombre)}
-              <div class="story-plus">+</div>
-            </div>
+        const bgStyle = _cardBgStyle(latest?.imagenUrl, myUser.foto, myUser.nombre);
+        html += `
+          <div class="story-card" onclick="verStories(${myIdx})">
+            <div class="story-thumb-bg" style="${bgStyle}"></div>
+            <div class="story-thumb-overlay"></div>
+            ${_cardAvatar(myUser.foto, myUser.nombre)}
             <span class="story-thumb-label">Tu historia</span>
           </div>`;
       }
 
       // ── other users' cards ──
-      let othersHtml = '';
       storyGroups.forEach((group, idx) => {
         if (group.userId === currentUserId) return;
         const u       = globalUserIdMap.get(group.userId) ?? { nombre: 'Usuario', foto: null };
         const allSeen = group.stories.every(s => seenStoryIds.has(s.id));
         const latest  = group.stories.find(s => s.imagenUrl) ?? group.stories[0];
-        const thumb   = latest?.imagenUrl
-          ? `<img class="story-thumb-img" src="${escapeHtml(latest.imagenUrl)}" alt="">`
-          : _storyThumb(u.foto, u.nombre);
+        const bgStyle = _cardBgStyle(latest?.imagenUrl, u.foto, u.nombre);
         const label   = (u.nombre.split(/[\s@.]/)[0] || 'Usuario').slice(0, 11);
         const seenCls = allSeen ? ' story-seen' : '';
 
-        othersHtml += `
+        html += `
           <div class="story-card${seenCls}" onclick="verStories(${idx})">
-            <div class="story-thumb">${thumb}</div>
+            <div class="story-thumb-bg" style="${bgStyle}"></div>
+            <div class="story-thumb-overlay"></div>
+            ${_cardAvatar(u.foto, u.nombre)}
             <span class="story-thumb-label">${escapeHtml(label)}</span>
           </div>`;
       });
 
-      row.innerHTML = ownHtml + othersHtml;
+      row.innerHTML = html;
     }
 
     /* ── VIEWER ── */
@@ -3135,12 +3214,15 @@
       if (vcEl) vcEl.textContent = story.vistas ?? 0;
 
       // Build content HTML
-      const sizeCls = _storyTextSizeClass(story.texto);
+      const sizeCls  = _storyTextSizeClass(story.texto);
+      const hasImage = !!story.imagenUrl;
       let inner = '';
-      if (story.imagenUrl) {
+      if (hasImage) {
         const esc = escapeHtml(story.imagenUrl);
         inner += `<div class="sv-bg-blur" style="background-image:url('${esc}')"></div>`;
         inner += `<img src="${esc}" alt="" loading="eager">`;
+        inner += `<div class="sv-scrim-top"></div>`;
+        inner += `<div class="sv-scrim-bottom"></div>`;
       }
       if (story.texto) inner += `<div class="story-text-display ${sizeCls}">${escapeHtml(story.texto)}</div>`;
       if (!inner)      inner  = `<div class="story-text-display sv-txt-xl" style="color:rgba(255,255,255,.28)">…</div>`;
@@ -3149,6 +3231,7 @@
       const content = document.getElementById('story-content');
       const applyContent = () => {
         content.style.background = story.colorFondo || '#1A1A2E';
+        content.classList.toggle('has-image', hasImage);
         content.innerHTML = inner;
         if (!skipFade) {
           content.classList.remove('sv-fade-out');
@@ -4080,11 +4163,9 @@
     }
 
     // ── INIT ──
-    // Show skeleton while stories load
     (function() {
       const row = document.getElementById('stories-row');
-      const sk  = '<div class="story-sk-wrap"><div class="story-sk"></div><div class="story-sk-label"></div></div>';
-      if (row) row.innerHTML = Array(6).fill(sk).join('');
+      if (row) row.innerHTML = Array(6).fill('<div class="story-sk"></div>').join('');
     })();
 
     cargarUsuario().then(cargarWidgetsUsuarios); // needs currentUserId → chain
