@@ -1,0 +1,592 @@
+/* NidoTESVG AAA Layout: mobile first app shell */
+body.nido-aaa {
+  min-height: 100vh;
+}
+
+body.nido-aaa:not(.nido-login-page) {
+  padding-bottom: calc(var(--nido-bottom-nav-h) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Chat page: no bottom nav, no mobile top, no extra padding */
+body.nido-aaa.nido-chat-page {
+  padding-bottom: 0 !important;
+}
+
+/* ── TOP NAV: always hidden on mobile regardless of JS timing ──────────
+   Targets both the hardcoded home.html nav and any page nav rebuilt by JS */
+@media (max-width: 768px) {
+  nav.nido-desktop-nav,
+  nav:not(.nido-bottom-nav):not(.nido-mobile-top) {
+    display: none !important;
+  }
+}
+
+/* ── BOTTOM NAV ──────────────────────────────────────────────────────── */
+.nido-bottom-nav {
+  position: fixed;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 520px;
+  height: 66px;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: space-around;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(245,166,35,0.18);
+  border-radius: 26px;
+  background: rgba(9,9,13,0.82);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.60), 0 0 36px rgba(245,166,35,0.10), inset 0 1px 0 rgba(255,255,255,0.07);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  transition: transform .34s cubic-bezier(.4,0,.2,1), opacity .28s ease;
+  will-change: transform;
+}
+
+.nido-bottom-link {
+  position: relative;
+  flex: 1;
+  height: 50px;
+  border: 0;
+  background: transparent;
+  color: var(--nido-muted);
+  text-decoration: none;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  transition: color .22s ease, background .22s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nido-bottom-link svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  fill: none;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+
+.nido-bottom-link.active {
+  color: var(--nido-gold);
+  background: rgba(245,166,35,0.09);
+}
+
+.nido-bottom-link.active svg {
+  transform: scale(1.12);
+}
+
+.nido-bottom-link.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 16px;
+  height: 2.5px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: var(--nido-gold);
+  box-shadow: 0 0 12px rgba(245,166,35,0.70);
+}
+
+.nido-bottom-create {
+  flex: 0 0 60px;
+  height: 60px;
+  margin-top: -22px;
+  color: #08080b;
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold) 48%, #b8720a);
+  border-radius: 22px;
+  box-shadow: 0 14px 32px rgba(245,166,35,0.38), 0 0 28px rgba(245,166,35,0.18), inset 0 1px 0 rgba(255,255,255,0.50);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease, color .22s ease, background .22s ease;
+}
+
+.nido-bottom-create:active {
+  transform: scale(.90) !important;
+  box-shadow: 0 6px 18px rgba(245,166,35,0.28) !important;
+}
+
+.nido-bottom-link:not(.nido-bottom-create):active {
+  transform: scale(.90);
+}
+
+/* ── Scroll-hide state ── */
+.nido-bottom-nav.nido-nav-hidden {
+  transform: translateX(-50%) translateY(calc(100% + 26px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nido-mobile-top {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 9000;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: linear-gradient(180deg, rgba(10,10,15,0.92), rgba(10,10,15,0.66));
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid var(--nido-border);
+}
+
+.nido-mobile-top-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nido-mobile-brand {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+  color: inherit;
+}
+
+.nido-mobile-brand span {
+  color: var(--nido-gold);
+  text-shadow: 0 0 18px rgba(245,166,35,0.30);
+}
+
+.nido-mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nido-mobile-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--nido-muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .16s ease, color .16s ease;
+  flex-shrink: 0;
+}
+.nido-mobile-action svg {
+  width: 20px;
+  height: 20px;
+}
+.nido-mobile-action:hover,
+.nido-mobile-action:focus-visible {
+  background: var(--nido-gold-mist);
+  color: var(--nido-gold);
+  outline: none;
+}
+
+.nido-mob-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--nido-red, #e03131);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  display: none;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  html,
+  body.nido-aaa {
+    min-height: 100%;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .nido-bottom-nav,
+  .nido-mobile-top {
+    display: flex;
+  }
+
+  body.nido-aaa nav:not(.nido-bottom-nav),
+  body.nido-aaa .topbar:not(.nido-mobile-top) {
+    display: none !important;
+  }
+
+  body.nido-aaa .page-wrap,
+  body.nido-aaa .layout,
+  body.nido-aaa .content-layout,
+  body.nido-aaa .app,
+  body.nido-aaa .mail-wrap {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 14px 12px 94px !important;
+    display: block !important;
+  }
+
+  body.nido-aaa .feed-col,
+  body.nido-aaa main,
+  body.nido-aaa .main,
+  body.nido-aaa .main-col,
+  body.nido-aaa #main-content {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  body.nido-aaa aside.sidebar,
+  body.nido-aaa .sidebar,
+  body.nido-aaa .mail-sidebar {
+    position: static !important;
+    width: 100% !important;
+    max-height: none !important;
+    margin-bottom: 12px !important;
+    border-right: 0 !important;
+    background: transparent !important;
+  }
+
+  body.nido-aaa .right-col,
+  body.nido-aaa .left-col {
+    display: none !important;
+  }
+
+  body.nido-aaa .card,
+  body.nido-aaa .post-card,
+  body.nido-aaa .my-post,
+  body.nido-aaa .profile-card,
+  body.nido-aaa .recurso-card,
+  body.nido-aaa .aviso-card,
+  body.nido-aaa .rank-card,
+  body.nido-aaa .grupo-card,
+  body.nido-aaa .user-card,
+  body.nido-aaa .badge-card {
+    border-radius: 22px !important;
+    padding: 14px !important;
+    margin-bottom: 12px !important;
+  }
+
+  body.nido-aaa .compose.card,
+  body.nido-aaa .composer,
+  body.nido-aaa .create-post-card {
+    position: relative !important;
+  }
+
+  body.nido-aaa .mail-list-col,
+  body.nido-aaa .mail-reading,
+  body.nido-aaa .chat-main,
+  body.nido-aaa .chat-area,
+  body.nido-aaa .chat-panel {
+    width: 100% !important;
+    height: calc(100vh - 150px) !important;
+    border-right: 0 !important;
+    border-radius: 24px !important;
+    overflow: hidden !important;
+  }
+
+  body.nido-aaa .mail-reading:not(.has-active),
+  body.nido-aaa .chat-empty {
+    min-height: 58vh;
+  }
+
+  body.nido-aaa table,
+  body.nido-aaa .table-wrap {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  body.nido-aaa .compose-backdrop,
+  body.nido-aaa .modal-backdrop,
+  body.nido-aaa .story-create-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  body.nido-aaa .compose-modal,
+  body.nido-aaa .modal,
+  body.nido-aaa .story-create-card {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 88vh !important;
+    border-radius: 28px 28px 0 0 !important;
+    animation: nido-sheet-up .28s cubic-bezier(.2,.9,.2,1) both;
+  }
+
+  /* ── FILTER / CHIP ROWS: scroll horizontal tipo Instagram ── */
+  body.nido-aaa .filter-row,
+  body.nido-aaa .filter-bar,
+  body.nido-aaa .filter-chips,
+  body.nido-aaa .chip-row,
+  body.nido-aaa .filter-tabs-row,
+  body.nido-aaa .tabs-row,
+  body.nido-aaa .cat-row {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px !important;
+  }
+  body.nido-aaa .filter-row::-webkit-scrollbar,
+  body.nido-aaa .filter-bar::-webkit-scrollbar,
+  body.nido-aaa .filter-chips::-webkit-scrollbar,
+  body.nido-aaa .chip-row::-webkit-scrollbar,
+  body.nido-aaa .filter-tabs-row::-webkit-scrollbar { display: none; }
+
+  body.nido-aaa .filter-row .filter-chip,
+  body.nido-aaa .filter-bar .filter-chip,
+  body.nido-aaa .filter-chips .filter-chip,
+  body.nido-aaa .chip-row .filter-chip { flex-shrink: 0 !important; }
+
+  /* ── TOUCH TARGETS: botones de acción de posts ── */
+  body.nido-aaa .btn-like,
+  body.nido-aaa .btn-comment,
+  body.nido-aaa .btn-share { min-height: 44px; }
+
+  /* ── NOTIF PANEL: no desborda la pantalla ── */
+  body.nido-aaa .notif-panel {
+    width: calc(100vw - 24px) !important;
+    right: 0 !important;
+    left: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  body.nido-aaa:not(.nido-login-page) {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   LIGHT MODE — bottom nav + mobile top
+══════════════════════════════════════════════════════ */
+
+html[data-theme="light"] .nido-bottom-nav {
+  background: rgba(246,245,241,0.92) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 -2px 18px rgba(0,0,0,0.07), 0 8px 28px rgba(0,0,0,0.06) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+html[data-theme="light"] .nido-bottom-link {
+  color: rgba(28,27,23,0.48) !important;
+}
+
+html[data-theme="light"] .nido-bottom-link.active {
+  color: var(--nido-gold) !important;
+  background: var(--nido-gold-weak) !important;
+  box-shadow: inset 0 0 0 1px var(--nido-border-gold) !important;
+}
+
+html[data-theme="light"] .nido-bottom-link.active::after {
+  background: var(--nido-gold) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .nido-bottom-create {
+  color: #fff !important;
+  background: linear-gradient(135deg, #d49218, var(--nido-gold) 48%, var(--nido-gold-soft)) !important;
+  box-shadow: 0 8px 24px rgba(184,122,8,0.26) !important;
+}
+
+html[data-theme="light"] .nido-mobile-top {
+  background: rgba(246,245,241,0.92) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+html[data-theme="light"] .nido-mobile-brand { color: #1C1B17 !important; }
+html[data-theme="light"] .nido-mobile-brand span { color: var(--nido-gold) !important; text-shadow: none !important; }
+
+html[data-theme="light"] .nido-mobile-action {
+  color: rgba(28,27,23,0.55) !important;
+}
+html[data-theme="light"] .nido-mobile-action:hover,
+html[data-theme="light"] .nido-mobile-action:focus-visible {
+  background: var(--nido-gold-mist) !important;
+  color: var(--nido-gold) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   MÁS — Bottom sheet + backdrop
+══════════════════════════════════════════════════════ */
+
+#nido-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  background: rgba(0,0,0,0);
+  pointer-events: none;
+  transition: background .28s ease;
+}
+#nido-more-backdrop.open {
+  background: rgba(0,0,0,0.58);
+  pointer-events: all;
+}
+
+#nido-more-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99991;
+  background: rgba(10,9,14,0.94);
+  backdrop-filter: blur(32px) saturate(170%);
+  -webkit-backdrop-filter: blur(32px) saturate(170%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  border-radius: 28px 28px 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+  transform: translateY(100%);
+  transition: transform .32s cubic-bezier(.2,.9,.2,1);
+}
+#nido-more-sheet.open {
+  transform: translateY(0);
+}
+
+.nido-more-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  margin: 14px auto 12px;
+}
+
+.nido-more-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 14px;
+}
+
+.nido-more-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--nido-text);
+}
+
+html[data-theme="light"] .nido-more-handle {
+  background: rgba(0,0,0,0.12);
+}
+
+html[data-theme="light"] .nido-more-header-title {
+  color: var(--nido-text);
+}
+
+.nido-more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 14px 28px;
+}
+
+.nido-more-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 6px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: rgba(238,237,233,0.52);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background .18s ease, color .18s ease, transform .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nido-more-ico {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.nido-more-ico svg {
+  width: 23px;
+  height: 23px;
+  stroke: currentColor;
+  stroke-width: 1.85;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nido-more-item:active {
+  transform: scale(.92);
+}
+
+.nido-more-item:active .nido-more-ico,
+.nido-more-item:hover .nido-more-ico {
+  background: rgba(245,166,35,0.10);
+  border-color: rgba(245,166,35,0.22);
+}
+
+.nido-more-item:active,
+.nido-more-item:hover {
+  color: var(--nido-gold);
+}
+
+.nido-more-item.active {
+  color: var(--nido-gold);
+}
+.nido-more-item.active .nido-more-ico {
+  background: rgba(245,166,35,0.12);
+  border-color: rgba(245,166,35,0.24);
+}
+
+/* ── Light mode ── */
+html[data-theme="light"] #nido-more-sheet {
+  background: rgba(248,247,244,0.97);
+  border-color: rgba(0,0,0,0.07);
+}
+html[data-theme="light"] .nido-more-item {
+  color: rgba(28,27,23,0.50);
+}
+html[data-theme="light"] .nido-more-ico {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.07);
+}
+html[data-theme="light"] .nido-more-item:active .nido-more-ico,
+html[data-theme="light"] .nido-more-item:hover .nido-more-ico {
+  background: rgba(184,122,8,0.09);
+  border-color: rgba(184,122,8,0.20);
+}
+html[data-theme="light"] .nido-more-item:active,
+html[data-theme="light"] .nido-more-item:hover {
+  color: var(--nido-gold);
+}
+html[data-theme="light"] .nido-more-item.active {
+  color: var(--nido-gold);
+}
+html[data-theme="light"] .nido-more-item.active .nido-more-ico {
+  background: rgba(184,122,8,0.10);
+  border-color: rgba(184,122,8,0.22);
+}

@@ -1,0 +1,650 @@
+/* NidoTESVG AAA Shared Components */
+body.nido-aaa,
+body.nido-aaa input,
+body.nido-aaa textarea,
+body.nido-aaa select,
+body.nido-aaa button {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body.nido-aaa a { color: inherit; }
+
+body.nido-aaa nav,
+body.nido-aaa .topbar,
+body.nido-aaa .navbar {
+  background: rgba(10,10,15,0.72) !important;
+  border-bottom: 1px solid var(--nido-border) !important;
+  box-shadow: 0 14px 42px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.055) !important;
+  backdrop-filter: var(--nido-blur);
+  -webkit-backdrop-filter: var(--nido-blur);
+}
+
+body.nido-aaa .nav-logo,
+body.nido-aaa .topbar-logo,
+body.nido-aaa .sidebar-logo {
+  color: var(--nido-text) !important;
+  letter-spacing: -0.02em;
+}
+
+body.nido-aaa .nav-logo span,
+body.nido-aaa .topbar-logo span {
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold) 50%, var(--nido-gold-soft)) !important;
+  color: #08080b !important;
+  box-shadow: 0 0 24px rgba(245,166,35,0.22);
+}
+
+body.nido-aaa .card,
+body.nido-aaa .sidebar-card,
+body.nido-aaa .profile-card,
+body.nido-aaa .post-card,
+body.nido-aaa .my-post,
+body.nido-aaa .aviso-card,
+body.nido-aaa .recurso-card,
+body.nido-aaa .rank-card,
+body.nido-aaa .stat-card,
+body.nido-aaa .report-card,
+body.nido-aaa .grupo-card,
+body.nido-aaa .user-card,
+body.nido-aaa .badge-card,
+body.nido-aaa .event-item,
+body.nido-aaa .mail-item,
+body.nido-aaa .contact-item {
+  background: linear-gradient(160deg, rgba(255,255,255,0.070), rgba(255,255,255,0.030)) !important;
+  border: 1px solid var(--nido-border) !important;
+  border-radius: var(--nido-radius-lg) !important;
+  box-shadow: var(--nido-shadow-sm), inset 0 1px 0 rgba(255,255,255,0.065) !important;
+  color: var(--nido-text) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+
+body.nido-aaa .post-card:hover,
+body.nido-aaa .my-post:hover,
+body.nido-aaa .aviso-card:hover,
+body.nido-aaa .recurso-card:hover,
+body.nido-aaa .rank-card:hover,
+body.nido-aaa .user-card:hover,
+body.nido-aaa .grupo-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--nido-border-gold) !important;
+  box-shadow: var(--nido-shadow), var(--nido-glow) !important;
+}
+
+body.nido-aaa .btn-primary,
+body.nido-aaa .btn-publish,
+body.nido-aaa .btn-search,
+body.nido-aaa .btn-compose,
+body.nido-aaa .btn-download,
+body.nido-aaa .btn-follow.seguir,
+body.nido-aaa .btn-evaluar,
+body.nido-aaa .btn-send,
+body.nido-aaa .btn-send-comment {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold) 46%, #b8720a) !important;
+  color: #08080b !important;
+  border: 0 !important;
+  border-radius: 15px !important;
+  box-shadow: 0 12px 32px rgba(245,166,35,0.28), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+  font-weight: 800 !important;
+  transition: transform .22s cubic-bezier(.2,.9,.2,1), box-shadow .22s ease, filter .22s ease !important;
+}
+
+body.nido-aaa .btn-primary:hover,
+body.nido-aaa .btn-publish:hover,
+body.nido-aaa .btn-search:hover,
+body.nido-aaa .btn-compose:hover,
+body.nido-aaa .btn-download:hover,
+body.nido-aaa .btn-follow.seguir:hover,
+body.nido-aaa .btn-evaluar:hover,
+body.nido-aaa .btn-send:hover,
+body.nido-aaa .btn-send-comment:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06) saturate(1.08);
+  box-shadow: 0 18px 42px rgba(245,166,35,0.36), 0 0 38px rgba(245,166,35,0.2) !important;
+}
+
+body.nido-aaa input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+body.nido-aaa textarea,
+body.nido-aaa select,
+body.nido-aaa .nav-search-input,
+body.nido-aaa .search-input,
+body.nido-aaa .filter-input,
+body.nido-aaa .info-input,
+body.nido-aaa .comment-input {
+  background: rgba(255,255,255,0.055) !important;
+  border: 1px solid var(--nido-border) !important;
+  color: var(--nido-text) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.055) !important;
+  backdrop-filter: blur(10px);
+  transition: border-color .22s ease, box-shadow .22s ease, background .22s ease, transform .22s ease !important;
+}
+
+body.nido-aaa input::placeholder,
+body.nido-aaa textarea::placeholder { color: rgba(255,255,255,0.32) !important; }
+
+body.nido-aaa input:focus,
+body.nido-aaa textarea:focus,
+body.nido-aaa select:focus {
+  border-color: rgba(245,166,35,0.72) !important;
+  background: rgba(245,166,35,0.07) !important;
+  box-shadow: 0 0 0 4px rgba(245,166,35,0.10), 0 0 28px rgba(245,166,35,0.16) !important;
+}
+
+body.nido-aaa .nav-avatar,
+body.nido-aaa .user-avatar,
+body.nido-aaa .post-avatar,
+body.nido-aaa .post-avatar-sm,
+body.nido-aaa .profile-avatar,
+body.nido-aaa .contact-avatar,
+body.nido-aaa .mail-item-avatar,
+body.nido-aaa .reading-avatar,
+body.nido-aaa .rank-avatar,
+body.nido-aaa .podium-avatar,
+body.nido-aaa .u-avatar {
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold), #8f5707);
+  color: #08080b !important;
+  box-shadow: 0 0 0 1px rgba(245,166,35,0.25), 0 0 26px rgba(245,166,35,0.16) !important;
+}
+
+body.nido-aaa .badge,
+body.nido-aaa .recurso-badge,
+body.nido-aaa .filter-chip,
+body.nido-aaa .filter-tab,
+body.nido-aaa .tab-btn,
+body.nido-aaa .slink,
+body.nido-aaa .snav-link,
+body.nido-aaa .snav-item {
+  border-radius: 999px !important;
+}
+
+body.nido-aaa .empty-state,
+body.nido-aaa .mail-empty,
+body.nido-aaa .reading-placeholder,
+body.nido-aaa .posts-empty,
+body.nido-aaa .recursos-empty {
+  color: var(--nido-muted) !important;
+}
+
+/* Home / Feed */
+body.nido-aaa .page-wrap {
+  position: relative;
+}
+
+body.nido-aaa .left-sidebar,
+body.nido-aaa .right-sidebar {
+  background: rgba(255,255,255,0.045) !important;
+  border: 1px solid var(--nido-border) !important;
+  border-radius: var(--nido-radius-lg) !important;
+  box-shadow: var(--nido-shadow-sm) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+body.nido-aaa .stories-wrap {
+  background: rgba(255,255,255,0.045) !important;
+  border: 1px solid var(--nido-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--nido-shadow-sm) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.nido-aaa .story-ring {
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold), #8f5707) !important;
+  box-shadow: 0 0 24px rgba(245,166,35,0.18);
+}
+
+body.nido-aaa .compose,
+body.nido-aaa .compose textarea {
+  color: var(--nido-text) !important;
+}
+
+body.nido-aaa .comments-section,
+body.nido-aaa .comment-body,
+body.nido-aaa .original-post-card {
+  background: rgba(0,0,0,0.22) !important;
+  border-color: var(--nido-border) !important;
+}
+
+/* Profile */
+body.nido-aaa .cover {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(245,166,35,0.20), transparent 34%),
+    linear-gradient(135deg, #07070a, #141018 58%, #0a0a0f) !important;
+  border-bottom: 1px solid var(--nido-border-gold);
+}
+
+body.nido-aaa .cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(115deg, transparent 0 44%, rgba(245,166,35,0.08) 45%, transparent 46% 100%),
+    radial-gradient(circle at 72% 30%, rgba(245,166,35,0.18), transparent 28%);
+  opacity: .75;
+}
+
+body.nido-aaa .profile-stat {
+  min-width: 64px;
+  padding: 8px 10px;
+  border: 1px solid var(--nido-border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.045);
+}
+
+body.nido-aaa .profile-stat-num {
+  color: var(--nido-gold) !important;
+  text-shadow: 0 0 18px rgba(245,166,35,0.28);
+}
+
+body.nido-aaa .tabs-bar,
+body.nido-aaa .followers-tabs {
+  background: rgba(255,255,255,0.045) !important;
+  border: 1px solid var(--nido-border) !important;
+  border-radius: 18px !important;
+  padding: 4px !important;
+}
+
+/* Chat */
+body.nido-aaa .app,
+body.nido-aaa .chat-panel,
+body.nido-aaa .messages-area,
+body.nido-aaa .mail-wrap {
+  background: transparent !important;
+}
+
+body.nido-aaa .chat-header,
+body.nido-aaa .input-area,
+body.nido-aaa .mail-list-header,
+body.nido-aaa .reading-header,
+body.nido-aaa .reading-actions,
+body.nido-aaa .compose-modal-header,
+body.nido-aaa .compose-footer {
+  background: rgba(10,10,15,0.72) !important;
+  border-color: var(--nido-border) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.nido-aaa .message-bubble.mine,
+body.nido-aaa .msg.mine,
+body.nido-aaa .bubble.mine {
+  background: linear-gradient(135deg, #ffe0a0, var(--nido-gold), #b8720a) !important;
+  color: #08080b !important;
+  box-shadow: 0 8px 26px rgba(245,166,35,0.22) !important;
+}
+
+body.nido-aaa .message-bubble.other,
+body.nido-aaa .msg.other,
+body.nido-aaa .bubble.other {
+  background: rgba(255,255,255,0.075) !important;
+  color: var(--nido-text) !important;
+  border: 1px solid var(--nido-border) !important;
+}
+
+/* Mail */
+body.nido-aaa .mail-sidebar,
+body.nido-aaa .mail-list-col,
+body.nido-aaa .mail-reading,
+body.nido-aaa .compose-modal {
+  background: rgba(255,255,255,0.045) !important;
+  border-color: var(--nido-border) !important;
+  box-shadow: var(--nido-shadow-sm);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+body.nido-aaa .mail-item.unread {
+  border-left: 3px solid var(--nido-gold) !important;
+  background: rgba(245,166,35,0.075) !important;
+}
+
+body.nido-aaa .slink.active,
+body.nido-aaa .contact-item.active,
+body.nido-aaa .mail-item.active,
+body.nido-aaa .tab-btn.active,
+body.nido-aaa .filter-tab.active,
+body.nido-aaa .filter-chip.active {
+  background: rgba(245,166,35,0.13) !important;
+  color: var(--nido-gold) !important;
+  border-color: rgba(245,166,35,0.28) !important;
+}
+
+/* Admin */
+body.nido-aaa .main {
+  background: transparent !important;
+}
+
+body.nido-aaa table,
+body.nido-aaa th,
+body.nido-aaa td {
+  color: var(--nido-text) !important;
+  border-color: var(--nido-border) !important;
+}
+
+body.nido-aaa th {
+  background: rgba(255,255,255,0.055) !important;
+  color: var(--nido-muted) !important;
+}
+
+@media (max-width: 760px) {
+  body.nido-aaa .stories-wrap {
+    margin: 0 0 12px !important;
+    padding: 12px !important;
+    overflow-x: auto !important;
+  }
+
+  body.nido-aaa .compose.card,
+  body.nido-aaa .compose {
+    border-radius: 24px !important;
+  }
+
+  body.nido-aaa .profile-card {
+    margin-top: -38px !important;
+  }
+
+  body.nido-aaa .profile-stats {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  body.nido-aaa .profile-card-right {
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  body.nido-aaa .mail-sidebar .sidebar-section {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding: 8px 0 !important;
+  }
+
+  body.nido-aaa .mail-sidebar .sidebar-section-title {
+    display: none !important;
+  }
+
+  body.nido-aaa .slink {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    border-radius: 999px !important;
+    padding: 10px 13px !important;
+    margin: 0 !important;
+  }
+
+  body.nido-aaa .mail-list-col {
+    margin-top: 8px;
+  }
+}
+
+.nido-falcon-watermark {
+  position: fixed;
+  width: min(72vw, 620px);
+  height: min(72vw, 620px);
+  left: -18vw;
+  bottom: 6vh;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 0;
+  background:
+    linear-gradient(145deg, transparent 30%, rgba(245,166,35,0.8) 31% 33%, transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(245,166,35,0.42), transparent 58%);
+  clip-path: polygon(50% 8%, 58% 35%, 96% 20%, 74% 47%, 95% 54%, 61% 58%, 50% 95%, 39% 58%, 5% 54%, 26% 47%, 4% 20%, 42% 35%);
+  filter: blur(.2px) drop-shadow(0 0 42px rgba(245,166,35,0.48));
+  animation: nido-float 12s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════════════
+   LIGHT MODE OVERRIDES  (html[data-theme="light"])
+══════════════════════════════════════════════════════ */
+
+html[data-theme="light"] body.nido-aaa {
+  color: var(--nido-text) !important;
+}
+
+/* Nav */
+html[data-theme="light"] body.nido-aaa nav,
+html[data-theme="light"] body.nido-aaa .topbar,
+html[data-theme="light"] body.nido-aaa .navbar {
+  background: rgba(246,245,241,0.92) !important;
+  border-bottom: 1px solid var(--nido-border) !important;
+  box-shadow: 0 1px 18px rgba(0,0,0,0.06) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+html[data-theme="light"] body.nido-aaa .nav-logo,
+html[data-theme="light"] body.nido-aaa .topbar-logo,
+html[data-theme="light"] body.nido-aaa .sidebar-logo {
+  color: var(--nido-text) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] body.nido-aaa .nav-logo span,
+html[data-theme="light"] body.nido-aaa .topbar-logo span {
+  background: linear-gradient(135deg, #d49218, var(--nido-gold)) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Cards */
+html[data-theme="light"] body.nido-aaa .card,
+html[data-theme="light"] body.nido-aaa .sidebar-card,
+html[data-theme="light"] body.nido-aaa .profile-card,
+html[data-theme="light"] body.nido-aaa .post-card,
+html[data-theme="light"] body.nido-aaa .my-post,
+html[data-theme="light"] body.nido-aaa .aviso-card,
+html[data-theme="light"] body.nido-aaa .recurso-card,
+html[data-theme="light"] body.nido-aaa .rank-card,
+html[data-theme="light"] body.nido-aaa .stat-card,
+html[data-theme="light"] body.nido-aaa .report-card,
+html[data-theme="light"] body.nido-aaa .grupo-card,
+html[data-theme="light"] body.nido-aaa .user-card,
+html[data-theme="light"] body.nido-aaa .badge-card,
+html[data-theme="light"] body.nido-aaa .event-item,
+html[data-theme="light"] body.nido-aaa .mail-item,
+html[data-theme="light"] body.nido-aaa .contact-item {
+  background: var(--nido-surface-2) !important;
+  border: 1px solid var(--nido-border) !important;
+  box-shadow: var(--nido-shadow-sm) !important;
+  color: var(--nido-text) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-theme="light"] body.nido-aaa .post-card:hover,
+html[data-theme="light"] body.nido-aaa .my-post:hover,
+html[data-theme="light"] body.nido-aaa .aviso-card:hover,
+html[data-theme="light"] body.nido-aaa .recurso-card:hover,
+html[data-theme="light"] body.nido-aaa .rank-card:hover,
+html[data-theme="light"] body.nido-aaa .user-card:hover,
+html[data-theme="light"] body.nido-aaa .grupo-card:hover {
+  border-color: var(--nido-border-gold) !important;
+  box-shadow: var(--nido-shadow) !important;
+}
+
+/* Buttons */
+html[data-theme="light"] body.nido-aaa .btn-primary,
+html[data-theme="light"] body.nido-aaa .btn-publish,
+html[data-theme="light"] body.nido-aaa .btn-search,
+html[data-theme="light"] body.nido-aaa .btn-compose,
+html[data-theme="light"] body.nido-aaa .btn-download,
+html[data-theme="light"] body.nido-aaa .btn-follow.seguir,
+html[data-theme="light"] body.nido-aaa .btn-evaluar,
+html[data-theme="light"] body.nido-aaa .btn-send,
+html[data-theme="light"] body.nido-aaa .btn-send-comment {
+  background: linear-gradient(135deg, #d49218, var(--nido-gold) 50%, var(--nido-gold-soft)) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 22px rgba(184,122,8,0.22), inset 0 1px 0 rgba(255,255,255,0.30) !important;
+}
+
+/* Inputs */
+html[data-theme="light"] body.nido-aaa input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+html[data-theme="light"] body.nido-aaa textarea,
+html[data-theme="light"] body.nido-aaa select,
+html[data-theme="light"] body.nido-aaa .nav-search-input,
+html[data-theme="light"] body.nido-aaa .search-input,
+html[data-theme="light"] body.nido-aaa .filter-input,
+html[data-theme="light"] body.nido-aaa .info-input,
+html[data-theme="light"] body.nido-aaa .comment-input {
+  background: var(--nido-surface-2) !important;
+  border: 1px solid var(--nido-border) !important;
+  color: var(--nido-text) !important;
+  backdrop-filter: none;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] body.nido-aaa input::placeholder,
+html[data-theme="light"] body.nido-aaa textarea::placeholder { color: var(--nido-muted-2) !important; }
+
+html[data-theme="light"] body.nido-aaa input:focus,
+html[data-theme="light"] body.nido-aaa textarea:focus,
+html[data-theme="light"] body.nido-aaa select:focus {
+  border-color: var(--nido-gold) !important;
+  background: rgba(184,122,8,0.04) !important;
+  box-shadow: 0 0 0 3px var(--nido-gold-weak) !important;
+}
+
+/* Avatars */
+html[data-theme="light"] body.nido-aaa .nav-avatar,
+html[data-theme="light"] body.nido-aaa .user-avatar,
+html[data-theme="light"] body.nido-aaa .post-avatar,
+html[data-theme="light"] body.nido-aaa .post-avatar-sm,
+html[data-theme="light"] body.nido-aaa .profile-avatar,
+html[data-theme="light"] body.nido-aaa .contact-avatar,
+html[data-theme="light"] body.nido-aaa .mail-item-avatar,
+html[data-theme="light"] body.nido-aaa .reading-avatar,
+html[data-theme="light"] body.nido-aaa .rank-avatar,
+html[data-theme="light"] body.nido-aaa .podium-avatar,
+html[data-theme="light"] body.nido-aaa .u-avatar {
+  background: linear-gradient(135deg, #d49218, var(--nido-gold)) !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 1px var(--nido-border-gold) !important;
+}
+
+/* Active / Selected states */
+html[data-theme="light"] body.nido-aaa .slink.active,
+html[data-theme="light"] body.nido-aaa .contact-item.active,
+html[data-theme="light"] body.nido-aaa .mail-item.active,
+html[data-theme="light"] body.nido-aaa .tab-btn.active,
+html[data-theme="light"] body.nido-aaa .filter-tab.active,
+html[data-theme="light"] body.nido-aaa .filter-chip.active {
+  background: var(--nido-gold-weak) !important;
+  color: var(--nido-gold) !important;
+  border-color: var(--nido-border-gold) !important;
+}
+
+/* Sidebars */
+html[data-theme="light"] body.nido-aaa .left-sidebar,
+html[data-theme="light"] body.nido-aaa .right-sidebar {
+  background: var(--nido-surface-2) !important;
+  border: 1px solid var(--nido-border) !important;
+  box-shadow: var(--nido-shadow-sm) !important;
+  backdrop-filter: none !important;
+}
+
+/* Stories */
+html[data-theme="light"] body.nido-aaa .stories-wrap {
+  background: var(--nido-surface-2) !important;
+  border: 1px solid var(--nido-border) !important;
+  box-shadow: var(--nido-shadow-xs) !important;
+  backdrop-filter: none !important;
+}
+
+/* Chat / Mail surfaces */
+html[data-theme="light"] body.nido-aaa .chat-header,
+html[data-theme="light"] body.nido-aaa .input-area,
+html[data-theme="light"] body.nido-aaa .mail-list-header,
+html[data-theme="light"] body.nido-aaa .reading-header,
+html[data-theme="light"] body.nido-aaa .reading-actions,
+html[data-theme="light"] body.nido-aaa .compose-modal-header,
+html[data-theme="light"] body.nido-aaa .compose-footer {
+  background: rgba(246,245,241,0.94) !important;
+  border-color: var(--nido-border) !important;
+  backdrop-filter: none !important;
+  color: var(--nido-text) !important;
+}
+
+html[data-theme="light"] body.nido-aaa .compose-modal-header *,
+html[data-theme="light"] body.nido-aaa .reading-header * {
+  color: var(--nido-text) !important;
+}
+
+html[data-theme="light"] body.nido-aaa .message-bubble.other,
+html[data-theme="light"] body.nido-aaa .msg.other,
+html[data-theme="light"] body.nido-aaa .bubble.other {
+  background: var(--nido-surface-3) !important;
+  color: var(--nido-text) !important;
+  border: 1px solid var(--nido-border) !important;
+}
+
+html[data-theme="light"] body.nido-aaa .mail-sidebar,
+html[data-theme="light"] body.nido-aaa .mail-list-col,
+html[data-theme="light"] body.nido-aaa .mail-reading,
+html[data-theme="light"] body.nido-aaa .compose-modal {
+  background: var(--nido-surface-2) !important;
+  border-color: var(--nido-border) !important;
+  box-shadow: var(--nido-shadow-sm) !important;
+  backdrop-filter: none !important;
+}
+
+/* Comments */
+html[data-theme="light"] body.nido-aaa .comments-section,
+html[data-theme="light"] body.nido-aaa .comment-body,
+html[data-theme="light"] body.nido-aaa .original-post-card {
+  background: var(--nido-surface-3) !important;
+  border-color: var(--nido-border) !important;
+}
+
+/* Profile */
+html[data-theme="light"] body.nido-aaa .cover {
+  background: linear-gradient(135deg, #ebe6d8, #d6ceba 55%, #c9c2ae) !important;
+  border-bottom: 1px solid var(--nido-border);
+}
+html[data-theme="light"] body.nido-aaa .cover::after { opacity: 0 !important; }
+
+html[data-theme="light"] body.nido-aaa .profile-stat {
+  background: rgba(0,0,0,0.04);
+  border-color: var(--nido-border);
+}
+html[data-theme="light"] body.nido-aaa .profile-stat-num {
+  color: var(--nido-gold) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] body.nido-aaa .tabs-bar,
+html[data-theme="light"] body.nido-aaa .followers-tabs {
+  background: rgba(0,0,0,0.05) !important;
+  border: 1px solid var(--nido-border) !important;
+}
+
+/* Tables */
+html[data-theme="light"] body.nido-aaa table,
+html[data-theme="light"] body.nido-aaa th,
+html[data-theme="light"] body.nido-aaa td {
+  color: var(--nido-text) !important;
+  border-color: var(--nido-border) !important;
+}
+html[data-theme="light"] body.nido-aaa th {
+  background: rgba(0,0,0,0.04) !important;
+  color: var(--nido-muted) !important;
+}
+
+/* Mail unread */
+html[data-theme="light"] body.nido-aaa .mail-item.unread {
+  background: rgba(184,122,8,0.06) !important;
+  border-left-color: var(--nido-gold) !important;
+}
+
+/* Watermark — very subtle in light */
+html[data-theme="light"] .nido-falcon-watermark { opacity: 0.012; }
+
+/* Notif panel — light mode overrides now in nido-nav.css (.nf-* rules) */
+
+/* Mine bubbles — reduce glow in light mode, keep gold gradient */
+html[data-theme="light"] body.nido-aaa .message-bubble.mine,
+html[data-theme="light"] body.nido-aaa .msg.mine,
+html[data-theme="light"] body.nido-aaa .bubble.mine {
+  box-shadow: 0 2px 8px rgba(184,122,8,0.14) !important;
+}

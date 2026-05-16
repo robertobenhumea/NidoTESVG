@@ -1,0 +1,39 @@
+/* NidoTESVG AAA Motion */
+@keyframes nido-glow-pulse {
+  0%, 100% { opacity: 0.58; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.045); }
+}
+
+@keyframes nido-float {
+  0%, 100% { transform: translate3d(0,0,0); }
+  50% { transform: translate3d(0,-8px,0); }
+}
+
+@keyframes nido-fade-up-soft {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nido-sheet-up {
+  from { opacity: 0; transform: translateY(34px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nido-particles-drift {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 104px -104px, 340px -340px; }
+}
+
+@keyframes nido-gold-sweep {
+  from { transform: translateX(-130%) skewX(-18deg); }
+  to { transform: translateX(230%) skewX(-18deg); }
+}
+
+@keyframes nido-shimmer-dark {
+  0% { background-position: -520px 0; }
+  100% { background-position: 520px 0; }
+}
+
+.nido-animate-in {
+  animation: nido-fade-up-soft .38s cubic-bezier(.2,.9,.2,1) both;
+}

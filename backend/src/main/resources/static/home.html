@@ -1,0 +1,3013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem("nido_prefs")||"{}"),h=document.documentElement;var t=p.darkMode===false?"light":"dark";h.setAttribute("data-theme",t);if(p.fontSize&&p.fontSize!=="normal")h.setAttribute("data-fontsize",p.fontSize);if(p.accentColor&&p.accentColor!=="gold")h.setAttribute("data-accent",p.accentColor);}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NidoTESVG — Feed</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F5A623;
+      --gold-dark: #D4891A;
+      --gold-light: #FEF3DC;
+      --navy: #1A1A2E;
+      --gray-bg: #F0F2F5;
+      --gray-border: #CED0D4;
+      --gray-text: #65676B;
+      --text: #1C1E21;
+      --white: #FFFFFF;
+      --nav-h: 60px;
+      --shadow: 0 1px 4px rgba(0,0,0,.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-bg);
+      color: var(--text);
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    nav.nido-desktop-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--white);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: minmax(auto, 310px) 1fr minmax(auto, 280px);
+      align-items: stretch;
+      z-index: 100;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 6px 0 18px;
+      overflow: hidden;
+    }
+
+    .nav-logo {
+      font-size: 1.36rem;
+      font-weight: 800;
+      color: var(--navy);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .nav-logo span {
+      background: var(--gold);
+      color: var(--navy);
+      padding: 1px 7px;
+      border-radius: 6px;
+    }
+
+    .nav-search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .nav-search-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 32px 0 13px;
+      border: none;
+      border-radius: 20px;
+      background: var(--gray-bg);
+      font-size: .84rem;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      transition: box-shadow .2s;
+    }
+    .nav-search-input:focus { box-shadow: 0 0 0 2px var(--gold); background: #E8EAF0; }
+
+    .nav-search-icon {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-text); pointer-events: none;
+      display: flex; align-items: center;
+    }
+    .nav-search-icon svg {
+      width: 15px; height: 15px;
+      stroke: currentColor; stroke-width: 2.2; fill: none;
+    }
+
+    /* ── CENTER NAV SHORTCUTS ── */
+    .nav-shortcuts {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .nav-shortcut {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-width: 68px;
+      padding: 0 4px;
+      color: var(--gray-text);
+      text-decoration: none;
+      font-size: .67rem;
+      font-weight: 700;
+      letter-spacing: .01em;
+      transition: color .14s;
+    }
+
+    .nav-shortcut svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; stroke-width: 1.9; fill: none;
+      transition: transform .16s ease;
+    }
+
+    .nav-shortcut:hover { color: var(--navy); }
+    .nav-shortcut:hover svg { transform: translateY(-1px); }
+
+    .nav-shortcut::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 16%; right: 16%;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: var(--gold);
+      opacity: 0;
+      transition: opacity .14s;
+    }
+
+    .nav-shortcut.active { color: var(--gold); }
+    .nav-shortcut.active::after { opacity: 1; }
+
+    /* ── RIGHT ACTIONS ── */
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+      padding: 0 14px 0 6px;
+    }
+
+    .nav-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden; cursor: pointer;
+    }
+
+    .nav-icon-link {
+      display: flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 50%;
+      text-decoration: none;
+      color: var(--navy); transition: background .15s;
+    }
+    .nav-icon-link svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.9; fill: none; }
+    .nav-icon-link:hover { background: var(--gold-light); }
+
+    .btn-nav { padding: 7px 14px; border-radius: 8px; border: none; font-size: .875rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-outline { background: var(--gold-light); color: var(--navy); }
+    .btn-outline:hover { background: #fde6b8; }
+    .btn-ghost { background: none; color: var(--gray-text); }
+    .btn-ghost:hover { background: var(--gray-bg); }
+
+    /* ── MAIN LAYOUT ── */
+    .page-wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    .feed-col {
+      width: 100%;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    /* ── COMPOSE ── */
+    .compose { display: flex; gap: 12px; align-items: flex-start; }
+
+    .compose-body { flex: 1; }
+
+    .compose textarea {
+      width: 100%;
+      border: 1.5px solid var(--gray-border);
+      border-radius: 24px;
+      padding: 12px 18px;
+      font-size: .95rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, border-radius .2s;
+      min-height: 46px;
+      color: var(--text);
+      background: var(--gray-bg);
+    }
+
+    .compose textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245,166,35,.2);
+      border-radius: 12px;
+      min-height: 90px;
+      background: var(--white);
+    }
+
+    .compose-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .compose-actions { display: flex; align-items: center; gap: 6px; }
+
+    .btn-attach {
+      width: 36px; height: 36px;
+      border-radius: 50%; border: none;
+      background: var(--gray-bg); color: var(--gray-text);
+      font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+      flex-shrink: 0;
+    }
+    .btn-attach:hover { background: var(--gold-light); color: var(--gold-dark); }
+    .btn-attach.active { background: var(--gold-light); color: var(--gold-dark); }
+
+    .compose-preview {
+      position: relative; margin-top: 10px;
+      border-radius: 10px; overflow: hidden;
+      border: 1.5px solid var(--gold);
+      display: none;
+    }
+    .compose-preview.visible { display: block; }
+    .compose-preview img {
+      width: 100%; max-height: 280px;
+      object-fit: cover; display: block;
+    }
+    .btn-remove-preview {
+      position: absolute; top: 8px; right: 8px;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,.55); color: #fff;
+      border: none; font-size: .9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .btn-remove-preview:hover { background: rgba(0,0,0,.75); }
+
+    .uploading-indicator {
+      font-size: .78rem; color: var(--gray-text);
+      display: none; align-items: center; gap: 5px;
+    }
+    .uploading-indicator.visible { display: flex; }
+
+    .btn-publish {
+      padding: 9px 22px;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+
+    .btn-publish:hover { background: var(--gold-dark); }
+    .btn-publish:active { transform: scale(.97); }
+    .btn-publish:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* ── POST CARD ── */
+    /* ── ANUNCIOS ── */
+    .anuncio-card {
+      background: linear-gradient(135deg, #1A1A2E 0%, #2C2150 100%);
+      border: 2px solid var(--gold);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 12px rgba(245,166,35,.25);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      color: var(--white);
+    }
+
+    .anuncio-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .anuncio-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: .75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+
+    .anuncio-author {
+      font-size: .8rem;
+      color: rgba(255,255,255,.55);
+    }
+
+    .anuncio-content {
+      font-size: .97rem;
+      line-height: 1.65;
+      color: var(--white);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .anuncio-img {
+      width: 100%; max-height: 360px;
+      object-fit: cover; border-radius: 8px;
+      margin-top: 12px; display: block;
+      cursor: zoom-in;
+    }
+
+    .anuncio-footer {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.15);
+    }
+
+    .anuncio-footer .btn-like { color: rgba(255,255,255,.6); }
+    .anuncio-footer .btn-like:hover { background: rgba(255,255,255,.1); color: #F48FB1; }
+    .anuncio-footer .btn-like.liked { color: #F48FB1; }
+    .anuncio-footer .btn-comment { color: rgba(255,255,255,.6); }
+    .anuncio-footer .btn-comment:hover { background: rgba(255,255,255,.1); color: var(--gold); }
+
+    .anuncio-footer .comments-section { color: var(--text); }
+
+    .anuncio-date {
+      margin-left: auto;
+      font-size: .75rem;
+      color: rgba(255,255,255,.45);
+    }
+
+    /* ── COMPOSE MODE BAR (segmented control — base fallback) ── */
+    .compose-mode-bar {
+      display: none; /* activado via JS para admins */
+      gap: 4px;
+      padding: 4px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+    }
+    .compose-mode-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-size: .8rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: transparent;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .compose-mode-btn.active {
+      background: var(--gold-light);
+      color: var(--navy);
+      border-color: var(--gold);
+    }
+
+    /* ── POST HEADER ── */
+    .post-header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .post-header .post-user-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pinned-post {
+      border-left: 3px solid var(--gold);
+    }
+    .pinned-badge {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: .3px;
+    }
+
+    .post-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: .95rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .post-meta { flex: 1; min-width: 0; }
+
+    .post-user-link {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: inherit;
+      border-radius: 8px; padding: 2px 4px; margin: -2px -4px;
+      transition: background .15s;
+    }
+    .post-user-link:hover { background: var(--gray-bg); }
+    .post-user-link:hover .post-author { text-decoration: underline; }
+
+    .post-author {
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .post-date {
+      font-size: .78rem;
+      color: var(--gray-text);
+      margin-top: 1px;
+    }
+
+    .post-content {
+      font-size: .95rem;
+      line-height: 1.6;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .post-img {
+      width: 100%; max-height: 420px;
+      object-fit: cover; border-radius: 8px;
+      margin-top: 10px; display: block;
+      cursor: zoom-in;
+    }
+
+    /* ── LIGHTBOX ── */
+    .lightbox {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.88); z-index: 300;
+      align-items: center; justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 6px; object-fit: contain; }
+
+    /* ── LIKE ── */
+    .post-footer {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #E4E6E9;
+    }
+
+    .btn-like {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: none;
+      background: none;
+      color: var(--gray-text);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      line-height: 1;
+    }
+
+    .btn-like:hover { background: #FFF0F4; color: #E0245E; }
+    .btn-like.liked { color: #E0245E; }
+    .btn-like:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-like .heart { font-size: 1.05rem; transition: transform .15s; display: inline-block; }
+    .btn-like:hover .heart,
+    .btn-like.liked .heart { transform: scale(1.25); }
+
+    /* ── REACTION PICKER ── */
+    .reaction-picker {
+      display: none;
+      position: fixed;
+      background: var(--white);
+      border-radius: 30px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.22);
+      padding: 6px 10px;
+      gap: 2px;
+      align-items: center;
+      z-index: 600;
+      animation: reactionPop .15s ease;
+    }
+    @keyframes reactionPop {
+      from { opacity: 0; transform: scale(.8) translateY(6px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .r-btn {
+      background: none;
+      border: none;
+      font-size: 1.55rem;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 50%;
+      transition: transform .15s, background .1s;
+      line-height: 1;
+    }
+    .r-btn:hover { transform: scale(1.45) translateY(-4px); background: var(--gray-bg); }
+    .reaction-counts {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      font-size: .78rem;
+      color: var(--gray-text);
+      margin-left: 2px;
+      flex-wrap: wrap;
+    }
+    .reaction-bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: .8rem;
+    }
+
+    /* ── SHARE ── */
+    .btn-share {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px; border: none;
+      background: none; color: var(--gray-text);
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-share:hover { background: var(--gold-light); color: var(--navy); }
+    .btn-share:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-share.ya-compartido { color: var(--gold-dark); }
+
+    .share-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .78rem; color: var(--gray-text);
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid #E4E6E9;
+    }
+    .share-header .share-by { font-weight: 700; color: var(--text); }
+    .share-header .share-avatar-sm {
+      width: 22px; height: 22px; border-radius: 50%;
+      font-size: .55rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: #fff;
+    }
+    .share-time { margin-left: auto; white-space: nowrap; }
+
+    .original-post-card {
+      border: 1.5px solid var(--gray-border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: var(--gray-bg);
+    }
+    .original-author-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .original-author-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      font-size: .65rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: #fff;
+    }
+    .original-author-name { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .original-date { font-size: .72rem; color: var(--gray-text); }
+    .original-content {
+      font-size: .93rem; line-height: 1.55; color: var(--text);
+      word-break: break-word; white-space: pre-wrap;
+    }
+    .original-img {
+      margin-top: 10px; width: 100%; max-height: 300px;
+      object-fit: cover; border-radius: 6px;
+    }
+    .share-comment {
+      font-size: .93rem; line-height: 1.55; color: var(--text);
+      word-break: break-word; white-space: pre-wrap;
+      margin-bottom: 10px;
+    }
+
+    /* ── POLLS (compose builder) ── */
+    .poll-builder {
+      display: none; margin-top: 10px; padding: 14px 16px;
+      background: var(--gold-light); border-radius: 10px;
+      border: 1.5px solid var(--gold);
+    }
+    .poll-builder.visible { display: block; }
+    .poll-builder-title {
+      font-size: .8rem; font-weight: 800; color: var(--navy);
+      text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px;
+    }
+    .poll-pregunta-input {
+      width: 100%; padding: 9px 13px; margin-bottom: 8px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .9rem; font-family: inherit; color: var(--text); outline: none;
+      transition: border-color .2s;
+    }
+    .poll-pregunta-input:focus { border-color: var(--gold); }
+    .poll-opcion-row { display: flex; gap: 7px; margin-bottom: 7px; align-items: center; }
+    .poll-opcion-input {
+      flex: 1; padding: 8px 12px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .88rem; font-family: inherit; color: var(--text); outline: none;
+      transition: border-color .2s;
+    }
+    .poll-opcion-input:focus { border-color: var(--gold); }
+    .btn-remove-opcion {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: #FFF0F0; color: #C92A2A; font-size: .9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .btn-add-opcion {
+      font-size: .8rem; color: var(--navy); background: none; border: none;
+      cursor: pointer; font-weight: 700; text-decoration: underline;
+      padding: 0 0 8px 0; display: block;
+    }
+    .poll-expira-row { display: flex; align-items: center; gap: 8px; }
+    .poll-expira-label { font-size: .8rem; color: var(--gray-text); flex-shrink: 0; }
+    .poll-expira-input {
+      flex: 1; padding: 7px 10px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .82rem; font-family: inherit; color: var(--text); outline: none;
+      transition: border-color .2s;
+    }
+    .poll-expira-input:focus { border-color: var(--gold); }
+
+    /* ── POLLS (feed display) ── */
+    .poll-card {
+      margin-top: 12px; padding: 14px 16px;
+      background: var(--gold-light); border: 1.5px solid var(--gold);
+      border-radius: 10px;
+    }
+    .poll-pregunta-display {
+      font-size: .95rem; font-weight: 700; color: var(--navy);
+      margin-bottom: 10px; line-height: 1.4;
+    }
+    .poll-opcion-btn {
+      width: 100%; padding: 9px 16px; margin-bottom: 8px;
+      border: 1.5px solid var(--gold); border-radius: 8px;
+      background: var(--white); color: var(--text);
+      font-size: .9rem; font-weight: 600; cursor: pointer; text-align: left;
+      transition: background .15s, color .15s;
+    }
+    .poll-opcion-btn:hover { background: var(--gold); color: var(--navy); }
+    .poll-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .poll-bar-label {
+      flex: 0 0 auto; min-width: 80px; max-width: 140px;
+      font-size: .87rem; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .poll-bar-track { flex: 1; height: 10px; border-radius: 5px; background: #e4e6e9; overflow: hidden; }
+    .poll-bar-fill { height: 100%; border-radius: 5px; background: var(--gold); transition: width .4s; }
+    .poll-bar-pct { font-size: .8rem; color: var(--gray-text); flex-shrink: 0; min-width: 36px; text-align: right; }
+    .poll-mi-voto { font-size: .77rem; font-weight: 800; color: var(--gold-dark); margin-left: 4px; }
+    .poll-footer { font-size: .77rem; color: var(--gray-text); margin-top: 4px; }
+
+    /* ── COMMENTS ── */
+    .btn-comment {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: none;
+      background: none;
+      color: var(--gray-text);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-comment:hover { background: var(--gold-light); color: var(--navy); }
+
+    .comments-section { display: none; margin-top: 12px; }
+    .comments-section.visible { display: block; }
+
+    .comment-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .comment-avatar-sm {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      color: var(--white);
+      font-size: .68rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .comment-body {
+      background: var(--gray-bg);
+      border-radius: 12px;
+      padding: 7px 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .comment-author {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--text);
+      display: block;
+    }
+
+    .comment-text {
+      font-size: .88rem;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .comment-time {
+      font-size: .7rem;
+      color: var(--gray-text);
+      display: block;
+      margin-top: 4px;
+    }
+
+    .btn-del-comment {
+      background: none;
+      border: none;
+      color: var(--gray-text);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 2px 4px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+      border-radius: 50%;
+      transition: color .15s, background .15s;
+    }
+    .btn-del-comment:hover { color: #C92A2A; background: #FFF0F0; }
+
+    .comment-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #E4E6E9;
+    }
+
+    .comment-input {
+      flex: 1;
+      padding: 8px 14px;
+      border: 1.5px solid var(--gray-border);
+      border-radius: 20px;
+      font-size: .88rem;
+      font-family: inherit;
+      outline: none;
+      background: var(--gray-bg);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .comment-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245,166,35,.18);
+      background: var(--white);
+    }
+
+    .btn-send-comment {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: .9rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .btn-send-comment:hover { background: var(--gold-dark); }
+    .btn-send-comment:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── SEPARATOR ── */
+    .divider {
+      border: none;
+      border-top: 1px solid #E4E6E9;
+      margin: 12px 0;
+    }
+
+    /* ── EMPTY / LOADING ── */
+    .state-msg {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-text);
+    }
+
+    .state-msg .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .state-msg p { font-size: .95rem; }
+
+    /* ── SKELETON ── */
+    .skeleton {
+      background: linear-gradient(90deg, #e8eaed 25%, #f4f5f6 50%, #e8eaed 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .sk-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; }
+    .sk-line { height: 12px; margin-bottom: 8px; }
+    .sk-short { width: 40%; }
+    .sk-medium { width: 70%; }
+    .sk-long { width: 90%; }
+    .sk-meta { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .sk-header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+
+    /* ── STORIES ── */
+    .stories-wrap {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .stories-wrap::-webkit-scrollbar { display: none; }
+
+    .stories-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      min-width: max-content;
+    }
+
+    /* ── STORY CARD — base (tall card) ── */
+    .story-card {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      display: inline-block;
+      min-width: 96px;
+      height: 154px;
+      border-radius: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Kept for viewer compatibility only */
+    .story-ring { display: none; }
+    .story-ring.add-ring { display: none; }
+    .story-avatar-inner { display: none; }
+    .story-add-inner { display: none; }
+    .story-label { display: none; }
+
+    /* ── TALL CARD LAYERS ── */
+    .story-thumb-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      background-color: var(--gold-light);
+      transition: transform .35s ease;
+    }
+    .story-thumb-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(0,0,0,.28) 0%,
+        transparent 40%,
+        rgba(0,0,0,.68) 100%
+      );
+    }
+    .story-thumb-avatar {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2.5px solid var(--gold);
+      background: var(--gold); color: var(--navy);
+      font-size: .62rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,.45);
+      flex-shrink: 0;
+    }
+    .story-thumb-avatar.seen { border-color: var(--gray-border); }
+    .story-thumb-label {
+      position: absolute; bottom: 9px; left: 6px; right: 6px;
+      font-size: .7rem; font-weight: 700; color: #fff;
+      text-align: center; line-height: 1.2;
+      text-shadow: 0 1px 4px rgba(0,0,0,.65);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .story-add-circle {
+      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); color: var(--navy);
+      font-size: .95rem; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      border: 2.5px solid var(--white);
+      box-shadow: 0 2px 10px rgba(245,166,35,.35);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    /* ── STORY VIEWER ── */
+    .story-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 1000;
+      display: none;
+      align-items: center; justify-content: center;
+    }
+    .story-overlay.open { display: flex; }
+
+    .story-viewer {
+      position: relative;
+      width: 360px; max-width: 92vw;
+      height: min(640px, 90vh);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #111;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+
+    .story-progress-bar {
+      position: absolute;
+      top: 8px; left: 10px; right: 10px;
+      height: 3px;
+      background: rgba(255,255,255,.3);
+      border-radius: 2px;
+      z-index: 10;
+    }
+    .story-progress-fill {
+      height: 100%; background: var(--white);
+      border-radius: 2px; width: 0%;
+    }
+
+    .story-header {
+      position: absolute;
+      top: 20px; left: 12px; right: 12px;
+      display: flex; align-items: center; gap: 10px;
+      z-index: 10;
+    }
+
+    .sv-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 2px solid var(--white);
+      background: var(--gold); color: var(--navy);
+      font-size: .8rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+    }
+
+    .sv-meta { flex: 1; min-width: 0; }
+    .sv-name { font-size: .88rem; font-weight: 700; color: var(--white); }
+    .sv-time { font-size: .72rem; color: rgba(255,255,255,.65); margin-top: 1px; }
+
+    .sv-views { font-size: .78rem; color: rgba(255,255,255,.8); flex-shrink: 0; }
+
+    .story-close {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,.18);
+      color: var(--white); font-size: .95rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .15s;
+    }
+    .story-close:hover { background: rgba(255,255,255,.32); }
+
+    .story-content {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .story-content img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .story-text-display {
+      position: relative; z-index: 2;
+      padding: 24px 20px;
+      font-size: 1.45rem; font-weight: 700; color: var(--white);
+      text-align: center; word-break: break-word; line-height: 1.5;
+      text-shadow: 0 1px 8px rgba(0,0,0,.5);
+    }
+
+    .story-nav {
+      position: absolute; inset: 0;
+      display: flex; z-index: 5;
+    }
+    .story-nav > div { flex: 1; cursor: pointer; }
+
+    /* ── CREATE STORY ── */
+    .story-create-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.72);
+      z-index: 1100;
+      display: none;
+      align-items: center; justify-content: center;
+    }
+    .story-create-overlay.open { display: flex; }
+
+    .story-create-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 380px; max-width: 95vw;
+      max-height: 92vh; overflow-y: auto;
+    }
+
+    .story-create-card h3 {
+      font-size: 1.1rem; font-weight: 800; color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .story-preview-box {
+      width: 100%;
+      aspect-ratio: 9/16; max-height: 200px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+      margin-bottom: 14px;
+      background: #1A1A2E; transition: background .2s;
+    }
+    .story-preview-box img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .story-preview-text-el {
+      position: relative; z-index: 1;
+      padding: 10px 14px;
+      font-size: .95rem; font-weight: 700; color: var(--white);
+      text-align: center; word-break: break-word;
+      text-shadow: 0 1px 5px rgba(0,0,0,.5);
+    }
+
+    .story-field-label {
+      font-size: .75rem; font-weight: 700; color: var(--gray-text);
+      text-transform: uppercase; letter-spacing: .4px;
+      margin: 12px 0 5px;
+    }
+
+    .story-textarea {
+      width: 100%; padding: 9px 12px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .9rem; font-family: inherit; color: var(--text);
+      resize: none; min-height: 72px; outline: none;
+      transition: border-color .2s;
+    }
+    .story-textarea:focus { border-color: var(--gold); }
+
+    .story-img-input {
+      width: 100%; padding: 8px 12px;
+      border: 1.5px solid var(--gray-border); border-radius: 8px;
+      font-size: .88rem; font-family: inherit; color: var(--text);
+      outline: none; transition: border-color .2s;
+    }
+    .story-img-input:focus { border-color: var(--gold); }
+
+    .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    .color-swatch {
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      outline: 2.5px solid transparent;
+      transition: transform .15s;
+    }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { outline-color: var(--gold); transform: scale(1.2); }
+
+    .story-create-actions {
+      display: flex; justify-content: flex-end; gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn-story-cancel {
+      padding: 8px 16px; border-radius: 8px; border: none;
+      background: var(--gray-bg); color: var(--text);
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-story-cancel:hover { background: #dee2e6; }
+
+    .btn-story-publish {
+      padding: 8px 20px; border-radius: 8px; border: none;
+      background: var(--gold); color: var(--navy);
+      font-size: .88rem; font-weight: 700; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-story-publish:hover { background: var(--gold-dark); }
+    .btn-story-publish:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── NOTIFICACIONES ── */
+    .notif-btn {
+      position: relative; background: none; border: none;
+      cursor: pointer; padding: 8px; border-radius: 50%;
+      color: var(--navy); display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .notif-btn svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.9; fill: none; }
+    .notif-btn:hover { background: var(--gold-light); }
+
+    @keyframes ring {
+      0%,100% { transform: rotate(0); }
+      20%      { transform: rotate(-18deg); }
+      40%      { transform: rotate(18deg); }
+      60%      { transform: rotate(-12deg); }
+      80%      { transform: rotate(12deg); }
+    }
+    .notif-btn.ring { animation: ring .6s ease; }
+    .notif-badge {
+      position: absolute; top: 2px; right: 2px;
+      background: #E03131; color: #fff; border-radius: 50%;
+      font-size: .65rem; font-weight: 800;
+      min-width: 16px; height: 16px;
+      display: none; align-items: center; justify-content: center;
+      padding: 0 3px; pointer-events: none;
+    }
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1099px) {
+      .nav-search-wrap { display: none; }
+    }
+    @media (max-width: 899px) {
+      .nav-shortcut span { display: none; }
+      .nav-shortcut { min-width: 50px; }
+    }
+    @media (max-width: 760px) {
+      /* Composer táctil */
+      .compose { gap: 10px; align-items: flex-start; }
+      .compose textarea { font-size: 1rem; min-height: 52px; padding: 14px; }
+      .compose-footer { gap: 6px; flex-wrap: wrap; }
+      .btn-attach { width: 42px; height: 42px; }
+      .btn-publish { min-height: 44px; padding: 0 20px; }
+      /* Comment input */
+      .comment-input { font-size: .95rem; padding: 10px 14px; min-height: 44px; }
+      .btn-send-comment { width: 44px; height: 44px; }
+      /* Post footer */
+      .btn-like, .btn-comment, .btn-share { min-height: 44px; font-size: .85rem; }
+      /* Post images */
+      .post-img, .anuncio-img { border-radius: 14px; width: 100%; }
+      /* Reaction picker no desborda */
+      .reaction-picker { max-width: calc(100vw - 24px); flex-wrap: wrap; gap: 4px; padding: 8px 10px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/nido-ui.css">
+  <link rel="stylesheet" href="/nido-tokens.css">
+  <link rel="stylesheet" href="/nido-animations.css">
+  <link rel="stylesheet" href="/nido-components.css">
+  <link rel="stylesheet" href="/nido-layout.css">
+  <link rel="stylesheet" href="/home-aaa.css">
+</head>
+<body class="home-aaa">
+
+  <!-- NAVBAR -->
+  <nav class="nido-desktop-nav">
+
+    <!-- LEFT: Logo + Search -->
+    <div class="nav-left">
+      <a class="nav-logo" href="/home.html">Nido<span>TESVG</span></a>
+      <div class="nav-search-wrap">
+        <input class="nav-search-input" type="text" placeholder="Buscar…"
+               onkeydown="if(event.key==='Enter'&&this.value.trim())window.location.href='/buscar.html?q='+encodeURIComponent(this.value.trim())">
+        <span class="nav-search-icon">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- CENTER: Page Shortcuts -->
+    <div class="nav-shortcuts" role="navigation" aria-label="Secciones">
+
+      <a class="nav-shortcut active" href="/home.html" title="Inicio">
+        <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Inicio</span>
+      </a>
+
+      <a class="nav-shortcut" href="/grupos.html" title="Grupos">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Grupos</span>
+      </a>
+
+      <a class="nav-shortcut" href="/marketplace.html" title="NidoMarket">
+        <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>Market</span>
+      </a>
+
+      <a class="nav-shortcut" href="/calendario.html" title="NidoEventos">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Eventos</span>
+      </a>
+
+      <a class="nav-shortcut" href="/avisos.html" title="Avisos">
+        <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+        <span>Avisos</span>
+      </a>
+
+      <a class="nav-shortcut" href="/ranking.html" title="Ranking">
+        <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 0 0 5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 1 0 5H18"/><path d="M6 9v3a6 6 0 0 0 12 0V9"/><path d="M4 22h16M12 17v5M8 22v-3M16 22v-3"/></svg>
+        <span>Ranking</span>
+      </a>
+
+      <a class="nav-shortcut" href="/recursos.html" title="NidoApuntes">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Apuntes</span>
+      </a>
+
+    </div>
+
+    <!-- RIGHT: Action icons + avatar -->
+    <div class="nav-actions">
+      <div style="position:relative">
+        <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notif-badge"></span>
+        </button>
+        <div class="notif-panel" id="notif-panel"></div>
+      </div>
+      <a href="/correo.html" class="nav-icon-link" title="PlumasMail">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </a>
+      <a href="/chat.html" class="nav-icon-link" title="HalconMensajero">
+        <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.4-5A8 8 0 1 1 21 12Z"/></svg>
+      </a>
+      <a href="/configuracion.html" class="nav-icon-link" title="Configuración">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      </a>
+      <a href="/perfil.html" style="text-decoration:none">
+        <div class="nav-avatar" id="nav-avatar">?</div>
+      </a>
+    </div>
+
+  </nav>
+
+  <!-- 3-COLUMN LAYOUT -->
+  <div class="page-wrap home-shell">
+
+    <!-- FEED COL -->
+    <main class="feed-col home-main">
+
+      <!-- COMPOSER UNIFICADO -->
+      <section class="card home-composer-card" aria-label="Crear publicación">
+
+        <!-- Barra de modo: solo visible para AUTORIDAD / ADMIN (JS la activa) -->
+        <div class="compose-mode-bar" id="compose-mode-bar">
+          <button class="compose-mode-btn active" id="mode-btn-post"
+                  onclick="switchComposerMode('post')">
+            <span>✏️</span> Publicación
+          </button>
+          <button class="compose-mode-btn" id="mode-btn-anuncio"
+                  onclick="switchComposerMode('anuncio')">
+            <span>📢</span> Anuncio oficial
+          </button>
+        </div>
+
+        <div class="compose">
+          <div class="nav-avatar" id="compose-avatar">?</div>
+          <div class="compose-body">
+            <textarea id="contenido" placeholder="¿Qué estás pensando?" rows="1"></textarea>
+            <div class="compose-preview" id="compose-preview">
+              <img id="preview-img" src="" alt="preview">
+              <button class="btn-remove-preview" onclick="quitarImagen()" title="Quitar imagen">✕</button>
+            </div>
+            <div class="compose-footer">
+              <div class="compose-actions" id="compose-actions-normal">
+                <button class="btn-attach" id="btn-attach" onclick="document.getElementById('img-input').click()" title="Adjuntar imagen">🖼</button>
+                <button class="btn-attach" id="btn-poll" onclick="togglePollBuilder()" title="Agregar encuesta">📊</button>
+                <span class="uploading-indicator" id="uploading-indicator">⏳ Subiendo…</span>
+              </div>
+              <button class="btn-publish" id="btn-publish" onclick="publicarComposer()">Publicar</button>
+            </div>
+            <input type="file" id="img-input" accept="image/*" style="display:none" onchange="seleccionarImagen(this)">
+            <!-- Poll builder -->
+            <div class="poll-builder" id="poll-builder">
+              <div class="poll-builder-title">📊 Encuesta</div>
+              <input class="poll-pregunta-input" id="poll-pregunta" type="text" placeholder="¿Cuál es tu pregunta?" maxlength="255">
+              <div id="poll-opciones">
+                <div class="poll-opcion-row">
+                  <input class="poll-opcion-input" type="text" placeholder="Opción 1" maxlength="100">
+                </div>
+                <div class="poll-opcion-row">
+                  <input class="poll-opcion-input" type="text" placeholder="Opción 2" maxlength="100">
+                </div>
+              </div>
+              <button class="btn-add-opcion" id="btn-add-opcion" onclick="addPollOption()">+ Agregar opción</button>
+              <div class="poll-expira-row">
+                <label class="poll-expira-label">Expira (opcional):</label>
+                <input class="poll-expira-input" id="poll-expira" type="datetime-local">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STORIES -->
+      <section class="stories-wrap home-stories" aria-label="Stories">
+        <div class="stories-row" id="stories-row">
+          <div class="story-card story-card-create" onclick="abrirCrearStory()">
+            <div class="story-thumb-bg"></div>
+            <div class="story-thumb-overlay"></div>
+            <div class="story-add-circle">+</div>
+            <span class="story-thumb-label">Crear historia</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEED -->
+      <div id="feed" class="home-feed"></div>
+
+    </main><!-- /feed-col -->
+
+  </div><!-- /page-wrap -->
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" onclick="document.getElementById('lightbox').classList.remove('open')">
+    <img id="lightbox-img" src="" alt="imagen">
+  </div>
+
+  <!-- REACTION PICKER -->
+  <div class="reaction-picker" id="reaction-picker">
+    <button class="r-btn" data-tipo="like"  title="Me gusta">♥</button>
+    <button class="r-btn" data-tipo="love"  title="Me encanta">😍</button>
+    <button class="r-btn" data-tipo="haha"  title="Jaja">😂</button>
+    <button class="r-btn" data-tipo="wow"   title="Asombro">😮</button>
+    <button class="r-btn" data-tipo="sad"   title="Triste">😢</button>
+    <button class="r-btn" data-tipo="angry" title="Enojo">😡</button>
+  </div>
+
+  <!-- STORY VIEWER -->
+  <div class="story-overlay" id="story-overlay">
+    <div class="story-viewer">
+      <div class="story-progress-bar">
+        <div class="story-progress-fill" id="story-progress"></div>
+      </div>
+      <div class="story-header">
+        <div class="sv-avatar" id="sv-avatar"></div>
+        <div class="sv-meta">
+          <div class="sv-name" id="sv-name"></div>
+          <div class="sv-time" id="sv-time"></div>
+        </div>
+        <div class="sv-views" id="sv-views"></div>
+        <button class="story-close" onclick="cerrarStory()">&#x2715;</button>
+      </div>
+      <div class="story-content" id="story-content"></div>
+      <div class="story-nav">
+        <div onclick="prevStory()"></div>
+        <div onclick="nextStory()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE STORY -->
+  <div class="story-create-overlay" id="story-create-overlay">
+    <div class="story-create-card">
+      <h3>Nueva Story</h3>
+      <div class="story-preview-box" id="story-preview-box">
+        <span class="story-preview-text-el" id="story-preview-text-el">Vista previa</span>
+      </div>
+      <div class="story-field-label">Texto</div>
+      <textarea class="story-textarea" id="story-texto" placeholder="Escribe algo para tu story…" oninput="previewStory()"></textarea>
+      <div class="story-field-label">Imagen (URL opcional)</div>
+      <input class="story-img-input" type="text" id="story-imagen" placeholder="https://…" oninput="previewStory()">
+      <div class="story-field-label">Color de fondo</div>
+      <div class="color-swatches" id="color-swatches"></div>
+      <div class="story-create-actions">
+        <button class="btn-story-cancel" onclick="cancelarCrearStory()">Cancelar</button>
+        <button class="btn-story-publish" id="btn-story-publish" onclick="publicarStory()">Publicar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/nido-ui.js"></script>
+<script>
+    const token = localStorage.getItem("token")?.trim();
+    let currentUserId   = null;
+    let globalUserIdMap = new Map(); // userId → { nombre, foto }
+
+    if (!token) window.location.href = "/login.html";
+
+    // Detect expired/invalid token and redirect to login
+    function handleUnauth(res) {
+      if (res && res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/login.html";
+        return true;
+      }
+      return false;
+    }
+
+    // ── HELPERS ──
+    function initials(str) {
+      if (!str) return "?";
+      return str.split(/[@.\s]/)[0].slice(0, 2).toUpperCase();
+    }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      if (isNaN(d)) return dateStr;
+      const diff = (Date.now() - d) / 1000;
+      if (diff < 60) return "Justo ahora";
+      if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+      if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+      return d.toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" });
+    }
+
+    function hueFromStr(str) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xFFFFFF;
+      const hue = h % 360;
+      const hue2 = (hue + 34) % 360;
+      return `radial-gradient(circle at 30% 22%, rgba(255,255,255,.42), transparent 0.9rem), linear-gradient(135deg, hsl(${hue}, 72%, 46%), hsl(${hue2}, 70%, 28%) 58%, #140f08)`;
+    }
+
+    // ── AVATAR HELPER ──
+    function aplicarAvatar(el, foto, nombre) {
+      if (foto) {
+        el.textContent = "";
+        el.style.background = `url('${foto}') center/cover no-repeat`;
+      } else {
+        el.textContent = initials(nombre);
+        el.style.background = hueFromStr(nombre || "u");
+      }
+    }
+
+    // ── NAV USER ──
+    let currentUserRol = null;
+
+    async function cargarUsuario() {
+      try {
+        const res = await fetch("/usuarios/perfil", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!res.ok) { handleUnauth(res); return; }
+        const user = await res.json();
+        currentUserId = user.id;
+        currentUserRol = user.rol;
+        const nombre = user.username || user.correo;
+        aplicarAvatar(document.getElementById("nav-avatar"), user.fotoPerfil, nombre);
+        aplicarAvatar(document.getElementById("compose-avatar"), user.fotoPerfil, nombre);
+        const navUn = document.getElementById("nav-username"); if (navUn) navUn.textContent = nombre;
+        if (user.rol === "AUTORIDAD" || user.rol === "ADMIN") {
+          document.getElementById("compose-mode-bar").style.display = "flex";
+        }
+        // Show admin link only for ADMIN role
+        if (user.rol === "ADMIN") {
+          const adminLink = document.getElementById("admin-link");
+          if (adminLink) adminLink.style.display = "";
+        }
+      } catch (_) {}
+    }
+
+    // ── IMAGE ATTACH ──
+    let pendingImgUrl = null;
+
+    // ── POLLS STATE ──
+    let pollActive    = false;
+    let encuestasMap  = new Map(); // pubId → encuesta object
+    let misVotosMap   = new Map(); // encuestaId → opcionId
+
+    async function seleccionarImagen(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Preview local inmediato
+      const localUrl = URL.createObjectURL(file);
+      document.getElementById('preview-img').src = localUrl;
+      document.getElementById('compose-preview').classList.add('visible');
+      document.getElementById('btn-attach').classList.add('active');
+
+      // Subir al servidor
+      const indicator = document.getElementById('uploading-indicator');
+      indicator.classList.add('visible');
+      document.getElementById('btn-publish').disabled = true;
+
+      try {
+        const form = new FormData();
+        form.append('archivo', file);
+        const res = await fetch('/imagenes/subir', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: form
+        });
+        if (!res.ok) { alert('Error al subir la imagen'); quitarImagen(); return; }
+        const data = await res.json();
+        pendingImgUrl = data.url;
+        // Cambiar preview a URL definitiva del servidor
+        document.getElementById('preview-img').src = pendingImgUrl;
+      } catch(e) {
+        alert('Error de conexión al subir imagen');
+        quitarImagen();
+      } finally {
+        indicator.classList.remove('visible');
+        document.getElementById('btn-publish').disabled = false;
+        input.value = '';
+      }
+    }
+
+    function quitarImagen() {
+      pendingImgUrl = null;
+      document.getElementById('preview-img').src = '';
+      document.getElementById('compose-preview').classList.remove('visible');
+      document.getElementById('btn-attach').classList.remove('active');
+      document.getElementById('img-input').value = '';
+    }
+
+    // ── LOGOUT ──
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/login.html";
+    }
+
+    function irPerfil() { window.location.href = "/perfil.html"; }
+
+    // ── COMPOSER MODE ──
+    let composerMode = 'post'; // 'post' | 'anuncio'
+
+    function switchComposerMode(mode) {
+      composerMode = mode;
+      const card       = document.querySelector('.home-composer-card');
+      const textarea   = document.getElementById('contenido');
+      const postBtn    = document.getElementById('mode-btn-post');
+      const anuncioBtn = document.getElementById('mode-btn-anuncio');
+      const actions    = document.getElementById('compose-actions-normal');
+      const publishBtn = document.getElementById('btn-publish');
+
+      if (mode === 'anuncio') {
+        card.classList.add('composer-anuncio-mode');
+        textarea.placeholder = 'Escribe el anuncio oficial para toda la comunidad…';
+        postBtn.classList.remove('active');
+        anuncioBtn.classList.add('active');
+        actions.style.display = 'none';
+        publishBtn.textContent = 'Publicar anuncio';
+        if (pendingImgUrl) quitarImagen();
+        if (pollActive)    togglePollBuilder();
+      } else {
+        card.classList.remove('composer-anuncio-mode');
+        textarea.placeholder = '¿Qué estás pensando?';
+        postBtn.classList.add('active');
+        anuncioBtn.classList.remove('active');
+        actions.style.display = '';
+        publishBtn.textContent = 'Publicar';
+      }
+      textarea.focus();
+    }
+
+    function publicarComposer() {
+      if (composerMode === 'anuncio') crearAnuncio();
+      else                            crearPost();
+    }
+
+    // ── CREAR ANUNCIO ──
+    async function crearAnuncio() {
+      const contenido = document.getElementById("contenido").value.trim();
+      if (!contenido) return;
+
+      const btn = document.getElementById("btn-publish");
+      btn.disabled = true;
+      btn.textContent = "Publicando…";
+
+      const res = await fetch("/publicaciones/anuncio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ contenido })
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Publicar anuncio";
+
+      if (!res.ok) { NidoUI.toast.error("Error al publicar el anuncio"); return; }
+
+      NidoUI.toast.ok('Anuncio publicado');
+      document.getElementById("contenido").value = "";
+      cargarFeed();
+    }
+
+    // ── CREATE POST ──
+    async function crearPost() {
+      const contenido = document.getElementById("contenido").value.trim();
+      if (!contenido && !pendingImgUrl && !pollActive) return;
+
+      const btn = document.getElementById("btn-publish");
+      btn.disabled = true;
+      btn.textContent = "Publicando…";
+
+      const payload = { contenido };
+      if (pendingImgUrl) {
+        payload.imagenUrl = pendingImgUrl;
+        payload.tipo = "imagen";
+      }
+
+      const res = await fetch("/publicaciones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(payload)
+      });
+
+      btn.disabled = false;
+      btn.textContent = "Publicar";
+
+      if (!res.ok) { alert("Error al publicar"); return; }
+
+      NidoUI.toast.ok('Publicación compartida');
+      const pub = await res.json();
+
+      if (pollActive) {
+        await crearEncuesta(pub.id);
+        resetPollBuilder();
+      }
+
+      document.getElementById("contenido").value = "";
+      quitarImagen();
+      cargarFeed();
+    }
+
+    // ── LOAD FEED ──
+    async function cargarFeed() {
+      const feed = document.getElementById("feed");
+
+      feed.innerHTML = NidoUI.sk.repeat(NidoUI.sk.feedCard, 3);
+
+      const [postsRes, usersRes, misReaccionesRes, reaccionesTodasRes, comentariosRes, encuestasTodas, misVotosRes] = await Promise.all([
+        fetch("/publicaciones",                        { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/usuarios",                             { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/interacciones/mis-reacciones",        { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/interacciones/reacciones-todos",      { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/interacciones/comentarios-todos",     { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/encuestas/todas",                     { headers: { "Authorization": "Bearer " + token } }),
+        fetch("/encuestas/mis-votos",                 { headers: { "Authorization": "Bearer " + token } })
+      ]);
+
+      feed.innerHTML = "";
+
+      if (!postsRes.ok) {
+        if (handleUnauth(postsRes)) return;
+        NidoUI.toast.error('No se pudo cargar el feed. Intenta de nuevo.');
+        feed.innerHTML = `<div class="state-msg"><span class="icon">⚠️</span><p>Error al cargar el feed.</p></div>`;
+        return;
+      }
+
+      // correo → { foto, nombre }  +  userId → { foto, nombre }
+      const userMap = new Map();
+      if (usersRes.ok) {
+        const users = await usersRes.json();
+        users.forEach(u => {
+          const entry = { foto: u.fotoPerfil || null, nombre: u.username || u.correo, rol: u.rol || 'ESTUDIANTE' };
+          userMap.set(u.correo, entry);
+          globalUserIdMap.set(u.id, entry);
+        });
+      }
+
+      // reacciones del usuario actual y conteos totales por tipo
+      const rawMisReacciones   = misReaccionesRes.ok   ? await misReaccionesRes.json()   : {};
+      const rawReaccionesTodas = reaccionesTodasRes.ok ? await reaccionesTodasRes.json() : {};
+      // pubId → tipo string (o null si sin reacción)
+      const misReaccionesMap = new Map(Object.entries(rawMisReacciones).map(([k,v]) => [Number(k), v]));
+      // pubId → { tipo → count }
+      const reaccionesTodasMap = new Map(Object.entries(rawReaccionesTodas).map(([k,v]) => [Number(k), v]));
+
+      // comentarios agrupados por post
+      const rawComentarios = comentariosRes.ok ? await comentariosRes.json() : {};
+      const comentariosMap = new Map(Object.entries(rawComentarios).map(([k, v]) => [Number(k), v]));
+
+      // encuestas y votos propios
+      const rawEncuestas = encuestasTodas.ok ? await encuestasTodas.json() : {};
+      encuestasMap = new Map(Object.entries(rawEncuestas).map(([k, v]) => [Number(k), v]));
+      const rawMisVotos = misVotosRes.ok ? await misVotosRes.json() : {};
+      misVotosMap = new Map(Object.entries(rawMisVotos).map(([k, v]) => [Number(k), Number(v)]));
+
+      const data = await postsRes.json();
+
+      if (!data.length) {
+        feed.innerHTML = `<div class="state-msg"><span class="icon">📭</span><p>Aún no hay publicaciones. ¡Sé el primero!</p></div>`;
+        return;
+      }
+
+      // Mapa id → post para lookup de originales en compartidas
+      const postById = new Map(data.map(p => [p.id, p]));
+
+      // Cuántas veces fue compartido cada post raíz
+      const shareCountMap = new Map();
+      data.forEach(p => {
+        if (p.compartida && p.publicacionOriginalId) {
+          shareCountMap.set(p.publicacionOriginalId,
+            (shareCountMap.get(p.publicacionOriginalId) ?? 0) + 1);
+        }
+      });
+
+      // Posts ya compartidos por el usuario actual (publicacionOriginalId)
+      const yaCompartidoSet = new Set(
+        data.filter(p => p.compartida && p.usuarioId === currentUserId && p.publicacionOriginalId)
+            .map(p => p.publicacionOriginalId)
+      );
+
+      // Separar anuncios, posts fijados y posts normales.
+      // El backend ya devuelve todo en orden fecha DESC (más reciente primero).
+      const anuncios = data.filter(p => p.esAnuncio);
+      const fijados  = data.filter(p => !p.esAnuncio && p.fijada);
+      const normales = data.filter(p => !p.esAnuncio && !p.fijada);
+      // Orden de render: anuncios → fijados → normales (todos ya en DESC del backend)
+
+      // ── Renderizar anuncios primero ──
+      anuncios.forEach(post => {
+        const div = document.createElement("div");
+        div.className = "anuncio-card";
+        const { nombre, rol: anuncioRol } = globalUserIdMap.get(post.usuarioId) ?? { nombre: "Institución", rol: 'AUTORIDAD' };
+        const miTipo       = misReaccionesMap.get(post.id) ?? null;
+        const countsObj    = reaccionesTodasMap.get(post.id) ?? {};
+        const totalLikes   = Object.values(countsObj).reduce((a,b) => a+b, 0);
+        const postComments = comentariosMap.get(post.id) ?? [];
+        div.innerHTML = `
+          <div class="anuncio-top">
+            <span class="anuncio-badge">📢 Anuncio oficial</span>
+            <span class="anuncio-author">${escapeHtml(nombre)}${NidoUI.rolBadge(anuncioRol, {style:'filter:brightness(1.3)'})}</span>
+          </div>
+          <p class="anuncio-content">${escapeHtml(post.contenido)}</p>
+          ${post.imagenUrl ? `<img class="anuncio-img" src="${post.imagenUrl}" alt="imagen" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}
+          <div class="anuncio-footer">
+            <button class="btn-like${miTipo ? ' liked' : ''}"
+              style="${miTipo ? 'color:' + REACTION_COLOR[miTipo] : ''}"
+              onmousedown="iniciarLongPress(${post.id},this,event)"
+              onmouseup="cancelarLongPress()" onmouseleave="cancelarLongPress()"
+              ontouchstart="iniciarLongPress(${post.id},this,event);event.preventDefault()"
+              ontouchend="cancelarLongPress()"
+              onclick="clickLike(${post.id},this)">
+              <span class="heart">${miTipo ? REACTION_EMOJI[miTipo] : '♡'}</span>
+              <span class="like-count">${totalLikes}</span>
+            </button>
+            ${renderReactionCounts(countsObj)}
+            <button class="btn-comment" onclick="toggleComentarios(${post.id})">
+              💬 <span id="cc-${post.id}">${postComments.length > 0 ? postComments.length : 'Comentar'}</span>
+            </button>
+            <span class="anuncio-date">${timeAgo(post.fecha)}</span>
+          </div>
+          <div class="comments-section" id="cs-${post.id}">
+            <div class="comments-list" id="cl-${post.id}">
+              ${postComments.map(c => renderOneComment(c)).join('')}
+            </div>
+            <div class="comment-input-row">
+              <input class="comment-input" id="ci-${post.id}"
+                     placeholder="Escribe un comentario…"
+                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agregarComentario(${post.id})}">
+              <button class="btn-send-comment" onclick="agregarComentario(${post.id})">➤</button>
+            </div>
+          </div>
+        `;
+        feed.appendChild(div);
+      });
+
+      // ── Renderizar posts fijados y normales (fijados primero, todo en fecha DESC) ──
+      [...fijados, ...normales].forEach(post => {
+        const div = document.createElement("div");
+        div.className = "card post-card nido-post-card" + (post.fijada ? " pinned-post" : "");
+        const { foto, nombre, rol: postRol } = globalUserIdMap.get(post.usuarioId) ?? { foto: null, nombre: "Usuario #" + post.usuarioId, rol: 'ESTUDIANTE' };
+        const avatarBg   = foto ? `url('${foto}') center/cover no-repeat` : hueFromStr(nombre);
+        const avatarText = foto ? "" : initials(nombre);
+        const miTipo       = misReaccionesMap.get(post.id) ?? null;
+        const countsObj    = reaccionesTodasMap.get(post.id) ?? {};
+        const totalLikes   = Object.values(countsObj).reduce((a,b) => a+b, 0);
+        const postComments = comentariosMap.get(post.id) ?? [];
+
+        // Identificar el post "raíz" para contar shares y botón de compartir
+        const raizId     = post.compartida && post.publicacionOriginalId ? post.publicacionOriginalId : post.id;
+        const shareCount = shareCountMap.get(raizId) ?? 0;
+        const yaComp     = yaCompartidoSet.has(raizId);
+
+        // Bloque de contenido: diferente si es compartida
+        let contenidoHtml;
+        if (post.compartida && post.publicacionOriginalId) {
+          const orig = postById.get(post.publicacionOriginalId);
+          const { foto: oFoto, nombre: oNombre } = orig
+            ? (globalUserIdMap.get(orig.usuarioId) ?? { foto: null, nombre: "Usuario" })
+            : { foto: null, nombre: "Usuario eliminado" };
+          const oBg   = oFoto ? `url('${oFoto}') center/cover no-repeat` : (orig ? hueFromStr(oNombre) : '#aaa');
+          const oText = oFoto ? "" : (oNombre ? oNombre[0].toUpperCase() : "?");
+          contenidoHtml = `
+            ${post.contenido ? `<p class="share-comment">${escapeHtml(post.contenido)}</p>` : ''}
+            <div class="original-post-card">
+              ${orig ? `
+                <div class="original-author-row">
+                  <a href="/perfil-publico.html?id=${orig.usuarioId}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+                    <div class="original-author-avatar" style="background:${oBg}">${oText}</div>
+                    <div>
+                      <div class="original-author-name">${escapeHtml(oNombre)}</div>
+                      <div class="original-date">${timeAgo(orig.fecha)}</div>
+                    </div>
+                  </a>
+                </div>
+                <p class="original-content">${escapeHtml(orig.contenido)}</p>
+                ${orig.imagenUrl ? `<img class="original-img" src="${orig.imagenUrl}" alt="imagen" onclick="abrirLightbox('${orig.imagenUrl}')">` : ''}
+              ` : `<em style="color:var(--gray-text);font-size:.85rem">Publicación original no disponible</em>`}
+            </div>`;
+        } else {
+          contenidoHtml = `
+            <p class="post-content">${escapeHtml(post.contenido)}</p>
+            ${post.imagenUrl ? `<img class="post-img" src="${post.imagenUrl}" alt="imagen" onclick="abrirLightbox('${post.imagenUrl}')">` : ''}`;
+        }
+
+        div.innerHTML = `
+          <div class="post-header">
+            ${post.fijada ? '<div class="pinned-badge">📌 Fijado</div>' : ''}
+            <a class="post-user-link" href="/perfil-publico.html?id=${post.usuarioId}">
+              <div class="post-avatar" style="background:${avatarBg}">${avatarText}</div>
+              <div class="post-meta">
+                <div class="post-author">${escapeHtml(nombre)}${NidoUI.rolBadge(postRol)}${post.compartida ? ' <span style="font-weight:400;color:var(--gray-text)">compartió</span>' : ''}</div>
+                <div class="post-date">${timeAgo(post.fecha)}</div>
+              </div>
+            </a>
+          </div>
+          <hr class="divider">
+          ${contenidoHtml}
+          ${renderPoll(post.id)}
+          <div class="post-footer">
+            <button class="btn-like${miTipo ? ' liked' : ''}"
+              style="${miTipo ? 'color:' + REACTION_COLOR[miTipo] : ''}"
+              onmousedown="iniciarLongPress(${post.id},this,event)"
+              onmouseup="cancelarLongPress()" onmouseleave="cancelarLongPress()"
+              ontouchstart="iniciarLongPress(${post.id},this,event);event.preventDefault()"
+              ontouchend="cancelarLongPress()"
+              onclick="clickLike(${post.id},this)">
+              <span class="heart">${miTipo ? REACTION_EMOJI[miTipo] : '♡'}</span>
+              <span class="like-count">${totalLikes}</span>
+            </button>
+            ${renderReactionCounts(countsObj)}
+            <button class="btn-comment" onclick="toggleComentarios(${post.id})">
+              💬 <span id="cc-${post.id}">${postComments.length > 0 ? postComments.length : 'Comentar'}</span>
+            </button>
+            ${!post.compartida ? `
+            <button class="btn-share${yaComp ? ' ya-compartido' : ''}"
+              onclick="compartirPost(${post.id}, this)"
+              ${yaComp ? 'title="Ya compartiste esta publicación"' : 'title="Compartir"'}>
+              🔁 <span class="share-count">${shareCount > 0 ? shareCount : ''}</span>
+            </button>` : ''}
+          </div>
+          <div class="comments-section" id="cs-${post.id}">
+            <div class="comments-list" id="cl-${post.id}">
+              ${postComments.map(c => renderOneComment(c)).join('')}
+            </div>
+            <div class="comment-input-row">
+              <input class="comment-input" id="ci-${post.id}"
+                     placeholder="Escribe un comentario…"
+                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agregarComentario(${post.id})}">
+              <button class="btn-send-comment" onclick="agregarComentario(${post.id})">➤</button>
+            </div>
+          </div>
+        `;
+        feed.appendChild(div);
+      });
+      injectTodosModulos();
+    }
+
+    // ── COMMENTS ──
+    function renderOneComment(c) {
+      const u = globalUserIdMap.get(c.usuarioId) ?? { nombre: "Usuario", foto: null };
+      const bg = u.foto ? `url('${u.foto}') center/cover no-repeat` : hueFromStr(u.nombre);
+      const tx = u.foto ? "" : initials(u.nombre);
+      const canDel = c.usuarioId === currentUserId;
+      return `
+        <div class="comment-item" id="cmt-${c.id}">
+          <div class="comment-avatar-sm" style="background:${bg}">${tx}</div>
+          <div class="comment-body">
+            <span class="comment-author">${escapeHtml(u.nombre)}</span>
+            <span class="comment-text">${escapeHtml(c.contenido)}</span>
+            <span class="comment-time">${timeAgo(c.fecha)}</span>
+          </div>
+          ${canDel ? `<button class="btn-del-comment" onclick="eliminarComentario(${c.id},${c.publicacionId})" title="Eliminar">×</button>` : ''}
+        </div>`;
+    }
+
+    function toggleComentarios(postId) {
+      const section = document.getElementById("cs-" + postId);
+      section.classList.toggle("visible");
+      if (section.classList.contains("visible")) {
+        document.getElementById("ci-" + postId)?.focus();
+      }
+    }
+
+    async function agregarComentario(postId) {
+      const input = document.getElementById("ci-" + postId);
+      const contenido = input.value.trim();
+      if (!contenido) return;
+
+      const sendBtn = input.nextElementSibling;
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      const res = await fetch(`/interacciones/comentario/${postId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ contenido })
+      });
+
+      input.disabled = false;
+      sendBtn.disabled = false;
+
+      if (!res.ok) { alert("Error al enviar comentario."); return; }
+
+      const c = await res.json();
+      // Asegurarse que el mapa tiene al usuario actual (puede que se haya cargado después)
+      if (!globalUserIdMap.has(c.usuarioId) && currentUserId === c.usuarioId) {
+        const navNombre = document.getElementById("nav-username")?.textContent;
+        globalUserIdMap.set(c.usuarioId, { nombre: navNombre || "Yo", foto: null });
+      }
+
+      const list = document.getElementById("cl-" + postId);
+      list.insertAdjacentHTML("beforeend", renderOneComment(c));
+      input.value = "";
+
+      // Actualizar contador
+      const countEl = document.getElementById("cc-" + postId);
+      if (countEl) {
+        const prev = parseInt(countEl.textContent) || 0;
+        countEl.textContent = prev + 1;
+      }
+    }
+
+    async function eliminarComentario(comentarioId, postId) {
+      const res = await fetch(`/interacciones/comentario/${comentarioId}`, {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + token }
+      });
+      if (!res.ok) { alert("No se pudo eliminar el comentario."); return; }
+
+      const el = document.getElementById("cmt-" + comentarioId);
+      if (el) {
+        el.style.transition = "opacity .2s";
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 210);
+      }
+
+      // Actualizar contador
+      const countEl = document.getElementById("cc-" + postId);
+      if (countEl) {
+        const prev = parseInt(countEl.textContent) || 1;
+        const n = Math.max(0, prev - 1);
+        countEl.textContent = n === 0 ? "Comentar" : n;
+      }
+    }
+
+    // ── REACTIONS ──
+    const REACTION_EMOJI  = { like:'♥', love:'😍', haha:'😂', wow:'😮', sad:'😢', angry:'😡' };
+    const REACTION_COLOR  = { like:'#E0245E', love:'#E91E63', haha:'#F5A623', wow:'#FF8F00', sad:'#1976D2', angry:'#D32F2F' };
+
+    function renderReactionCounts(countsObj) {
+      if (!countsObj || Object.keys(countsObj).length === 0) return '';
+      const sorted = Object.entries(countsObj).sort((a,b) => b[1]-a[1]).slice(0,3);
+      return `<span class="reaction-counts">${sorted.map(([t,n]) => `<span class="reaction-bubble">${REACTION_EMOJI[t]} ${n}</span>`).join('')}</span>`;
+    }
+
+    let longPressTimer = null;
+    let isLongPress    = false;
+    let pickerTarget   = null;
+
+    function iniciarLongPress(postId, btn, event) {
+      isLongPress = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        isLongPress = true;
+        mostrarPicker(btn, postId);
+      }, 300);
+    }
+
+    function cancelarLongPress() { clearTimeout(longPressTimer); }
+
+    function clickLike(postId, btn) {
+      if (isLongPress) { isLongPress = false; return; }
+      toggleLike(postId, btn, 'like');
+    }
+
+    function mostrarPicker(btn, postId) {
+      const picker = document.getElementById('reaction-picker');
+      pickerTarget = { postId, btn };
+      const rect = btn.getBoundingClientRect();
+      picker.style.left = Math.max(4, rect.left) + 'px';
+      picker.style.top  = (rect.top + window.scrollY - 64) + 'px';
+      picker.style.display = 'flex';
+      picker.style.animation = 'none';
+      picker.offsetHeight;
+      picker.style.animation = '';
+    }
+
+    function ocultarPicker() {
+      document.getElementById('reaction-picker').style.display = 'none';
+      pickerTarget = null;
+    }
+
+    document.addEventListener('click', e => {
+      const picker = document.getElementById('reaction-picker');
+      if (picker.style.display !== 'none' && !picker.contains(e.target) && !e.target.closest('.btn-like')) {
+        ocultarPicker();
+      }
+    });
+
+    document.querySelectorAll('#reaction-picker .r-btn').forEach(rb => {
+      rb.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!pickerTarget) return;
+        const { postId, btn } = pickerTarget;
+        const tipo = rb.dataset.tipo;
+        ocultarPicker();
+        await toggleLike(postId, btn, tipo);
+      });
+    });
+
+    async function toggleLike(postId, btn, tipo = 'like') {
+      btn.disabled = true;
+      const res = await fetch(`/interacciones/like/${postId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ tipo })
+      });
+      btn.disabled = false;
+      if (!res.ok) return;
+      const data = await res.json();
+      const { accion, likes } = data;
+      const tipoResp = data.tipo ?? null;
+      const isLiked = accion !== 'quitado';
+      btn.classList.toggle("liked", isLiked);
+      btn.style.color = isLiked ? REACTION_COLOR[tipoResp] : '';
+      btn.querySelector(".heart").textContent = isLiked ? REACTION_EMOJI[tipoResp] : '♡';
+      btn.querySelector(".like-count").textContent = likes;
+      // Actualizar conteos de reacciones
+      actualizarConteoUI(btn, postId, tipo, accion, tipoResp);
+    }
+
+    function actualizarConteoUI(btn, postId, tipo, accion, tipoResp) {
+      const footer = btn.closest('.post-footer, .anuncio-footer');
+      if (!footer) return;
+      let countEl = footer.querySelector('.reaction-counts');
+      // Reconstruir conteo optimista a partir del span actual (simplificado: reload no requerido)
+      // Para exactitud pedimos al servidor en background
+      fetch(`/interacciones/reacciones-todos`, {
+        headers: { "Authorization": "Bearer " + token }
+      }).then(r => r.ok ? r.json() : null).then(data => {
+        if (!data) return;
+        const countsObj = data[postId] ?? {};
+        const newHtml = renderReactionCounts(countsObj);
+        if (countEl) { countEl.outerHTML = newHtml || ''; }
+        else if (newHtml) { btn.insertAdjacentHTML('afterend', newHtml); }
+      });
+    }
+
+    // ── COMPARTIR ──
+    async function compartirPost(postId, btn) {
+      if (btn.classList.contains('ya-compartido')) return;
+      btn.disabled = true;
+      const res = await fetch(`/publicaciones/compartir/${postId}`, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token }
+      });
+      btn.disabled = false;
+      if (res.status === 409) { btn.classList.add('ya-compartido'); btn.title = "Ya compartiste esta publicación"; return; }
+      if (!res.ok) { alert("No se pudo compartir la publicación."); return; }
+      // Actualizar contador optimista
+      const countEl = btn.querySelector('.share-count');
+      if (countEl) {
+        const prev = parseInt(countEl.textContent) || 0;
+        countEl.textContent = prev + 1;
+      }
+      btn.classList.add('ya-compartido');
+      btn.title = "Ya compartiste esta publicación";
+      // Recargar feed para mostrar el post compartido
+      setTimeout(cargarFeed, 400);
+    }
+
+    // ── POLLS ──
+    function renderPoll(pubId) {
+      const enc = encuestasMap.get(pubId);
+      if (!enc) return '';
+      const miVotoOpcionId = misVotosMap.get(enc.id) ?? null;
+      const showResults = miVotoOpcionId !== null || enc.expirada;
+
+      let opcionesHtml;
+      if (showResults) {
+        opcionesHtml = enc.opciones.map(op => {
+          const pct = enc.totalVotos > 0 ? Math.round((op.votos / enc.totalVotos) * 100) : 0;
+          const esMiVoto = op.id === miVotoOpcionId;
+          return `
+            <div class="poll-bar-row">
+              <div class="poll-bar-label" title="${escapeHtml(op.texto)}">${escapeHtml(op.texto)}${esMiVoto ? '<span class="poll-mi-voto">✓</span>' : ''}</div>
+              <div class="poll-bar-track"><div class="poll-bar-fill" style="width:${pct}%"></div></div>
+              <div class="poll-bar-pct">${pct}%</div>
+            </div>`;
+        }).join('');
+      } else {
+        opcionesHtml = enc.opciones.map(op => `
+          <button class="poll-opcion-btn" onclick="votar(${enc.id},${op.id},${pubId})">${escapeHtml(op.texto)}</button>
+        `).join('');
+      }
+
+      const footerText = enc.expirada
+        ? `Encuesta cerrada · ${enc.totalVotos} votos`
+        : `${enc.totalVotos} votos${enc.expiraEn ? ' · Expira ' + timeAgo(enc.expiraEn) : ''}`;
+
+      return `
+        <div class="poll-card" id="poll-${pubId}">
+          <div class="poll-pregunta-display">${escapeHtml(enc.pregunta)}</div>
+          <div id="poll-inner-${pubId}">${opcionesHtml}</div>
+          <div class="poll-footer">${footerText}</div>
+        </div>`;
+    }
+
+    async function votar(encuestaId, opcionId, pubId) {
+      const card = document.getElementById('poll-' + pubId);
+      if (card) { card.style.pointerEvents = 'none'; card.style.opacity = '.65'; }
+
+      const res = await fetch(`/encuestas/votar/${opcionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({})
+      });
+
+      if (card) { card.style.pointerEvents = ''; card.style.opacity = ''; }
+      if (res.status === 410) { alert('La encuesta ha expirado.'); return; }
+      if (res.status === 409) { alert('Ya votaste en esta encuesta.'); return; }
+      if (!res.ok) { alert('Error al votar.'); return; }
+
+      const enc = await res.json();
+      encuestasMap.set(pubId, enc);
+      misVotosMap.set(encuestaId, opcionId);
+
+      if (card) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderPoll(pubId);
+        const newCard = tmp.firstElementChild;
+        if (newCard) card.replaceWith(newCard);
+      }
+    }
+
+    function togglePollBuilder() {
+      pollActive = !pollActive;
+      document.getElementById('poll-builder').classList.toggle('visible', pollActive);
+      document.getElementById('btn-poll').classList.toggle('active', pollActive);
+      if (pollActive) document.getElementById('poll-pregunta').focus();
+    }
+
+    function addPollOption() {
+      const container = document.getElementById('poll-opciones');
+      const count = container.querySelectorAll('.poll-opcion-row').length;
+      if (count >= 4) return;
+      const div = document.createElement('div');
+      div.className = 'poll-opcion-row';
+      div.innerHTML = `<input class="poll-opcion-input" type="text" placeholder="Opción ${count + 1}" maxlength="100"><button class="btn-remove-opcion" onclick="removePollOption(this)" title="Quitar">×</button>`;
+      container.appendChild(div);
+      div.querySelector('input').focus();
+      if (count + 1 >= 4) document.getElementById('btn-add-opcion').style.display = 'none';
+    }
+
+    function removePollOption(btn) {
+      btn.closest('.poll-opcion-row')?.remove();
+      const count = document.getElementById('poll-opciones').querySelectorAll('.poll-opcion-row').length;
+      document.getElementById('btn-add-opcion').style.display = count < 4 ? '' : 'none';
+    }
+
+    function resetPollBuilder() {
+      pollActive = false;
+      document.getElementById('poll-builder').classList.remove('visible');
+      document.getElementById('btn-poll').classList.remove('active');
+      document.getElementById('poll-pregunta').value = '';
+      document.getElementById('poll-expira').value = '';
+      document.getElementById('poll-opciones').innerHTML = `
+        <div class="poll-opcion-row"><input class="poll-opcion-input" type="text" placeholder="Opción 1" maxlength="100"></div>
+        <div class="poll-opcion-row"><input class="poll-opcion-input" type="text" placeholder="Opción 2" maxlength="100"></div>`;
+      document.getElementById('btn-add-opcion').style.display = '';
+    }
+
+    async function crearEncuesta(pubId) {
+      const pregunta = document.getElementById('poll-pregunta').value.trim();
+      const opciones = [...document.querySelectorAll('#poll-opciones .poll-opcion-input')]
+        .map(i => i.value.trim()).filter(Boolean);
+      if (!pregunta || opciones.length < 2) { alert('La encuesta necesita pregunta y al menos 2 opciones.'); return; }
+      const expStr = document.getElementById('poll-expira').value;
+      const body = { publicacionId: pubId, pregunta, opciones };
+      if (expStr) body.expiraEn = expStr.length === 16 ? expStr + ':00' : expStr;
+      await fetch('/encuestas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+    }
+
+    function escapeHtml(str) {
+      return (str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function abrirLightbox(url) {
+      document.getElementById('lightbox-img').src = url;
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    // ── STORIES STATE ──
+    let storyGroups = [];          // [{userId, stories:[...]}, ...]
+    let currentGroupIndex = 0;
+    let currentStoryIndex = 0;
+    let storyTimer        = null;
+    let storyProgressFrame = null;
+    let storyProgressStart = 0;
+    const seenStoryIds    = new Set();
+    let selectedColor     = '#1A1A2E';
+    const STORY_DURATION  = 5000;
+    const STORY_COLORS    = ['#1A1A2E','#F5A623','#2D6A4F','#1864AB','#862E9C','#C92A2A','#E67700','#343A40'];
+
+    // ── LOAD & RENDER STORIES ──
+    async function cargarStories() {
+      try {
+        const h = { 'Authorization': 'Bearer ' + token };
+        const res = await fetch('/stories/activas', { headers: h });
+        if (!res.ok) { handleUnauth(res); return; }
+        const stories = await res.json();
+
+        // Populate globalUserIdMap if the feed failed to load it
+        if (globalUserIdMap.size === 0) {
+          const uRes = await fetch('/usuarios', { headers: h });
+          if (uRes.ok) {
+            const users = await uRes.json();
+            users.forEach(u => {
+              const nombre = u.username || u.correo;
+              globalUserIdMap.set(u.id, { nombre, foto: u.fotoPerfil });
+            });
+          }
+        }
+
+        const map = new Map();
+        stories.forEach(s => {
+          if (!map.has(s.usuarioId)) map.set(s.usuarioId, []);
+          map.get(s.usuarioId).push(s);
+        });
+
+        // Current user's group first, then others
+        const all = Array.from(map.entries()).map(([uid, sts]) => ({ userId: uid, stories: sts }));
+        storyGroups = [
+          ...all.filter(g => g.userId === currentUserId),
+          ...all.filter(g => g.userId !== currentUserId)
+        ];
+
+        renderStoriesRow();
+      } catch (_) {}
+    }
+
+    function renderStoriesRow() {
+      const row = document.getElementById('stories-row');
+      if (!row) return;
+
+      // Create-story card — usa foto del usuario actual como fondo
+      const myUser = globalUserIdMap.get(currentUserId) ?? { nombre: 'Tú', foto: null };
+      const myBg   = myUser.foto
+        ? `url('${myUser.foto}') center/cover no-repeat`
+        : hueFromStr(myUser.nombre || 'Tú');
+
+      let html = `
+        <div class="story-card story-card-create" onclick="abrirCrearStory()">
+          <div class="story-thumb-bg" style="background:${myBg}"></div>
+          <div class="story-thumb-overlay"></div>
+          <div class="story-add-circle">+</div>
+          <span class="story-thumb-label">Crear historia</span>
+        </div>`;
+
+      storyGroups.forEach((group, idx) => {
+        const u       = globalUserIdMap.get(group.userId) ?? { nombre: 'Usuario', foto: null };
+        const allSeen = group.stories.every(s => seenStoryIds.has(s.id));
+        // Fondo: imagen de la story más reciente, luego foto de perfil, luego color
+        const latest  = group.stories.at(-1);
+        const cardBg  = latest?.imagenUrl
+          ? `url('${latest.imagenUrl}') center/cover no-repeat`
+          : (u.foto ? `url('${u.foto}') center/cover no-repeat` : hueFromStr(u.nombre));
+        const avBg    = u.foto ? `url('${u.foto}') center/cover no-repeat` : hueFromStr(u.nombre);
+        const tx      = u.foto ? '' : initials(u.nombre);
+        const label   = (u.nombre.split(/[\s@.]/)[0] || 'Usuario').slice(0, 10);
+
+        html += `
+          <div class="story-card${allSeen ? ' story-seen' : ''}" onclick="verStories(${idx})">
+            <div class="story-thumb-bg" style="background:${cardBg}"></div>
+            <div class="story-thumb-overlay"></div>
+            <div class="story-thumb-avatar${allSeen ? ' seen' : ''}" style="background:${avBg}">${escapeHtml(tx)}</div>
+            <span class="story-thumb-label">${escapeHtml(label)}</span>
+          </div>`;
+      });
+
+      row.innerHTML = html;
+    }
+
+    // ── VIEWER ──
+    function verStories(groupIdx) {
+      currentGroupIndex = groupIdx;
+      currentStoryIndex = 0;
+      document.getElementById('story-overlay').classList.add('open');
+      mostrarStory();
+    }
+
+    function mostrarStory() {
+      clearTimeout(storyTimer);
+      cancelAnimationFrame(storyProgressFrame);
+
+      const group = storyGroups[currentGroupIndex];
+      if (!group) { cerrarStory(); return; }
+      const story = group.stories[currentStoryIndex];
+      if (!story) { cerrarStory(); return; }
+
+      seenStoryIds.add(story.id);
+
+      // Register view
+      fetch(`/stories/${story.id}/vista`, {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+      }).then(r => r.ok ? r.json() : null).then(data => {
+        if (data && story.usuarioId === currentUserId)
+          document.getElementById('sv-views').textContent = '👁 ' + data.vistas;
+      }).catch(() => {});
+
+      // Header
+      const u = globalUserIdMap.get(group.userId) ?? { nombre: 'Usuario', foto: null };
+      const svAv = document.getElementById('sv-avatar');
+      if (u.foto) { svAv.style.background = `url('${u.foto}') center/cover no-repeat`; svAv.textContent = ''; }
+      else { svAv.style.background = hueFromStr(u.nombre); svAv.textContent = initials(u.nombre); }
+
+      document.getElementById('sv-name').textContent  = u.nombre;
+      document.getElementById('sv-time').textContent  = timeAgo(story.fecha);
+      document.getElementById('sv-views').textContent = story.usuarioId === currentUserId ? '👁 ' + story.vistas : '';
+
+      // Content
+      const content = document.getElementById('story-content');
+      content.style.background = story.colorFondo || '#1A1A2E';
+      let inner = '';
+      if (story.imagenUrl) inner += `<img src="${story.imagenUrl}" alt="">`;
+      if (story.texto)     inner += `<div class="story-text-display">${escapeHtml(story.texto)}</div>`;
+      content.innerHTML = inner || `<div class="story-text-display" style="color:rgba(255,255,255,.4)">...</div>`;
+
+      // Progress bar
+      const fill = document.getElementById('story-progress');
+      fill.style.transition = 'none';
+      fill.style.width = '0%';
+
+      function step(ts) {
+        if (!storyProgressStart) storyProgressStart = ts;
+        const pct = Math.min(((ts - storyProgressStart) / STORY_DURATION) * 100, 100);
+        fill.style.width = pct + '%';
+        if (pct < 100) storyProgressFrame = requestAnimationFrame(step);
+      }
+      storyProgressStart = 0;
+      storyProgressFrame = requestAnimationFrame(step);
+      storyTimer = setTimeout(nextStory, STORY_DURATION);
+    }
+
+    function nextStory() {
+      clearTimeout(storyTimer); cancelAnimationFrame(storyProgressFrame);
+      const group = storyGroups[currentGroupIndex];
+      if (group && currentStoryIndex < group.stories.length - 1) {
+        currentStoryIndex++;
+      } else if (currentGroupIndex < storyGroups.length - 1) {
+        currentGroupIndex++; currentStoryIndex = 0;
+      } else { cerrarStory(); return; }
+      mostrarStory();
+    }
+
+    function prevStory() {
+      clearTimeout(storyTimer); cancelAnimationFrame(storyProgressFrame);
+      if (currentStoryIndex > 0) { currentStoryIndex--; }
+      else if (currentGroupIndex > 0) { currentGroupIndex--; currentStoryIndex = 0; }
+      else return;
+      mostrarStory();
+    }
+
+    function cerrarStory() {
+      clearTimeout(storyTimer); cancelAnimationFrame(storyProgressFrame);
+      document.getElementById('story-overlay').classList.remove('open');
+      renderStoriesRow();
+    }
+
+    // Close viewer on backdrop click
+    document.addEventListener('click', e => {
+      if (e.target.id === 'story-overlay') cerrarStory();
+    });
+
+    // ── CREATE STORY ──
+    function abrirCrearStory() {
+      document.getElementById('color-swatches').innerHTML = STORY_COLORS.map(c =>
+        `<div class="color-swatch${c === selectedColor ? ' selected' : ''}"
+              style="background:${c}" onclick="selectStoryColor('${c}')"></div>`
+      ).join('');
+      document.getElementById('story-texto').value  = '';
+      document.getElementById('story-imagen').value = '';
+      previewStory();
+      document.getElementById('story-create-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('story-texto').focus(), 50);
+    }
+
+    function cancelarCrearStory() {
+      document.getElementById('story-create-overlay').classList.remove('open');
+    }
+
+    function selectStoryColor(color) {
+      selectedColor = color;
+      document.querySelectorAll('.color-swatch').forEach(el =>
+        el.classList.toggle('selected', el.style.background === color || el.style.backgroundColor === color)
+      );
+      previewStory();
+    }
+
+    function previewStory() {
+      const texto  = document.getElementById('story-texto').value;
+      const imgUrl = document.getElementById('story-imagen').value.trim();
+      const box    = document.getElementById('story-preview-box');
+      const textEl = document.getElementById('story-preview-text-el');
+
+      box.style.background = selectedColor;
+      box.querySelectorAll('img').forEach(i => i.remove());
+
+      if (imgUrl) {
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        box.insertBefore(img, textEl);
+      }
+
+      textEl.textContent = texto || (imgUrl ? '' : 'Vista previa');
+    }
+
+    async function publicarStory() {
+      const texto    = document.getElementById('story-texto').value.trim();
+      const imagenUrl = document.getElementById('story-imagen').value.trim();
+      if (!texto && !imagenUrl) { alert('Agrega texto o una imagen.'); return; }
+
+      const btn = document.getElementById('btn-story-publish');
+      btn.disabled = true; btn.textContent = 'Publicando…';
+
+      const res = await fetch('/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ texto, imagenUrl, colorFondo: selectedColor })
+      });
+
+      btn.disabled = false; btn.textContent = 'Publicar';
+      if (!res.ok) { alert('Error al publicar la story.'); return; }
+
+      cancelarCrearStory();
+      cargarStories();
+    }
+
+    // ── NOTIFICACIONES ──
+    function formatRelTime(iso) {
+      const diff = Date.now() - new Date(iso);
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return "ahora";
+      if (m < 60) return `hace ${m} min`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `hace ${h} h`;
+      return `hace ${Math.floor(h / 24)} días`;
+    }
+
+    // ── WEBSOCKET (STOMP) ──
+    let stompClient = null;
+
+    function conectarWebSocket() {
+      if (typeof StompJs === 'undefined' || typeof SockJS === 'undefined') return;
+      if (stompClient && stompClient.active) return; // ya conectado
+
+      stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS('/ws'),
+        connectHeaders: { Authorization: 'Bearer ' + token },
+        reconnectDelay: 5000,
+        onConnect: () => {
+          stompClient.subscribe('/user/queue/notificaciones', (frame) => {
+            try {
+              const notif = JSON.parse(frame.body);
+              recibirNotifWebSocket(notif);
+            } catch (e) {}
+          });
+        },
+        onStompError: () => { /* fallback: polling sigue activo */ },
+        onWebSocketError: () => { /* ídem */ },
+      });
+
+      stompClient.activate();
+    }
+
+    // ── SIDEBAR USER HELPERS ──
+    let feedSuggestedUsers = [];
+    let feedContactsUsers = [];
+    let feedAvisosItems = [];
+    let feedEventosItems = [];
+    let feedGruposItems    = [];
+    let feedRankingItems   = [];
+    let feedRecursosItems  = [];
+    let feedMarketItems    = [];
+
+    function renderSidebarUser(u, esSiguiendo) {
+      const nombre  = u.username || u.correo;
+      const bgStyle = u.fotoPerfil
+        ? `url('${u.fotoPerfil}') center/cover no-repeat`
+        : hueFromStr(nombre);
+      const txt = u.fotoPerfil ? '' : initials(nombre);
+      return `
+        <div class="sidebar-user-row" onclick="location.href='/perfil-publico.html?id=${u.id}'">
+          <div class="sur-avatar" style="background:${bgStyle}">${txt}</div>
+          <div class="sur-info">
+            <div class="sur-name">${escapeHtml(nombre)}</div>
+            <div class="sur-meta">${escapeHtml(u.carrera || 'TESVG')}</div>
+          </div>
+          ${!esSiguiendo ? `<button class="btn-seguir-sm" onclick="event.stopPropagation();toggleSeguirSidebar(${u.id},this)">Seguir</button>` : ''}
+        </div>`;
+    }
+
+    function renderSuggestedFeedUser(u) {
+      const nombre = u.username || u.correo;
+      const bgStyle = u.fotoPerfil
+        ? `url('${u.fotoPerfil}') center/cover no-repeat`
+        : hueFromStr(nombre);
+      const txt = u.fotoPerfil ? '' : initials(nombre);
+      const meta = [u.carrera, u.grupo].filter(Boolean).join(' · ') || 'Comunidad TESVG';
+      return `
+        <article class="feed-suggestion-card" data-suggested-user="${u.id}">
+          <button class="feed-suggestion-close" title="Ocultar" onclick="event.stopPropagation();this.closest('.feed-suggestion-card')?.remove()">×</button>
+          <a class="feed-suggestion-profile" href="/perfil-publico.html?id=${u.id}">
+            <div class="feed-suggestion-avatar" style="background:${bgStyle}">${txt}</div>
+            <div class="feed-suggestion-name">${escapeHtml(nombre)}</div>
+            <div class="feed-suggestion-meta">${escapeHtml(meta)}</div>
+            <div class="feed-suggestion-mutual">${escapeHtml(u.carrera ? 'Estudia en tu comunidad' : 'Conexión del campus')}</div>
+          </a>
+          <button class="feed-suggestion-follow" onclick="toggleSeguirSidebar(${u.id},this)">Seguir</button>
+        </article>`;
+    }
+
+    function renderFeedSuggestedBlock(users) {
+      if (!users.length) return '';
+      return `
+        <section class="feed-suggestions-section" data-feed-insert="suggestions" aria-label="Personas que quizá conozcas">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Descubre</span>
+              <h2>Personas que quizá conozcas</h2>
+            </div>
+            <a href="/buscar.html">Ver más</a>
+          </div>
+          <div class="feed-suggestions-rail">
+            ${users.map(renderSuggestedFeedUser).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedSuggestedBlock() {
+      const feed = document.getElementById('feed');
+      if (!feed) return;
+      feed.querySelectorAll('[data-feed-insert="suggestions"]').forEach(el => el.remove());
+      if (!feedSuggestedUsers.length) return;
+      const posts = Array.from(feed.children).filter(el =>
+        el.classList.contains('post-card') || el.classList.contains('anuncio-card')
+      );
+      if (!posts.length) return;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = renderFeedSuggestedBlock(feedSuggestedUsers.slice(0, 8));
+      const block = wrapper.firstElementChild;
+      const anchor = posts[Math.min(1, posts.length - 1)];
+      if (anchor.nextSibling) {
+        feed.insertBefore(block, anchor.nextSibling);
+      } else {
+        feed.appendChild(block);
+      }
+    }
+
+    // ── FEED MODULE HELPERS ──
+    function injectFeedModuleAt(key, html, postIdx) {
+      const feed = document.getElementById('feed');
+      if (!feed) return;
+      feed.querySelectorAll(`[data-feed-insert="${key}"]`).forEach(el => el.remove());
+      if (!html) return;
+      const posts = Array.from(feed.children).filter(el =>
+        el.classList.contains('post-card') || el.classList.contains('anuncio-card')
+      );
+      if (!posts.length) return;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+      const block = wrapper.firstElementChild;
+      const anchor = posts[Math.min(postIdx, posts.length - 1)];
+      if (anchor.nextSibling) {
+        feed.insertBefore(block, anchor.nextSibling);
+      } else {
+        feed.appendChild(block);
+      }
+    }
+
+    // ── COMUNICADOS INSTITUCIONALES ──
+    function renderFeedComunicados() {
+      if (!feedAvisosItems.length) return '';
+      const PRIO_CLASS = {URGENTE:'prio-urg',IMPORTANTE:'prio-imp',ACADEMICO:'prio-aca',EVENTO:'prio-evt',ADMINISTRATIVO:'prio-adm'};
+      const PRIO_LABEL = {URGENTE:'Urgente',IMPORTANTE:'Importante',ACADEMICO:'Académico',EVENTO:'Evento',ADMINISTRATIVO:'Administrativo'};
+      const ROLE_CLASS = {DOCENTE:'rol-doc',COORDINADOR:'rol-coord',ADMINISTRATIVO:'rol-adm',PERSONAL:'rol-adm'};
+      const ROLE_LABEL = {AUTORIDAD:'Dirección',ADMIN:'Dirección',DOCENTE:'Docente',COORDINADOR:'Coordinación',ADMINISTRATIVO:'Adm.',PERSONAL:'Adm.'};
+      const PRIO_ORDER = {URGENTE:0,IMPORTANTE:1,ACADEMICO:2,EVENTO:3,ADMINISTRATIVO:4};
+      const top = [...feedAvisosItems]
+        .sort((a,b) => {
+          const pa = PRIO_ORDER[a.prioridad] ?? 5, pb = PRIO_ORDER[b.prioridad] ?? 5;
+          if (pa !== pb) return pa - pb;
+          return new Date(b.fecha||0) - new Date(a.fecha||0);
+        })
+        .slice(0, 3);
+      if (!top.length) return '';
+      const cards = top.map(a => {
+        const pc = PRIO_CLASS[a.prioridad] || '';
+        const pl = PRIO_LABEL[a.prioridad] || '';
+        const rol = a.autorRol || a.creadorRol || '';
+        const rc = ROLE_CLASS[rol] || '';
+        const rl = ROLE_LABEL[rol] || '';
+        const author = escapeHtml(a.autorNombre || a.creadorNombre || 'Institución');
+        return `
+          <a class="fc-card ${pc}" href="/avisos.html">
+            <div class="fc-top-row">
+              ${pl ? `<span class="fc-prio-badge">${pl}</span>` : ''}
+              ${rl ? `<span class="fc-role-badge ${rc}">${rl}</span>` : ''}
+            </div>
+            <div class="fc-title">${escapeHtml(a.titulo)}</div>
+            <div class="fc-meta">
+              <span class="fc-meta-author">${author}</span>
+              <span>·</span>
+              <span>${timeAgo(a.fecha)}</span>
+              ${a.lecturas ? `<span class="fc-read-count">${a.lecturas} lecturas</span>` : ''}
+            </div>
+          </a>`;
+      }).join('');
+      return `
+        <section class="feed-module-section fc-section" data-feed-insert="comunicados" aria-label="Comunicados institucionales">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Oficial</span>
+              <h2>Comunicados institucionales</h2>
+            </div>
+            <a href="/avisos.html">Ver todos</a>
+          </div>
+          <div class="fc-cards">${cards}</div>
+        </section>`;
+    }
+    function injectFeedComunicados() {
+      injectFeedModuleAt('comunicados', renderFeedComunicados(), 1);
+    }
+
+    function injectTodosModulos() {
+      injectFeedSuggestedBlock();
+      injectFeedComunicados();
+      injectFeedMarket();
+      injectFeedGrupos();
+      injectFeedEventos();
+      injectFeedAvisos();
+      injectFeedRanking();
+      injectFeedRecursos();
+    }
+
+    // ── NIDO MARKET ──
+    function renderFeedMarket() {
+      if (!feedMarketItems.length) return '';
+      const CATS_MAP = {
+        APUNTES:'📚', TECNOLOGIA:'💻', FITNESS:'🏋️', ROPA:'👕',
+        COMIDA:'🍔', SERVICIOS:'🛠️', GAMING:'🎮', TRANSPORTE:'🚗', OTROS:'📦'
+      };
+      const fmtPrice = p => (p == null || p === 0) ? 'Gratis' : '$' + Number(p).toLocaleString('es-MX', {maximumFractionDigits: 0});
+      return `
+        <section class="feed-module-section" data-feed-insert="market" aria-label="NidoMarket">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">NidoMarket</span>
+              <h2>Productos en el campus</h2>
+            </div>
+            <a href="/marketplace.html">Ver más</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(130px, 38%);">
+            ${feedMarketItems.slice(0, 8).map(p => {
+              const em = CATS_MAP[p.categoria] || '📦';
+              const bg = p.imagenUrl
+                ? `url('${p.imagenUrl}') center/cover no-repeat`
+                : 'rgba(255,255,255,.06)';
+              return `
+                <div class="fm-market-card" onclick="location.href='/marketplace.html'">
+                  <div class="fm-market-img" style="background:${bg}">
+                    ${!p.imagenUrl ? `<span class="fm-market-emoji">${em}</span>` : ''}
+                    ${p.estado === 'VENDIDO' ? '<span class="fm-market-sold">Vendido</span>' : ''}
+                  </div>
+                  <div class="fm-market-price">${escapeHtml(fmtPrice(p.precio))}</div>
+                  <div class="fm-market-title">${escapeHtml(p.titulo)}</div>
+                </div>`;
+            }).join('')}
+            <div class="fm-market-card fm-market-cta" onclick="location.href='/marketplace.html'">
+              <div class="fm-market-img" style="background:rgba(245,166,35,.1)">
+                <span class="fm-market-emoji">🛍️</span>
+              </div>
+              <div class="fm-market-price" style="color:rgba(245,166,35,.9)">Ver todo</div>
+              <div class="fm-market-title">NidoMarket</div>
+            </div>
+          </div>
+        </section>`;
+    }
+
+    function injectFeedMarket() {
+      injectFeedModuleAt('market', renderFeedMarket(), 3);
+    }
+
+    // ── GRUPOS ──
+    function renderFeedGrupos() {
+      if (!feedGruposItems.length) return '';
+      const icons = { ACADEMICO:'📚', SOCIAL:'🎉', DEPORTIVO:'⚽', CULTURAL:'🎭', TECNOLOGIA:'💻' };
+      return `
+        <section class="feed-module-section" data-feed-insert="grupos" aria-label="Grupos del campus">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Comunidad</span>
+              <h2>Grupos del campus</h2>
+            </div>
+            <a href="/grupos.html">Ver todos</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(168px, 38%);">
+            ${feedGruposItems.slice(0, 8).map(g => {
+              const icon = icons[g.tipo] || '👥';
+              return `
+                <div class="fm-group-card">
+                  <div class="fm-group-icon">${icon}</div>
+                  <div class="fm-group-name">${escapeHtml(g.nombre)}</div>
+                  <div class="fm-group-meta">${g.totalMiembros || 0} miembros${g.tipo ? ' · ' + escapeHtml(g.tipo) : ''}</div>
+                  <button class="fm-group-join${g.soyMiembro ? ' miembro' : ''}"
+                          onclick="event.stopPropagation();unirseGrupoFeed(${g.id},this)">
+                    ${g.soyMiembro ? 'Ya eres miembro' : 'Unirse'}
+                  </button>
+                </div>`;
+            }).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedGrupos() {
+      injectFeedModuleAt('grupos', renderFeedGrupos(), 2);
+    }
+
+    // ── EVENTOS ──
+    function renderFeedEventos() {
+      if (!feedEventosItems.length) return '';
+      return `
+        <section class="feed-module-section" data-feed-insert="eventos" aria-label="Próximos eventos">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Agenda</span>
+              <h2>Próximos eventos</h2>
+            </div>
+            <a href="/calendario.html">Ver todos</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(192px, 52%);">
+            ${feedEventosItems.slice(0, 6).map(e => {
+              const f   = new Date(e.fechaEvento);
+              const day = Number.isNaN(f.getTime()) ? '?' : f.getUTCDate();
+              const mon = Number.isNaN(f.getTime()) ? ''  : f.toLocaleDateString('es', { month: 'short', timeZone: 'UTC' });
+              return `
+                <a class="fm-event-card" href="/calendario.html">
+                  <div class="fm-event-date"><b>${day}</b>${mon}</div>
+                  <div class="fm-event-title">${escapeHtml(e.titulo)}</div>
+                  <div class="fm-event-meta">${escapeHtml(e.tipo || 'Evento')}${e.lugar ? ' · ' + escapeHtml(e.lugar) : ''}</div>
+                </a>`;
+            }).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedEventos() {
+      injectFeedModuleAt('eventos', renderFeedEventos(), 5);
+    }
+
+    // ── AVISOS ──
+    function renderFeedAvisos() {
+      if (!feedAvisosItems.length) return '';
+      return `
+        <section class="feed-module-section" data-feed-insert="avisos" aria-label="Avisos institucionales">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Institucional</span>
+              <h2>Avisos oficiales</h2>
+            </div>
+            <a href="/avisos.html">Ver todos</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(200px, 56%);">
+            ${feedAvisosItems.slice(0, 5).map(a => `
+              <a class="fm-aviso-card" href="/avisos.html">
+                <span class="fm-aviso-tag">${a.carrera ? escapeHtml(a.carrera) : 'Para todos'}</span>
+                <div class="fm-aviso-title">${escapeHtml(a.titulo)}</div>
+                <div class="fm-aviso-meta">${timeAgo(a.fecha)}</div>
+              </a>`).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedAvisos() {
+      injectFeedModuleAt('avisos', renderFeedAvisos(), 8);
+    }
+
+    // ── RANKING ──
+    function renderFeedRanking() {
+      if (!feedRankingItems.length) return '';
+      return `
+        <section class="feed-module-section" data-feed-insert="ranking" aria-label="Ranking semanal">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">Destacados</span>
+              <h2>Top de la semana</h2>
+            </div>
+            <a href="/ranking.html">Ver ranking</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(130px, 28%);">
+            ${feedRankingItems.slice(0, 8).map((u, i) => {
+              const bgStyle = u.fotoPerfil
+                ? `url('${u.fotoPerfil}') center/cover no-repeat`
+                : hueFromStr(u.username || '?');
+              const tx      = u.fotoPerfil ? '' : initials(u.username || '?');
+              const posClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+              const medal   = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+              return `
+                <a class="fm-rank-card ${posClass}" href="/perfil-publico.html?id=${u.id}">
+                  <div class="fm-rank-pos">${medal}</div>
+                  <div class="fm-rank-avatar" style="background:${bgStyle}">${escapeHtml(tx)}</div>
+                  <div class="fm-rank-name">${escapeHtml((u.username || '').split(/[@.]/)[0] || 'Usuario')}</div>
+                  <div class="fm-rank-val">${u.valor || 0} seg.</div>
+                </a>`;
+            }).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedRanking() {
+      injectFeedModuleAt('ranking', renderFeedRanking(), 11);
+    }
+
+    // ── INSIGNIAS ──
+    // ── RECURSOS ──
+    function renderFeedRecursos() {
+      if (!feedRecursosItems.length) return '';
+      const typeEmoji = { pdf:'📄', imagen:'🖼️', video:'🎬', link:'🔗', otro:'📎' };
+      return `
+        <section class="feed-module-section" data-feed-insert="recursos" aria-label="Apuntes y recursos">
+          <div class="feed-insert-header">
+            <div>
+              <span class="feed-insert-kicker">NidoApuntes</span>
+              <h2>Recursos recientes</h2>
+            </div>
+            <a href="/apuntes.html">Ver todos</a>
+          </div>
+          <div class="feed-module-rail" style="grid-auto-columns: minmax(175px, 44%);">
+            ${feedRecursosItems.slice(0, 6).map(r => {
+              const em = typeEmoji[r.tipo] || '📎';
+              return `
+                <div class="fm-recurso-card" onclick="location.href='/apuntes.html'">
+                  <div class="fm-recurso-type">${em} ${escapeHtml(r.tipo || 'archivo')}</div>
+                  <div class="fm-recurso-title">${escapeHtml(r.titulo)}</div>
+                  <div class="fm-recurso-meta">${[r.materia, r.carrera].filter(Boolean).map(escapeHtml).join(' · ') || 'TESVG'}</div>
+                  <div class="fm-recurso-dl">↓ ${r.descargas || 0} descargas</div>
+                </div>`;
+            }).join('')}
+          </div>
+        </section>`;
+    }
+
+    function injectFeedRecursos() {
+      injectFeedModuleAt('recursos', renderFeedRecursos(), 17);
+    }
+
+    async function toggleSeguirSidebar(userId, btn) {
+      btn.disabled = true;
+      const res = await fetch(`/seguidores/toggle/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      btn.disabled = false;
+      if (!res.ok) return;
+      btn.textContent = 'Siguiendo';
+      btn.classList.add('siguiendo');
+    }
+
+    // Loads Sugeridos + Contactos — called after cargarUsuario() so currentUserId is set
+    async function cargarWidgetsUsuarios() {
+      const h = { "Authorization": "Bearer " + token };
+      try {
+        const [siguiendoRes, usuariosRes] = await Promise.all([
+          fetch("/seguidores/mi-siguiendo", { headers: h }),
+          fetch("/usuarios",                { headers: h })
+        ]);
+        if (!siguiendoRes.ok || !usuariosRes.ok) return;
+
+        const siguiendoData = await siguiendoRes.json();
+        const siguiendoIds = new Set(
+          (siguiendoData.siguiendo || []).map(s => s.seguidoId)
+        );
+
+        const todos  = await usuariosRes.json();
+        const otros  = todos.filter(u => u.id !== currentUserId);
+
+        const sugeridos  = otros.filter(u => !siguiendoIds.has(u.id)).slice(0, 8);
+        const contactos  = otros.filter(u =>  siguiendoIds.has(u.id)).slice(0, 6);
+        feedSuggestedUsers = sugeridos;
+        feedContactsUsers = contactos;
+        injectTodosModulos();
+      } catch (_) {}
+    }
+
+    async function cargarSidebar() {
+      const h = { "Authorization": "Bearer " + token };
+      try {
+        const [avisosRes, eventosRes] = await Promise.all([
+          fetch("/avisos",  { headers: h }),
+          fetch("/eventos", { headers: h })
+        ]);
+
+        if (handleUnauth(avisosRes) || handleUnauth(eventosRes)) return;
+
+        if (avisosRes.ok) {
+          feedAvisosItems = await avisosRes.json();
+        }
+        if (eventosRes.ok) {
+          const eventos = await eventosRes.json();
+          const today = new Date(); today.setHours(0,0,0,0);
+          feedEventosItems = eventos
+            .filter(e => e.fechaEvento && new Date(e.fechaEvento) >= today)
+            .sort((a, b) => new Date(a.fechaEvento) - new Date(b.fechaEvento))
+            .slice(0, 3);
+        }
+        injectTodosModulos();
+      } catch (_) {}
+    }
+
+    // ── EXTRA FEED MODULES (Grupos / Ranking / Insignias / Recursos) ──
+    async function cargarFeedModulosExtra() {
+      const h = { "Authorization": "Bearer " + token };
+      const [gRes, rRes, recRes, mktRes] = await Promise.allSettled([
+        fetch("/grupos",                          { headers: h }).then(r => r.ok ? r.json() : []),
+        fetch("/ranking?tipo=seguidores&limit=8", { headers: h }).then(r => r.ok ? r.json() : []),
+        fetch("/recursos",                        { headers: h }).then(r => r.ok ? r.json() : []),
+        fetch("/market/productos?limit=8",        { headers: h }).then(r => r.ok ? r.json() : [])
+      ]);
+      feedGruposItems  = gRes.status   === 'fulfilled' && Array.isArray(gRes.value)   ? gRes.value   : [];
+      feedRankingItems = rRes.status   === 'fulfilled' && Array.isArray(rRes.value)   ? rRes.value   : [];
+      feedRecursosItems = recRes.status === 'fulfilled' && Array.isArray(recRes.value) ? recRes.value : [];
+      feedMarketItems  = mktRes.status === 'fulfilled' && Array.isArray(mktRes.value) ? mktRes.value : [];
+      injectTodosModulos();
+    }
+
+    async function unirseGrupoFeed(grupoId, btn) {
+      if (btn.classList.contains('miembro')) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/grupos/${grupoId}/unirse`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          btn.textContent = 'Ya eres miembro';
+          btn.classList.add('miembro');
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ── INIT ──
+    cargarUsuario().then(cargarWidgetsUsuarios); // needs currentUserId → chain
+    cargarFeed().then(() => cargarStories());
+    cargarSidebar();
+    cargarFeedModulosExtra();
+    conectarWebSocket(); // WebSocket para notifs push; polling en nido-notif.js
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"
+          onload="conectarWebSocket()"></script>
+
+</body>
+</html>
