@@ -35,7 +35,7 @@ function UserRow({ user, onFollowToggle }: { user: SearchUser; onFollowToggle: (
   }
 
   return (
-    <Link href={`/profile?id=${user.id}`} className="flex items-center gap-3 py-3 hover:opacity-80 transition-opacity">
+    <Link href={`/profile/${user.id}`} className="flex items-center gap-3 py-3 hover:opacity-80 transition-opacity">
       <Avatar src={user.avatarUrl} name={user.username} size="md" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{user.username}</p>
@@ -243,7 +243,7 @@ export default function SearchPage() {
                 <div className="space-y-3 py-2">
                   {result.posts.map((p) => (
                     <div key={p.id} className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-3">
-                      <Link href={`/profile?id=${p.authorId}`} className="flex items-center gap-2 mb-2">
+                      <Link href={`/profile/${p.authorId}`} className="flex items-center gap-2 mb-2">
                         <Avatar src={p.authorAvatar} name={p.authorName ?? 'Usuario'} size="xs" />
                         <p className="text-xs font-semibold text-[var(--text-primary)]">{p.authorName}</p>
                         <p className="text-xs text-[var(--text-muted)]">· {timeAgo(p.createdAt)}</p>

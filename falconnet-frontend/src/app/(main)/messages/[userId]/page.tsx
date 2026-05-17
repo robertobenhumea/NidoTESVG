@@ -130,7 +130,7 @@ export default function MessageThreadPage() {
             <polyline points="15 18 9 12 15 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <Link href={`/profile?id=${partnerId}`} className="flex items-center gap-2.5 flex-1 min-w-0">
+        <Link href={`/profile/${partnerId}`} className="flex items-center gap-2.5 flex-1 min-w-0">
           <Avatar src={partner?.avatarUrl} name={partnerName} size="sm" />
           <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{partnerName}</p>
         </Link>

@@ -8,6 +8,7 @@ import { ReactionPicker } from '@/components/feed/ReactionPicker';
 import { CommentSection } from '@/components/feed/CommentSection';
 import { cn, timeAgo } from '@/lib/utils';
 import { REACTIONS } from '@/lib/constants';
+import { postService } from '@/services/post.service';
 import type { Post, ReactionType } from '@/types';
 
 interface PostCardProps {
@@ -119,6 +120,8 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
   const [pickerOpen, setPicker]         = useState(false);
   const [commentsOpen, setComments]     = useState(false);
   const [avatarOpen, setAvatar]         = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareDone, setShareDone]       = useState(false);
   const holdRef                         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didHoldRef                      = useRef(false);
 
@@ -172,6 +175,18 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
     onReact?.(post.id, type);
   }
 
+  async function handleShare() {
+    if (shareLoading || shareDone) return;
+    setShareLoading(true);
+    try {
+      await postService.sharePost(post.id);
+      setShareDone(true);
+      setTimeout(() => setShareDone(false), 2000);
+    } catch { /* ignore */ } finally {
+      setShareLoading(false);
+    }
+  }
+
   const activeRx = post.userReaction;
   const rxInfo   = getReaction(activeRx);
 
@@ -199,7 +214,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
 
           <div className="flex-1 min-w-0">
             <Link
-              href={`/profile?id=${author.id}`}
+              href={`/profile/${author.id}`}
               className="text-sm font-semibold text-[var(--text-primary)] hover:underline leading-tight block truncate"
             >
               {displayName}
@@ -310,10 +325,23 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
 
           {/* Share button */}
           <button
-            aria-label="Compartir"
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors duration-150"
+            onClick={handleShare}
+            disabled={shareLoading}
+            aria-label="Compartir publicación"
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
+              shareDone
+                ? 'text-green-500 bg-green-50 dark:bg-green-950/30'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+            )}
           >
-            <IcShare />
+            {shareDone ? (
+              <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <IcShare />
+            )}
           </button>
         </div>
 

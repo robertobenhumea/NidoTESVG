@@ -97,4 +97,8 @@ export const postService = {
   async deletePost(postId: number): Promise<void> {
     await api.delete(`/publicaciones/${postId}`);
   },
+
+  async sharePost(postId: number, comentario?: string): Promise<void> {
+    await api.post(`/publicaciones/compartir/${postId}`, comentario ? { comentario } : {});
+  },
 };
