@@ -39,7 +39,7 @@ function ProductCard({
   const isPaused  = listing.status === 'PAUSADO';
 
   return (
-    <div className={`bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col ${isSold || isPaused ? 'opacity-70' : ''}`}>
+    <div className={`bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200 ${isSold || isPaused ? 'opacity-70' : ''}`}>
       {/* Image */}
       <div className="relative aspect-[4/3] bg-[var(--bg-elevated)]">
         {listing.imageUrl ? (

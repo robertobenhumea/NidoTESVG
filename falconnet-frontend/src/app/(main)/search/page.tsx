@@ -106,7 +106,7 @@ export default function SearchPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Search bar */}
-      <div className="sticky top-[var(--nav-h)] bg-[var(--bg-base)] px-4 py-3 border-b border-[var(--border)] z-10 space-y-3">
+      <div className="sticky top-[var(--nav-h)] bg-[var(--bg-base)]/90 backdrop-blur-md px-4 py-3 border-b border-[var(--border)] z-10 space-y-3">
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" />

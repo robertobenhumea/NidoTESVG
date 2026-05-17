@@ -144,11 +144,15 @@ export function Navbar() {
       className="fixed top-0 inset-x-0 z-50 h-[var(--nav-h)]"
       style={{ paddingTop: 'var(--safe-top)' }}
     >
-      <div className="h-full flex items-center px-4 gap-3 bg-[var(--bg-surface)] border-b border-[var(--border)]">
+      <div className="h-full flex items-center px-4 gap-3 bg-[var(--bg-surface)]/85 backdrop-blur-md border-b border-[var(--border)]">
 
         {/* Logo */}
         <Link href={ROUTES.HOME} aria-label="FalconNet — Inicio" className="flex items-center gap-2 shrink-0 mr-2">
-          <div className="size-8 rounded-xl bg-[var(--brand)] flex items-center justify-center text-white font-bold text-sm" aria-hidden>
+          <div
+            className="size-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
+            style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
+            aria-hidden
+          >
             F
           </div>
           <span className="hidden sm:block font-semibold text-[var(--text-primary)] text-base tracking-tight">

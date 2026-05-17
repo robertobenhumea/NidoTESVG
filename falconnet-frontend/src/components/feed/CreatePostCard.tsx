@@ -117,7 +117,7 @@ export function CreatePostCard({ author, onPostCreated, onSubmit }: CreatePostCa
   }
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-4">
+    <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-4 shadow-sm">
       {!expanded ? (
         <div className="flex items-center gap-3">
           <Avatar src={author.avatarUrl} name={displayName} size="md" />

@@ -132,7 +132,7 @@ export function HomeFeed() {
   return (
     <div className="max-w-xl mx-auto px-3 py-4 space-y-3">
       {/* Stories */}
-      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] py-3 overflow-hidden">
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] py-3 overflow-hidden shadow-sm">
         <StoryBar />
       </div>
 

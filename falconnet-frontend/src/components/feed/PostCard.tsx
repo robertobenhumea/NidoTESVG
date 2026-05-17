@@ -320,7 +320,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
   return (
     <>
       <article
-        className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden"
+        className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
         aria-label={`Publicación de ${displayName}`}
       >
         {/* ── Header ── */}
