@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
+        protocol: 'http',
+        hostname: '192.168.0.16',
+        port: '8080',
+        pathname: '/**',
+      },
+      {
         protocol: 'https',
         hostname: '**.tesvg.edu.mx',
         pathname: '/**',
@@ -20,6 +26,9 @@ const nextConfig: NextConfig = {
     deviceSizes: [390, 430, 768, 1024, 1280, 1440],
     imageSizes: [32, 48, 64, 96, 128, 256],
   },
+
+  /* ── Local network dev access ── */
+  allowedDevOrigins: ['192.168.0.16'],
 
   /* ── Bundle optimization ── */
   experimental: {

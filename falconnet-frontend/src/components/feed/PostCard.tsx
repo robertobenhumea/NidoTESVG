@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarModal } from '@/components/ui/AvatarModal';
 import { ReactionPicker } from '@/components/feed/ReactionPicker';
@@ -50,6 +49,61 @@ function IcThumbUp() {
       <path d="M7 10v12" strokeLinecap="round" />
       <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function AnnouncementCard({ post, currentUserId }: { post: Post; currentUserId?: number }) {
+  const author = post.author;
+  const displayName = author.displayName ?? author.username;
+  const isOwn = currentUserId === author.id;
+
+  return (
+    <article
+      className="rounded-2xl overflow-hidden border-2 border-amber-400/70 dark:border-amber-500/50"
+      style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2C2150 100%)' }}
+      aria-label={`Anuncio de ${displayName}`}
+    >
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide bg-amber-400 text-[#1A1A2E] rounded-full px-3 py-1">
+            <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            Anuncio
+          </span>
+          <span className="text-xs text-white/50">{timeAgo(post.createdAt)}</span>
+        </div>
+        {post.content && (
+          <p className="text-[15px] text-white leading-relaxed whitespace-pre-wrap break-words mb-3">
+            {post.content}
+          </p>
+        )}
+        {post.imageUrl && <PostImage src={post.imageUrl} />}
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+          <Avatar src={author.avatarUrl} name={displayName} size="xs" />
+          <span className="text-xs text-white/60">{displayName}</span>
+          {isOwn && (
+            <span className="ml-auto text-xs text-white/40">Tu anuncio</span>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PostImage({ src }: { src: string }) {
+  const [error, setError] = useState(false);
+  if (error) return null;
+  return (
+    <div className="w-full bg-[var(--bg-elevated)] overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Imagen de la publicación"
+        onError={() => setError(true)}
+        className="w-full max-h-[480px] object-cover"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
   );
 }
 
@@ -121,6 +175,12 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
   const activeRx = post.userReaction;
   const rxInfo   = getReaction(activeRx);
 
+  if (post.isAnnouncement) {
+    return (
+      <AnnouncementCard post={post} currentUserId={currentUserId} />
+    );
+  }
+
   return (
     <>
       <article
@@ -168,17 +228,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
         )}
 
         {/* ── Image ── */}
-        {post.imageUrl && (
-          <div className="relative w-full bg-[var(--bg-elevated)]" style={{ aspectRatio: '16/9' }}>
-            <Image
-              src={post.imageUrl}
-              alt="Imagen de la publicación"
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 640px"
-            />
-          </div>
-        )}
+        {post.imageUrl && <PostImage src={post.imageUrl} />}
 
         {/* ── Summary row (reactions/comments count) ── */}
         {(post.reactionCount > 0 || post.commentCount > 0) && (

@@ -1,4 +1,5 @@
 import { api } from './api';
+import { resolveUrl } from '@/lib/utils';
 import type { Post, User, BPublicacion, BFeedPage, BUser, ReactionType } from '@/types';
 import { mapBUser } from '@/types';
 
@@ -16,23 +17,28 @@ function mapBPost(b: BPublicacion, userMap: Map<number, User>): Post {
     id: b.id,
     author,
     content: b.contenido ?? '',
-    imageUrl: b.imagenUrl ?? undefined,
+    imageUrl: resolveUrl(b.imagenUrl),
     createdAt: b.fecha,
     updatedAt: undefined,
     reactionCount: 0,
     commentCount: 0,
     userReaction: undefined,
+    isAnnouncement: b.esAnuncio ?? false,
   };
+}
+
+async function safeGet<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try { return await promise; } catch { return fallback; }
 }
 
 export const postService = {
   async getFeed(page = 0, size = 15): Promise<{ posts: Post[]; hasMore: boolean; page: number }> {
     const [feedData, users, myReactions, allReactions, allComments] = await Promise.all([
       api.get<BFeedPage>(`/publicaciones?page=${page}&size=${size}`),
-      api.get<BUser[]>('/usuarios'),
-      api.get<Record<string, string>>('/interacciones/mis-reacciones'),
-      api.get<Record<string, Record<string, number>>>('/interacciones/reacciones-todos'),
-      api.get<Record<string, unknown[]>>('/interacciones/comentarios-todos'),
+      safeGet(api.get<BUser[]>('/usuarios'), [] as BUser[]),
+      safeGet(api.get<Record<string, string>>('/interacciones/mis-reacciones'), {} as Record<string, string>),
+      safeGet(api.get<Record<string, Record<string, number>>>('/interacciones/reacciones-todos'), {} as Record<string, Record<string, number>>),
+      safeGet(api.get<Record<string, unknown[]>>('/interacciones/comentarios-todos'), {} as Record<string, unknown[]>),
     ]);
 
     const userMap = buildUserMap(users);

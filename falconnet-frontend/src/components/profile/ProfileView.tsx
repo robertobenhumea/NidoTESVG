@@ -122,7 +122,14 @@ export function ProfileView() {
     <>
       <div className="max-w-2xl mx-auto">
         {/* Cover */}
-        <div className="h-40 bg-gradient-to-br from-[var(--brand-muted)] to-[var(--brand)] rounded-b-2xl" />
+        <div className="h-40 rounded-b-2xl overflow-hidden">
+          {profileUser.coverUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={profileUser.coverUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[var(--brand-muted)] to-[var(--brand)]" />
+          )}
+        </div>
 
         {/* Profile header */}
         <div className="px-4 pb-4">
@@ -164,6 +171,11 @@ export function ProfileView() {
               {displayName}
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">@{profileUser.username}</p>
+            {(profileUser.grupo || profileUser.carrera) && (
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {[profileUser.carrera, profileUser.grupo].filter(Boolean).join(' · ')}
+              </p>
+            )}
             {profileUser.bio && (
               <p className="text-sm text-[var(--text-secondary)] mt-2 leading-relaxed">
                 {profileUser.bio}

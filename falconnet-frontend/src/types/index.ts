@@ -69,10 +69,19 @@ export function mapBUser(b: BUser): User {
     username: b.username,
     email: b.correo,
     displayName: b.username,
-    avatarUrl: b.fotoPerfil ?? undefined,
+    avatarUrl: b.fotoPerfil ? resolveBackendUrl(b.fotoPerfil) : undefined,
+    coverUrl: b.fotoPortada ? resolveBackendUrl(b.fotoPortada) : undefined,
     bio: b.bio ?? undefined,
     role: b.rol ?? undefined,
+    grupo: b.grupo ?? undefined,
+    carrera: b.carrera ?? undefined,
   };
+}
+
+function resolveBackendUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 /* ── Auth ── */
@@ -83,8 +92,11 @@ export interface User {
   email: string;
   displayName?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   bio?: string;
   role?: string;
+  grupo?: string;
+  carrera?: string;
 }
 
 export interface AuthTokens {
@@ -119,6 +131,7 @@ export interface Post {
   reactionCount: number;
   commentCount: number;
   userReaction?: ReactionType;
+  isAnnouncement?: boolean;
 }
 
 export interface Comment {

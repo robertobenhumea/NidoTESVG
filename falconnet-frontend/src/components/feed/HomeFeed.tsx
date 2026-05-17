@@ -70,9 +70,9 @@ export function HomeFeed() {
     if (sentinelVisible && hasMore && !loadingMore) loadMore();
   }, [sentinelVisible, hasMore, loadingMore, loadMore]);
 
-  async function handleCreatePost(content: string): Promise<Post> {
+  async function handleCreatePost(content: string, imageUrl?: string): Promise<Post> {
     if (!user) throw new Error('No autenticado');
-    return postService.createPost({ content }, user);
+    return postService.createPost({ content, imageUrl }, user);
   }
 
   async function handleDeletePost(id: number) {

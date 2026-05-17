@@ -66,6 +66,20 @@ export function applyTheme(dark: boolean): void {
   localStorage.setItem(STORAGE_KEYS.THEME, dark ? 'dark' : 'light');
 }
 
+/**
+ * Converts a backend-relative image path (e.g. "/imagenes/foo.jpg")
+ * to an absolute URL using the configured API base.
+ * Already-absolute URLs are returned unchanged.
+ */
+export function resolveUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
+  }
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 /** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
