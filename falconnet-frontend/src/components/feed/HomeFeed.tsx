@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useIntersection } from '@/hooks/useIntersection';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeed } from '@/hooks/useFeed';
@@ -8,7 +8,8 @@ import { PostCard } from '@/components/feed/PostCard';
 import { CreatePostCard } from '@/components/feed/CreatePostCard';
 import { StoryBar } from '@/components/stories/StoryBar';
 import { postService } from '@/services/post.service';
-import type { Post } from '@/types';
+import { api } from '@/services/api';
+import type { Post, Poll } from '@/types';
 
 function PostSkeleton() {
   return (
@@ -65,6 +66,52 @@ export function HomeFeed() {
     handleReact, handleCommentAdded,
   } = useFeed();
 
+  const [polls, setPolls] = useState<Map<number, Poll>>(new Map());
+
+  const fetchPolls = useCallback(async () => {
+    try {
+      const [allPolls, myVotes] = await Promise.all([
+        api.get<Record<string, { id: number; pregunta: string; opciones: { id: number; texto: string; votos: number }[]; total: number }>>('/encuestas/todas'),
+        api.get<Record<string, number>>('/encuestas/mis-votos').catch(() => ({} as Record<string, number>)),
+      ]);
+      const map = new Map<number, Poll>();
+      for (const [pubIdStr, enc] of Object.entries(allPolls)) {
+        const pubId = Number(pubIdStr);
+        map.set(pubId, {
+          id:       enc.id,
+          pregunta: enc.pregunta,
+          opciones: enc.opciones,
+          total:    enc.total,
+          miVoto:   myVotes[String(enc.id)] as number | undefined,
+        });
+      }
+      setPolls(map);
+    } catch { /* polls are optional — fail silently */ }
+  }, []);
+
+  useEffect(() => { fetchPolls(); }, [fetchPolls]);
+
+  function handleVote(postId: number, opcionId: number, encuestaId: number) {
+    // Optimistic update
+    setPolls((prev) => {
+      const poll = prev.get(postId);
+      if (!poll) return prev;
+      const updated: Poll = {
+        ...poll,
+        miVoto: opcionId,
+        total: poll.miVoto ? poll.total : poll.total + 1,
+        opciones: poll.opciones.map((o) =>
+          o.id === opcionId ? { ...o, votos: o.votos + 1 }
+          : (poll.miVoto === o.id ? { ...o, votos: Math.max(0, o.votos - 1) } : o)
+        ),
+      };
+      return new Map(prev).set(postId, updated);
+    });
+    api.post(`/encuestas/votar/${opcionId}`, { encuestaId }).catch(() => {
+      fetchPolls(); // revert on error
+    });
+  }
+
   const [sentinelRef, sentinelVisible] = useIntersection({ threshold: 0.1, rootMargin: '200px' });
   useEffect(() => {
     if (sentinelVisible && hasMore && !loadingMore) loadMore();
@@ -108,11 +155,12 @@ export function HomeFeed() {
           {posts.map((post) => (
             <PostCard
               key={post.id}
-              post={post}
+              post={{ ...post, poll: polls.get(post.id) }}
               currentUserId={user?.id}
               onDelete={handleDeletePost}
               onReact={handleReact}
               onCommentAdded={handleCommentAdded}
+              onVote={(opcionId, encuestaId) => handleVote(post.id, opcionId, encuestaId)}
             />
           ))}
 

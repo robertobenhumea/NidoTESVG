@@ -121,6 +121,20 @@ export interface RegisterRequest {
 
 export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
 
+export interface PollOption {
+  id: number;
+  texto: string;
+  votos: number;
+}
+
+export interface Poll {
+  id: number;
+  pregunta: string;
+  opciones: PollOption[];
+  total: number;
+  miVoto?: number; // opcionId voted by current user, undefined if not voted
+}
+
 export interface Post {
   id: number;
   author: User;
@@ -132,6 +146,7 @@ export interface Post {
   commentCount: number;
   userReaction?: ReactionType;
   isAnnouncement?: boolean;
+  poll?: Poll;
 }
 
 export interface Comment {

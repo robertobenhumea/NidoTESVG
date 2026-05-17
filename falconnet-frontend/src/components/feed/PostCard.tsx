@@ -9,14 +9,66 @@ import { CommentSection } from '@/components/feed/CommentSection';
 import { cn, timeAgo } from '@/lib/utils';
 import { REACTIONS } from '@/lib/constants';
 import { postService } from '@/services/post.service';
-import type { Post, ReactionType } from '@/types';
+import { api } from '@/services/api';
+import type { Post, ReactionType, Poll } from '@/types';
 
 interface PostCardProps {
   post: Post;
   onDelete?: (id: number) => void;
   onReact?: (postId: number, type: ReactionType) => void;
   onCommentAdded?: (postId: number) => void;
+  onVote?: (opcionId: number, encuestaId: number) => void;
   currentUserId?: number;
+}
+
+function PollWidget({ poll, onVote }: { poll: Poll; onVote?: (opcionId: number, encuestaId: number) => void }) {
+  const voted = poll.miVoto != null;
+  const total = poll.total || 1;
+
+  return (
+    <div className="px-4 pb-3">
+      <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">{poll.pregunta}</p>
+      <div className="space-y-2">
+        {poll.opciones.map((op) => {
+          const pct     = Math.round((op.votos / total) * 100);
+          const isVoted = poll.miVoto === op.id;
+          return (
+            <button
+              key={op.id}
+              onClick={() => !voted && onVote?.(op.id, poll.id)}
+              disabled={voted}
+              className={`relative w-full text-left rounded-xl overflow-hidden border transition-colors ${
+                isVoted
+                  ? 'border-[var(--brand)] bg-[var(--brand-muted)]'
+                  : 'border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] disabled:cursor-default'
+              }`}
+            >
+              {voted && (
+                <div
+                  className="absolute inset-y-0 left-0 bg-[var(--brand)]/15 rounded-xl transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              )}
+              <div className="relative flex items-center justify-between px-3 py-2">
+                <span className={`text-sm ${isVoted ? 'font-semibold text-[var(--brand)]' : 'text-[var(--text-primary)]'}`}>
+                  {op.texto}
+                </span>
+                {voted && (
+                  <span className={`text-xs font-medium tabular-nums ml-2 ${isVoted ? 'text-[var(--brand)]' : 'text-[var(--text-muted)]'}`}>
+                    {pct}%
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-[var(--text-muted)] mt-2">
+        {poll.total} {poll.total === 1 ? 'voto' : 'votos'}
+        {!voted && <span className="ml-1">· Toca para votar</span>}
+      </p>
+    </div>
+  );
 }
 
 function IcTrash() {
@@ -112,7 +164,73 @@ function getReaction(type?: ReactionType) {
   return REACTIONS.find((r) => r.type === type);
 }
 
-export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserId }: PostCardProps) {
+const MOTIVOS = [
+  'Contenido inapropiado',
+  'Spam o publicidad',
+  'Acoso o bullying',
+  'Información falsa',
+  'Violencia o amenazas',
+  'Otro',
+];
+
+function ReportModal({ postId, onClose, onSent }: { postId: number; onClose: () => void; onSent: () => void }) {
+  const [motivo, setMotivo]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  async function handleSend() {
+    if (!motivo) { setError('Selecciona un motivo.'); return; }
+    setLoading(true);
+    try {
+      await api.post(`/admin/reportes/publicacion/${postId}`, { motivo });
+      onSent();
+    } catch {
+      setError('No se pudo enviar el reporte. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-sm bg-[var(--bg-surface)] rounded-2xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+          <h3 className="text-base font-bold text-[var(--text-primary)]">Reportar publicación</h3>
+          <button onClick={onClose} className="size-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]">
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/><line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+        <div className="p-4 space-y-2">
+          <p className="text-xs text-[var(--text-muted)] mb-3">¿Por qué reportas esta publicación?</p>
+          {MOTIVOS.map((m) => (
+            <label key={m} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--bg-elevated)] cursor-pointer transition-colors">
+              <input
+                type="radio"
+                name="motivo"
+                value={m}
+                checked={motivo === m}
+                onChange={() => setMotivo(m)}
+                className="accent-[var(--brand)]"
+              />
+              <span className="text-sm text-[var(--text-primary)]">{m}</span>
+            </label>
+          ))}
+          {error && <p className="text-xs text-red-500 pt-1">{error}</p>}
+          <div className="flex gap-2 pt-2">
+            <button onClick={onClose} className="flex-1 h-9 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleSend} disabled={loading || !motivo} className="flex-1 h-9 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50 transition-colors">
+              {loading ? 'Enviando…' : 'Reportar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, currentUserId }: PostCardProps) {
   const author      = post.author;
   const displayName = author.displayName ?? author.username;
   const isOwn       = currentUserId === author.id;
@@ -122,6 +240,9 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
   const [avatarOpen, setAvatar]         = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareDone, setShareDone]       = useState(false);
+  const [reportOpen, setReportOpen]     = useState(false);
+  const [reportSent, setReportSent]     = useState(false);
+  const [menuOpen, setMenuOpen]         = useState(false);
   const holdRef                         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didHoldRef                      = useRef(false);
 
@@ -224,15 +345,48 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
             </time>
           </div>
 
-          {isOwn && onDelete && (
+          {/* Post menu (delete for own, report for others) */}
+          <div className="relative">
             <button
-              onClick={() => onDelete(post.id)}
-              aria-label="Eliminar publicación"
-              className="size-8 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Más opciones"
+              className="size-8 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
             >
-              <IcTrash />
+              <svg className="size-4" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+              </svg>
             </button>
-          )}
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-9 z-20 min-w-[140px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-lg overflow-hidden"
+                onMouseLeave={() => setMenuOpen(false)}
+              >
+                {isOwn && onDelete && (
+                  <button
+                    onClick={() => { setMenuOpen(false); onDelete(post.id); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  >
+                    <IcTrash />
+                    Eliminar
+                  </button>
+                )}
+                {!isOwn && !reportSent && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setReportOpen(true); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                    </svg>
+                    Reportar
+                  </button>
+                )}
+                {!isOwn && reportSent && (
+                  <span className="block px-3 py-2.5 text-xs text-[var(--text-muted)]">Reportado</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Content ── */}
@@ -240,6 +394,11 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
           <p className="px-4 pb-3 text-[15px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap break-words">
             {post.content}
           </p>
+        )}
+
+        {/* ── Poll ── */}
+        {post.poll && (
+          <PollWidget poll={post.poll} onVote={onVote} />
         )}
 
         {/* ── Image ── */}
@@ -361,6 +520,15 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, currentUserI
         open={avatarOpen}
         onClose={() => setAvatar(false)}
       />
+
+      {/* ── Report modal ── */}
+      {reportOpen && (
+        <ReportModal
+          postId={post.id}
+          onClose={() => setReportOpen(false)}
+          onSent={() => { setReportOpen(false); setReportSent(true); }}
+        />
+      )}
     </>
   );
 }

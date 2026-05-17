@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type FormEvent } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -9,6 +9,58 @@ import { userService } from '@/services/user.service';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { STORAGE_KEYS } from '@/lib/utils';
+import { api } from '@/services/api';
+
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = window.atob(base64);
+  const bytes   = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getPushSubscription(): Promise<PushSubscription | null> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+async function subscribePush(): Promise<boolean> {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return false;
+
+    const { publicKey } = await api.get<{ publicKey: string }>('/push/vapid-public-key');
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly:      true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    const json = sub.toJSON();
+    await api.post('/push/subscribe', {
+      endpoint: sub.endpoint,
+      keys:     json.keys,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function unsubscribePush(): Promise<void> {
+  const sub = await getPushSubscription();
+  if (!sub) return;
+  const token = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.TOKEN) : null;
+  await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/push/subscribe`, {
+    method:  'DELETE',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body:    JSON.stringify({ endpoint: sub.endpoint }),
+  }).catch(() => {});
+  await sub.unsubscribe();
+}
 
 /* ── Shared primitives ────────────────────────────────────────── */
 
@@ -294,8 +346,30 @@ export default function SettingsPage() {
   const { clearAuth, user } = useAuth();
   const { isDark, toggle: toggleTheme } = useTheme();
 
-  const [editOpen, setEditOpen]   = useState(false);
-  const [pwOpen, setPwOpen]       = useState(false);
+  const [editOpen, setEditOpen]     = useState(false);
+  const [pwOpen, setPwOpen]         = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    getPushSubscription().then((sub) => setPushEnabled(!!sub));
+  }, []);
+
+  async function handleTogglePush() {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribePush();
+        setPushEnabled(false);
+      } else {
+        const ok = await subscribePush();
+        setPushEnabled(ok);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  }
 
   async function handleLogout() {
     await authService.logout();
@@ -343,8 +417,8 @@ export default function SettingsPage() {
           <SettingRow label="Perfil privado" description="Solo seguidores pueden ver tu contenido">
             <Toggle checked={false} onChange={() => {}} />
           </SettingRow>
-          <SettingRow label="Notificaciones push">
-            <Toggle checked={true} onChange={() => {}} />
+          <SettingRow label="Notificaciones push" description={pushEnabled ? 'Activadas' : 'Desactivadas'}>
+            <Toggle checked={pushEnabled} onChange={handleTogglePush} />
           </SettingRow>
         </Section>
 

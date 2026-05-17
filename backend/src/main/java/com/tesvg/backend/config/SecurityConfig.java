@@ -17,6 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityConfig {
@@ -72,6 +73,8 @@ public class SecurityConfig {
                 .requestMatchers("/imagenes/**").permitAll()
 
                 // ── Role-restricted endpoints ──────────────────────────────────────────
+                // Any authenticated user can report a post (more specific → must come first)
+                .requestMatchers(HttpMethod.POST, "/admin/reportes/publicacion/**").authenticated()
                 .requestMatchers("/admin/**").hasAuthority("ADMIN")
                 .requestMatchers("/publicaciones/anuncio").hasAnyAuthority("AUTORIDAD", "ADMIN", "DIRECCION")
 

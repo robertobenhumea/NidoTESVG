@@ -116,3 +116,31 @@ async function trimCache(cache, maxEntries) {
     await cache.delete(keys[0]);
   }
 }
+
+/* ── Push notifications ── */
+self.addEventListener('push', (event) => {
+  let data = { title: 'FalconNet', body: 'Tienes una nueva notificación' };
+  try { data = event.data?.json() ?? data; } catch { /* non-JSON */ }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body:    data.body,
+      icon:    '/icons/icon-192.png',
+      badge:   '/icons/icon-72.png',
+      tag:     data.tag ?? 'falconnet',
+      data:    data.url ? { url: data.url } : undefined,
+      vibrate: [100, 50, 100],
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/notifications';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const existing = list.find((c) => c.url === url && 'focus' in c);
+      return existing ? existing.focus() : clients.openWindow(url);
+    }),
+  );
+});

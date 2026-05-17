@@ -95,6 +95,16 @@ export function Navbar() {
       onClick: () => router.push(ROUTES.PROFILE),
     },
     {
+      label: 'Avisos',
+      icon:  <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 11l19-9-9 19-2-8-8-2z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+      onClick: () => router.push(ROUTES.AVISOS),
+    },
+    {
+      label: 'Ranking',
+      icon:  <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+      onClick: () => router.push(ROUTES.RANKING),
+    },
+    {
       label: 'Configuración',
       icon:  <IcSettings />,
       onClick: () => router.push(ROUTES.SETTINGS),

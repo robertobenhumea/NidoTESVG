@@ -51,6 +51,8 @@ export const ROUTES = {
   CREATE:        '/create',
   GROUPS:        '/groups',
   SEARCH:        '/search',
+  AVISOS:        '/avisos',
+  RANKING:       '/ranking',
 } as const;
 
 export type AppRoute = typeof ROUTES[keyof typeof ROUTES];

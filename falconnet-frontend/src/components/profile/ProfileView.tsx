@@ -8,7 +8,17 @@ import { AvatarModal } from '@/components/ui/AvatarModal';
 import { PostCard } from '@/components/feed/PostCard';
 import { userService } from '@/services/user.service';
 import { postService } from '@/services/post.service';
+import { api } from '@/services/api';
 import type { User, Post } from '@/types';
+
+interface Insignia {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  icono: string;
+  tipo: string;
+  fecha?: string;
+}
 
 function ProfileSkeleton() {
   return (
@@ -51,6 +61,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts]             = useState<Post[]>([]);
   const [stats, setStats]             = useState<ProfileStats>({ followers: 0, following: 0, isFollowing: false });
+  const [insignias, setInsignias]     = useState<Insignia[]>([]);
   const [loading, setLoading]         = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
@@ -67,15 +78,17 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
     setLoading(true);
     setError('');
     try {
-      const [user, userPosts, followStatus, followersData, followingData] = await Promise.all([
+      const [user, userPosts, followStatus, followersData, followingData, badges] = await Promise.all([
         isOwnProfile ? userService.getMe() : userService.getUser(targetId),
         postService.getUserPosts(targetId),
         !isOwnProfile ? userService.getFollowStatus(targetId) : Promise.resolve(null),
         userService.getFollowerCount(targetId),
         userService.getFollowingCount(targetId),
+        api.get<Insignia[]>(`/insignias/usuario/${targetId}`).catch(() => [] as Insignia[]),
       ]);
       setProfileUser(user);
       setPosts(userPosts);
+      setInsignias(badges);
       setStats({
         followers:   followersData,
         following:   followingData,
@@ -235,6 +248,25 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
             ))}
           </div>
         </div>
+
+        {/* Insignias */}
+        {insignias.length > 0 && (
+          <div className="px-4 py-3 border-b border-[var(--border)]">
+            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Insignias</p>
+            <div className="flex flex-wrap gap-2">
+              {insignias.map((ins) => (
+                <div
+                  key={ins.id}
+                  title={ins.descripcion}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)]"
+                >
+                  <span className="text-base leading-none">{ins.icono}</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{ins.nombre}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Posts */}
         <div className="px-3 pb-8 space-y-3">
