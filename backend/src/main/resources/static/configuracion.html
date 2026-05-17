@@ -295,6 +295,20 @@
     .modal-sub { font-size: .85rem; color: var(--gray-text); margin-bottom: 18px; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 
+    /* ── LOGOUT BUTTON ── */
+    .snav-logout-sep {
+      height: 1px; background: var(--gray-border); margin: 6px 0;
+    }
+    .snav-logout {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 20px;
+      font-size: .9rem; font-weight: 600; color: #DC2626;
+      cursor: pointer; border: none; background: none; width: 100%;
+      text-align: left; transition: background .13s;
+    }
+    .snav-logout:hover { background: #FEF2F2; }
+    .snav-logout .snav-icon { font-size: 1.1rem; flex-shrink: 0; }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 720px) {
       .settings-wrap { grid-template-columns: 1fr; }
@@ -336,7 +350,7 @@
       <a href="/perfil.html" style="text-decoration:none">
         <div class="nav-avatar" id="nav-avatar">?</div>
       </a>
-      <button class="nav-icon-btn" onclick="logout()" title="Cerrar sesión">🚪</button>
+      <button class="nav-icon-btn" onclick="confirmarLogout()" title="Cerrar sesión">🚪</button>
     </div>
   </nav>
 
@@ -359,6 +373,10 @@
       </button>
       <button class="snav-item" onclick="showSection('idioma', this)">
         <span class="snav-icon">🌍</span> Idioma
+      </button>
+      <div class="snav-logout-sep"></div>
+      <button class="snav-logout" onclick="confirmarLogout()">
+        <span class="snav-icon">🚪</span> Cerrar sesión
       </button>
     </div>
 
@@ -630,6 +648,18 @@
 
   </div><!-- /settings-wrap -->
 
+  <!-- Modal: cerrar sesión -->
+  <div class="modal-backdrop" id="modal-logout">
+    <div class="modal">
+      <div class="modal-title">¿Cerrar sesión?</div>
+      <div class="modal-sub">Se cerrará tu sesión en este dispositivo. Necesitarás iniciar sesión nuevamente para acceder a NidoTESVG.</div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="cancelarLogout()">Cancelar</button>
+        <button class="btn-danger" onclick="logout()">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: eliminar cuenta -->
   <div class="modal-backdrop" id="modal-delete">
     <div class="modal">
@@ -882,16 +912,29 @@
       } catch(e) {}
     }
 
+    function confirmarLogout() {
+      document.getElementById('modal-logout').classList.add('open');
+    }
+    function cancelarLogout() {
+      document.getElementById('modal-logout').classList.remove('open');
+    }
     function logout() {
-      localStorage.removeItem('token');
-      location.href = '/login.html';
+      // Clear all app data from storage
+      ['token', 'nido_session', 'nido_prefs', 'nido_last_reaction'].forEach(k => localStorage.removeItem(k));
+      try { sessionStorage.clear(); } catch(_) {}
+      // Replace history so back button won't return to protected pages
+      history.replaceState(null, '', '/login.html');
+      location.replace('/login.html');
     }
 
     /* ── BOOT ── */
     loadPrefs();
     initNav();
 
-    /* Close modal on backdrop click */
+    /* Close modals on backdrop click */
+    document.getElementById('modal-logout').addEventListener('click', function(e) {
+      if (e.target === this) cancelarLogout();
+    });
     document.getElementById('modal-delete').addEventListener('click', function(e) {
       if (e.target === this) closeDeleteModal();
     });

@@ -424,11 +424,18 @@
       if (!s) return;
       var el = document.getElementById('nav-avatar');
       if (!el) return;
+      var nombre = s.username || s.correo || '?';
+      el.textContent = nombre.charAt(0).toUpperCase();
+      el.style.position = 'relative';
+      el.style.overflow = 'hidden';
       if (s.foto) {
-        el.style.cssText = "background:url('" + s.foto + "') center/cover no-repeat;color:transparent";
-        el.textContent = '';
-      } else {
-        el.textContent = (s.username || s.correo || '?').charAt(0).toUpperCase();
+        var img = document.createElement('img');
+        img.className = 'avatar-photo-img';
+        img.src = s.foto;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.onerror = function() { img.remove(); };
+        el.appendChild(img);
       }
     } catch (_) {}
   }

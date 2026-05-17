@@ -727,6 +727,9 @@
       el.style.background = avatarColor(nombre);
       el.style.color = "#fff";
     }
+    el.style.cursor = 'pointer';
+    el.title = 'Ver foto de perfil';
+    el.onclick = () => NidoUI.abrirAvatarModal(nombre, u.fotoPerfil || null, null);
   }
 
   // ── HEADER ──────────────────────────────────────────────────────────────────

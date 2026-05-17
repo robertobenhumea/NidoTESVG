@@ -364,7 +364,62 @@
     return `<span style="${style}">${cfg.icon} ${cfg.label}</span>`;
   }
 
-  window.NidoUI = { toast, sk, apiErr, rolBadge, ROL_BADGE, empty: emptyState };
+  /* ── USER AVATAR MODAL ─────────────────────────────────────── */
+  function ensureAvatarModal() {
+    if (document.getElementById('nido-avatar-modal')) return;
+    const m = document.createElement('div');
+    m.id = 'nido-avatar-modal';
+    m.className = 'nido-avatar-modal';
+    m.innerHTML = `
+      <div class="nam-backdrop"></div>
+      <div class="nam-content">
+        <div class="nam-avatar" id="nam-avatar"></div>
+        <div class="nam-name" id="nam-name"></div>
+        <a class="nam-btn-perfil" id="nam-btn-perfil" href="#">Ver perfil completo</a>
+      </div>
+      <button class="nam-close" id="nam-close" aria-label="Cerrar">&times;</button>
+    `;
+    document.body.appendChild(m);
+    m.querySelector('.nam-backdrop').addEventListener('click', cerrarAvatarModal);
+    m.querySelector('#nam-close').addEventListener('click', cerrarAvatarModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarAvatarModal(); });
+    let startY = 0;
+    m.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+    m.addEventListener('touchend', e => { if (e.changedTouches[0].clientY - startY > 60) cerrarAvatarModal(); }, { passive: true });
+  }
+
+  function abrirAvatarModal(nombre, foto, userId) {
+    ensureAvatarModal();
+    const avatarEl = document.getElementById('nam-avatar');
+    const nameEl   = document.getElementById('nam-name');
+    const btnEl    = document.getElementById('nam-btn-perfil');
+    nameEl.textContent = nombre || '';
+    if (foto) {
+      avatarEl.style.cssText = `background: url('${foto}') center/cover no-repeat; font-size:0`;
+      avatarEl.textContent = '';
+    } else {
+      avatarEl.style.cssText = '';
+      avatarEl.textContent = nombre ? nombre[0].toUpperCase() : '?';
+    }
+    if (userId) {
+      btnEl.href = `/perfil-publico.html?id=${userId}`;
+      btnEl.style.display = 'inline-flex';
+    } else {
+      btnEl.style.display = 'none';
+    }
+    document.getElementById('nido-avatar-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarAvatarModal() {
+    const modal = document.getElementById('nido-avatar-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  window.NidoUI = { toast, sk, apiErr, rolBadge, ROL_BADGE, empty: emptyState,
+                    abrirAvatarModal, cerrarAvatarModal };
 })();
 
 /* ── NIDO AUTH — session persistence helper ── */

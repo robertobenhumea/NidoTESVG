@@ -460,6 +460,11 @@
       align-items: center;
       gap: 10px;
     }
+    .post-user-row { display:flex; align-items:center; gap:10px; }
+    .post-avatar-btn { border:none; cursor:pointer; padding:0; background:none; flex-shrink:0; transition:transform .15s; }
+    .post-avatar-btn:hover { transform:scale(1.07); }
+    .post-author-link { text-decoration:none; color:var(--text); font-weight:700; font-size:.95rem; }
+    .post-author-link:hover { text-decoration:underline; }
     .pinned-post {
       border-left: 3px solid var(--gold);
     }
@@ -479,6 +484,15 @@
       font-size: .95rem;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
+      position: relative; overflow: hidden;
+    }
+    /* Shared class for the photo <img> inside any avatar container.
+       Absolute positioning covers the initials; onerror removes it revealing them. */
+    .avatar-photo-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 50%;
+      display: block;
     }
 
     .post-meta { flex: 1; min-width: 0; }
@@ -725,6 +739,7 @@
       font-size: .65rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; color: #fff;
+      position: relative; overflow: hidden;
     }
     .original-author-name { font-size: .88rem; font-weight: 700; color: var(--text); }
     .original-date { font-size: .72rem; color: var(--gray-text); }
@@ -854,6 +869,7 @@
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
       margin-top: 2px;
+      position: relative; overflow: hidden;
     }
 
     .comment-body {
@@ -1200,6 +1216,7 @@
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; overflow: hidden;
       box-shadow: 0 2px 8px rgba(0,0,0,.4);
+      position: relative;
     }
     .sv-meta { flex: 1; min-width: 0; }
     .sv-name { font-size: .9rem; font-weight: 700; color: #fff; }
@@ -2031,14 +2048,26 @@
       return `radial-gradient(circle at 30% 22%, rgba(255,255,255,.42), transparent 0.9rem), linear-gradient(135deg, hsl(${hue}, 72%, 46%), hsl(${hue2}, 70%, 28%) 58%, #140f08)`;
     }
 
+    // Returns an <img> that covers initials; removes itself on load error (revealing gradient+initials).
+    function _avatarPhotoHtml(foto) {
+      if (!foto) return '';
+      return `<img class="avatar-photo-img" src="${foto}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+
     // ── AVATAR HELPER ──
     function aplicarAvatar(el, foto, nombre) {
+      el.textContent = initials(nombre);
+      el.style.background = hueFromStr(nombre || "u");
+      el.style.position = 'relative';
+      el.style.overflow = 'hidden';
       if (foto) {
-        el.textContent = "";
-        el.style.background = `url('${foto}') center/cover no-repeat`;
-      } else {
-        el.textContent = initials(nombre);
-        el.style.background = hueFromStr(nombre || "u");
+        const img = document.createElement('img');
+        img.className = 'avatar-photo-img';
+        img.src = foto;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.onerror = () => img.remove();
+        el.appendChild(img);
       }
     }
 
@@ -2419,8 +2448,9 @@
         const div = document.createElement("div");
         div.className = "card post-card nido-post-card" + (post.fijada ? " pinned-post" : "");
         const { foto, nombre, rol: postRol } = globalUserIdMap.get(post.usuarioId) ?? { foto: null, nombre: "Usuario #" + post.usuarioId, rol: 'ESTUDIANTE' };
-        const avatarBg   = foto ? `url('${foto}') center/cover no-repeat` : hueFromStr(nombre);
-        const avatarText = foto ? "" : initials(nombre);
+        const avatarBg   = hueFromStr(nombre);
+        const avatarText = initials(nombre);
+        const avatarImg  = _avatarPhotoHtml(foto);
         const miTipo       = feedMisReacciones.get(post.id) ?? null;
         const countsObj    = feedReaccionesTodas.get(post.id) ?? {};
         const totalLikes   = Object.values(countsObj).reduce((a,b) => a+b, 0);
@@ -2436,20 +2466,21 @@
           const { foto: oFoto, nombre: oNombre } = orig
             ? (globalUserIdMap.get(orig.usuarioId) ?? { foto: null, nombre: "Usuario" })
             : { foto: null, nombre: "Usuario eliminado" };
-          const oBg   = oFoto ? `url('${oFoto}') center/cover no-repeat` : (orig ? hueFromStr(oNombre) : '#aaa');
-          const oText = oFoto ? "" : (oNombre ? oNombre[0].toUpperCase() : "?");
+          const oBg   = orig ? hueFromStr(oNombre) : '#aaa';
+          const oText = oNombre ? oNombre[0].toUpperCase() : "?";
+          const oImg  = _avatarPhotoHtml(oFoto);
           contenidoHtml = `
             ${post.contenido ? `<p class="share-comment">${formatContent(post.contenido, 'sc' + post.id)}</p>` : ''}
             <div class="original-post-card">
               ${orig ? `
                 <div class="original-author-row">
-                  <a href="/perfil-publico.html?id=${orig.usuarioId}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
-                    <div class="original-author-avatar" style="background:${oBg}">${oText}</div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <button class="original-author-avatar" style="background:${oBg};border:none;cursor:pointer;padding:0;flex-shrink:0;transition:transform .15s" onclick="NidoUI.abrirAvatarModal(${JSON.stringify(oNombre)},${JSON.stringify(oFoto)},${orig.usuarioId})">${oText}${oImg}</button>
                     <div>
-                      <div class="original-author-name">${escapeHtml(oNombre)}</div>
+                      <a href="/perfil-publico.html?id=${orig.usuarioId}" style="text-decoration:none;color:inherit"><div class="original-author-name">${escapeHtml(oNombre)}</div></a>
                       <div class="original-date">${timeAgo(orig.fecha)}</div>
                     </div>
-                  </a>
+                  </div>
                 </div>
                 <p class="original-content">${formatContent(orig.contenido, 'oc' + orig.id)}</p>
                 ${orig.imagenUrl ? `<img class="original-img" src="${orig.imagenUrl}" alt="imagen" loading="lazy" onclick="abrirLightbox('${orig.imagenUrl}')">` : ''}
@@ -2464,13 +2495,15 @@
         div.innerHTML = `
           <div class="post-header">
             ${post.fijada ? '<div class="pinned-badge">📌 Fijado</div>' : ''}
-            <a class="post-user-link" href="/perfil-publico.html?id=${post.usuarioId}">
-              <div class="post-avatar" style="background:${avatarBg}">${avatarText}</div>
+            <div class="post-user-row">
+              <button class="post-avatar post-avatar-btn" style="background:${avatarBg}"
+                      onclick="NidoUI.abrirAvatarModal(${JSON.stringify(nombre)},${JSON.stringify(foto)},${post.usuarioId})"
+                      aria-label="Ver foto de ${escapeHtml(nombre)}">${avatarText}${avatarImg}</button>
               <div class="post-meta">
-                <div class="post-author">${escapeHtml(nombre)}${NidoUI.rolBadge(postRol)}${post.compartida ? ' <span style="font-weight:400;color:var(--gray-text)">compartió</span>' : ''}</div>
+                <a class="post-author-link" href="/perfil-publico.html?id=${post.usuarioId}">${escapeHtml(nombre)}${NidoUI.rolBadge(postRol)}${post.compartida ? ' <span style="font-weight:400;color:var(--gray-text)">compartió</span>' : ''}</a>
                 <div class="post-date">${timeAgo(post.fecha)}</div>
               </div>
-            </a>
+            </div>
           </div>
           ${contenidoHtml}
           ${renderPoll(post.id)}
@@ -2550,12 +2583,13 @@
     // ── COMMENTS ──
     function renderOneComment(c) {
       const u = globalUserIdMap.get(c.usuarioId) ?? { nombre: "Usuario", foto: null };
-      const bg = u.foto ? `url('${u.foto}') center/cover no-repeat` : hueFromStr(u.nombre);
-      const tx = u.foto ? "" : initials(u.nombre);
+      const bg  = hueFromStr(u.nombre);
+      const tx  = initials(u.nombre);
+      const img = _avatarPhotoHtml(u.foto);
       const canDel = c.usuarioId === currentUserId;
       return `
         <div class="comment-item" id="cmt-${c.id}">
-          <div class="comment-avatar-sm" style="background:${bg}">${tx}</div>
+          <div class="comment-avatar-sm" style="background:${bg}">${tx}${img}</div>
           <div class="comment-body">
             <span class="comment-author">${escapeHtml(u.nombre)}</span>
             <span class="comment-text">${escapeHtml(c.contenido)}</span>
@@ -3073,9 +3107,10 @@
     }
 
     function _cardAvatar(foto, nombre, extraCls) {
-      const bg = foto ? `background-image:url('${escapeHtml(foto)}')` : `background:${hueFromStr(nombre)}`;
-      const tx = foto ? '' : escapeHtml(initials(nombre));
-      return `<div class="story-card-avatar${extraCls ? ' ' + extraCls : ''}" style="${bg}">${tx}</div>`;
+      const bg  = `background:${hueFromStr(nombre)}`;
+      const tx  = escapeHtml(initials(nombre));
+      const img = _avatarPhotoHtml(foto);
+      return `<div class="story-card-avatar${extraCls ? ' ' + extraCls : ''}" style="${bg}">${tx}${img}</div>`;
     }
 
     function _cardBgStyle(imagenUrl, foto, nombre) {
@@ -3206,8 +3241,10 @@
       // Header
       const u    = globalUserIdMap.get(group.userId) ?? { nombre: 'Usuario', foto: null };
       const svAv = document.getElementById('sv-avatar');
-      if (u.foto) { svAv.style.background = `url('${u.foto}') center/cover no-repeat`; svAv.textContent = ''; }
-      else        { svAv.style.background = hueFromStr(u.nombre); svAv.textContent = initials(u.nombre); }
+      svAv.textContent = initials(u.nombre);
+      svAv.style.background = hueFromStr(u.nombre);
+      const _svOldImg = svAv.querySelector('img'); if (_svOldImg) _svOldImg.remove();
+      if (u.foto) { const _svImg = document.createElement('img'); _svImg.className = 'avatar-photo-img'; _svImg.src = u.foto; _svImg.alt = ''; _svImg.onerror = () => _svImg.remove(); svAv.appendChild(_svImg); }
       document.getElementById('sv-name').textContent = u.nombre;
       document.getElementById('sv-time').textContent = timeAgo(story.fecha);
       const vcEl = document.getElementById('sv-views-count');
@@ -3697,13 +3734,11 @@
 
     function renderSidebarUser(u, esSiguiendo) {
       const nombre  = u.username || u.correo;
-      const bgStyle = u.fotoPerfil
-        ? `url('${u.fotoPerfil}') center/cover no-repeat`
-        : hueFromStr(nombre);
-      const txt = u.fotoPerfil ? '' : initials(nombre);
+      const txt = initials(nombre);
+      const img = _avatarPhotoHtml(u.fotoPerfil);
       return `
         <div class="sidebar-user-row" onclick="location.href='/perfil-publico.html?id=${u.id}'">
-          <div class="sur-avatar" style="background:${bgStyle}">${txt}</div>
+          <div class="sur-avatar" style="background:${hueFromStr(nombre)};position:relative;overflow:hidden">${txt}${img}</div>
           <div class="sur-info">
             <div class="sur-name">${escapeHtml(nombre)}</div>
             <div class="sur-meta">${escapeHtml(u.carrera || 'TESVG')}</div>
@@ -3714,16 +3749,14 @@
 
     function renderSuggestedFeedUser(u) {
       const nombre = u.username || u.correo;
-      const bgStyle = u.fotoPerfil
-        ? `url('${u.fotoPerfil}') center/cover no-repeat`
-        : hueFromStr(nombre);
-      const txt = u.fotoPerfil ? '' : initials(nombre);
+      const txt = initials(nombre);
+      const img = _avatarPhotoHtml(u.fotoPerfil);
       const meta = [u.carrera, u.grupo].filter(Boolean).join(' · ') || 'Comunidad TESVG';
       return `
         <article class="feed-suggestion-card" data-suggested-user="${u.id}">
           <button class="feed-suggestion-close" title="Ocultar" onclick="event.stopPropagation();this.closest('.feed-suggestion-card')?.remove()">×</button>
           <a class="feed-suggestion-profile" href="/perfil-publico.html?id=${u.id}">
-            <div class="feed-suggestion-avatar" style="background:${bgStyle}">${txt}</div>
+            <div class="feed-suggestion-avatar" style="background:${hueFromStr(nombre)};position:relative;overflow:hidden">${txt}${img}</div>
             <div class="feed-suggestion-name">${escapeHtml(nombre)}</div>
             <div class="feed-suggestion-meta">${escapeHtml(meta)}</div>
             <div class="feed-suggestion-mutual">${escapeHtml(u.carrera ? 'Estudia en tu comunidad' : 'Conexión del campus')}</div>
@@ -4011,16 +4044,15 @@
           </div>
           <div class="feed-module-rail" style="grid-auto-columns: minmax(130px, 28%);">
             ${feedRankingItems.slice(0, 8).map((u, i) => {
-              const bgStyle = u.fotoPerfil
-                ? `url('${u.fotoPerfil}') center/cover no-repeat`
-                : hueFromStr(u.username || '?');
-              const tx      = u.fotoPerfil ? '' : initials(u.username || '?');
+              const _rn  = u.username || '?';
+              const _rtx = escapeHtml(initials(_rn));
+              const _ri  = _avatarPhotoHtml(u.fotoPerfil);
               const posClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
               const medal   = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
               return `
                 <a class="fm-rank-card ${posClass}" href="/perfil-publico.html?id=${u.id}">
                   <div class="fm-rank-pos">${medal}</div>
-                  <div class="fm-rank-avatar" style="background:${bgStyle}">${escapeHtml(tx)}</div>
+                  <div class="fm-rank-avatar" style="background:${hueFromStr(_rn)};position:relative;overflow:hidden">${_rtx}${_ri}</div>
                   <div class="fm-rank-name">${escapeHtml((u.username || '').split(/[@.]/)[0] || 'Usuario')}</div>
                   <div class="fm-rank-val">${u.valor || 0} seg.</div>
                 </a>`;

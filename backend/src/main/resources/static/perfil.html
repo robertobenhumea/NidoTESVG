@@ -1134,13 +1134,11 @@
     function updateAvatar(user) {
       const avatar  = document.getElementById("profile-avatar");
       const overlay = '<div class="avatar-camera-overlay">📷</div>';
-      if (user.fotoPerfil) {
-        avatar.style.background = `url('${user.fotoPerfil}') center/cover no-repeat`;
-        avatar.innerHTML = overlay;
-      } else {
-        avatar.style.background = hueFromStr(user.username || user.correo || "u");
-        avatar.innerHTML = escapeHtml(initials(user.username || user.correo)) + overlay;
-      }
+      avatar.style.background = hueFromStr(user.username || user.correo || "u");
+      const photoImg = user.fotoPerfil
+        ? `<img class="avatar-photo-img" src="${user.fotoPerfil}" alt="" loading="lazy" onerror="this.remove()">`
+        : '';
+      avatar.innerHTML = escapeHtml(initials(user.username || user.correo)) + photoImg + overlay;
     }
 
     // ── FOTO DE PERFIL CON PREVIEW ──

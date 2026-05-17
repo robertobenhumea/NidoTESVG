@@ -648,3 +648,51 @@ html[data-theme="light"] body.nido-aaa .msg.mine,
 html[data-theme="light"] body.nido-aaa .bubble.mine {
   box-shadow: 0 2px 8px rgba(184,122,8,0.14) !important;
 }
+
+/* ── UserAvatarModal ───────────────────────────────────────── */
+.nido-avatar-modal {
+  display: none; position: fixed; inset: 0; z-index: 10300;
+  align-items: center; justify-content: center; flex-direction: column;
+}
+.nido-avatar-modal.open { display: flex; }
+.nam-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.82);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  animation: nam-fade .22s ease;
+}
+.nam-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  animation: nam-scale .22s cubic-bezier(.34,1.56,.64,1);
+  padding: env(safe-area-inset-top,0) env(safe-area-inset-right,0)
+           env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+}
+.nam-avatar {
+  width: min(80vw,300px); height: min(80vw,300px); border-radius: 50%;
+  background: #555; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(3rem,15vw,6rem); font-weight: 700; color: #fff;
+  border: 3px solid rgba(255,255,255,.2);
+  box-shadow: 0 8px 40px rgba(0,0,0,.5);
+}
+.nam-name {
+  font-size: 1.2rem; font-weight: 700; color: #fff; text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,.5); max-width: 280px; word-break: break-word;
+}
+.nam-btn-perfil {
+  display: inline-flex; align-items: center;
+  padding: 10px 24px; border-radius: 24px;
+  background: rgba(255,255,255,.15); color: #fff;
+  font-size: .9rem; font-weight: 600; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.25); transition: background .2s;
+}
+.nam-btn-perfil:hover { background: rgba(255,255,255,.25); }
+.nam-close {
+  position: absolute; top: max(16px, env(safe-area-inset-top, 16px)); right: 16px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,.15); border: none; color: #fff;
+  font-size: 1.4rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+@keyframes nam-fade  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes nam-scale { from { opacity: 0; transform: scale(.85) } to { opacity: 1; transform: scale(1) } }

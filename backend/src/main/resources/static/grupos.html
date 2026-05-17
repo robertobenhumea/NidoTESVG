@@ -182,6 +182,7 @@
       background: var(--gold); color: var(--navy);
       font-size: .82rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      position: relative; overflow: hidden;
     }
     .compose-textarea {
       flex: 1; padding: 10px 14px;
@@ -213,6 +214,7 @@
       width: 38px; height: 38px; border-radius: 50%;
       font-size: .75rem; font-weight: 700; color: #fff;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      position: relative; overflow: hidden;
     }
     .post-author { font-size: .92rem; font-weight: 700; color: var(--text); }
     .post-date   { font-size: .73rem; color: var(--gray-text); margin-top: 1px; }
@@ -248,6 +250,7 @@
       width: 36px; height: 36px; border-radius: 50%;
       font-size: .72rem; font-weight: 700; color: #fff;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      position: relative; overflow: hidden;
     }
     .member-name { font-size: .88rem; font-weight: 600; color: var(--text); }
     .member-role {
@@ -554,7 +557,11 @@
     function tipoBadge(t) { return `<span class="tipo-badge tipo-${t}">${tipoLabel(t)}</span>`; }
     function grupoIcon(g) { return (g.nombre||"G")[0].toUpperCase(); }
     function avatarStyle(foto, nombre) {
-      return foto ? `background:url('${foto}') center/cover no-repeat` : `background:${hue(nombre||"u")}`;
+      return `background:${hue(nombre||"u")}`;
+    }
+    function _avatarPhotoHtml(foto) {
+      if (!foto) return '';
+      return `<img class="avatar-photo-img" src="${foto}" alt="" loading="lazy" onerror="this.remove()">`;
     }
 
     async function api(method, path, body) {
@@ -660,9 +667,10 @@
       const membersHtml = g.miembros.map(m => {
         const nombre = m.nombre || "Usuario";
         const bg = avatarStyle(m.fotoPerfil, nombre);
+        const mImg = _avatarPhotoHtml(m.fotoPerfil);
         return `
           <div class="member-row">
-            <div class="member-avatar" style="${bg}">${m.fotoPerfil ? '' : initials(nombre)}</div>
+            <div class="member-avatar" style="${bg}">${initials(nombre)}${mImg}</div>
             <div>
               <div class="member-name">${esc(nombre)}</div>
               ${m.carrera ? `<div style="font-size:.72rem;color:var(--gray-text)">${esc(m.carrera)}</div>` : ''}
@@ -675,10 +683,11 @@
       // Posts
       const postsHtml = g.posts.length ? g.posts.map(p => {
         const bg = avatarStyle(p.autorFoto, p.autorNombre);
+        const pImg = _avatarPhotoHtml(p.autorFoto);
         return `
           <div class="post-card">
             <div class="post-head">
-              <div class="post-avatar" style="${bg}">${p.autorFoto ? '' : initials(p.autorNombre)}</div>
+              <div class="post-avatar" style="${bg}">${initials(p.autorNombre)}${pImg}</div>
               <div>
                 <div class="post-author">${esc(p.autorNombre)}</div>
                 <div class="post-date">${timeAgo(p.fecha)}</div>
@@ -691,10 +700,11 @@
 
       // Compose (solo si es miembro)
       const myBg = avatarStyle(miFoto, miNombre || "Yo");
+      const myImg = _avatarPhotoHtml(miFoto);
       const composeHtml = esMiembro ? `
         <div class="compose-card">
           <div class="compose-top">
-            <div class="compose-avatar" style="${myBg}">${miFoto ? '' : initials(miNombre || 'Yo')}</div>
+            <div class="compose-avatar" style="${myBg}">${initials(miNombre || 'Yo')}${myImg}</div>
             <textarea class="compose-textarea" id="compose-text-${g.id}"
               placeholder="Escribe algo para el grupo…"
               oninput="autoResize(this)"></textarea>
@@ -778,11 +788,12 @@
       const container = document.getElementById("posts-container-" + grupoId);
       if (!container) return;
       const bg = avatarStyle(p.autorFoto, p.autorNombre);
+      const npImg = _avatarPhotoHtml(p.autorFoto);
       const newPost = document.createElement("div");
       newPost.className = "post-card";
       newPost.innerHTML = `
         <div class="post-head">
-          <div class="post-avatar" style="${bg}">${p.autorFoto ? '' : initials(p.autorNombre)}</div>
+          <div class="post-avatar" style="${bg}">${initials(p.autorNombre)}${npImg}</div>
           <div>
             <div class="post-author">${esc(p.autorNombre)}</div>
             <div class="post-date">Justo ahora</div>
