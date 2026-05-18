@@ -1,16 +1,28 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useIntersection } from '@/hooks/useIntersection';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeed } from '@/hooks/useFeed';
 import { PostCard } from '@/components/feed/PostCard';
 import { CreatePostCard } from '@/components/feed/CreatePostCard';
 import { StoryBar } from '@/components/stories/StoryBar';
+import { AvisoFeedCard } from '@/components/feed/AvisoFeedCard';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
 import type { Post, Poll } from '@/types';
+import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
+/* ─────────────────────────────────────────────
+   Types for the merged feed
+───────────────────────────────────────────── */
+type FeedEntry =
+  | { kind: 'post';  post:  Post;          sortKey: number }
+  | { kind: 'aviso'; aviso: AvisoFeedItem; sortKey: number };
+
+/* ─────────────────────────────────────────────
+   Skeleton / empty / error UI
+───────────────────────────────────────────── */
 function PostSkeleton() {
   return (
     <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-4 space-y-3 animate-pulse">
@@ -58,6 +70,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+/* ─────────────────────────────────────────────
+   Main component
+───────────────────────────────────────────── */
 export function HomeFeed() {
   const { user } = useAuth();
   const {
@@ -66,8 +81,10 @@ export function HomeFeed() {
     handleReact, handleCommentAdded,
   } = useFeed();
 
-  const [polls, setPolls] = useState<Map<number, Poll>>(new Map());
+  const [polls,  setPolls]  = useState<Map<number, Poll>>(new Map());
+  const [avisos, setAvisos] = useState<AvisoFeedItem[]>([]);
 
+  /* ── Fetch polls ── */
   const fetchPolls = useCallback(async () => {
     try {
       const [allPolls, myVotes] = await Promise.all([
@@ -86,20 +103,46 @@ export function HomeFeed() {
         });
       }
       setPolls(map);
-    } catch { /* polls are optional — fail silently */ }
+    } catch { /* polls are optional */ }
   }, []);
 
-  useEffect(() => { fetchPolls(); }, [fetchPolls]);
+  /* ── Fetch avisos — separate backend resource, merged into feed ── */
+  const fetchAvisos = useCallback(async () => {
+    try {
+      const data = await api.get<AvisoFeedItem[]>('/avisos');
+      setAvisos(Array.isArray(data) ? data : []);
+    } catch { /* fail silently — feed still works without avisos */ }
+  }, []);
 
+  useEffect(() => {
+    fetchPolls();
+    fetchAvisos();
+  }, [fetchPolls, fetchAvisos]);
+
+  /* ── Merge posts + avisos, sorted newest-first ── */
+  const feedItems = useMemo((): FeedEntry[] => {
+    const avisoEntries: FeedEntry[] = avisos.map((a) => ({
+      kind:    'aviso',
+      aviso:   a,
+      sortKey: new Date(a.fecha).getTime(),
+    }));
+    const postEntries: FeedEntry[] = posts.map((p) => ({
+      kind:    'post',
+      post:    p,
+      sortKey: new Date(p.createdAt).getTime(),
+    }));
+    return [...avisoEntries, ...postEntries].sort((a, b) => b.sortKey - a.sortKey);
+  }, [avisos, posts]);
+
+  /* ── Poll vote handler ── */
   function handleVote(postId: number, opcionId: number, encuestaId: number) {
-    // Optimistic update
     setPolls((prev) => {
       const poll = prev.get(postId);
       if (!poll) return prev;
       const updated: Poll = {
         ...poll,
-        miVoto: opcionId,
-        total: poll.miVoto ? poll.total : poll.total + 1,
+        miVoto:   opcionId,
+        total:    poll.miVoto ? poll.total : poll.total + 1,
         opciones: poll.opciones.map((o) =>
           o.id === opcionId ? { ...o, votos: o.votos + 1 }
           : (poll.miVoto === o.id ? { ...o, votos: Math.max(0, o.votos - 1) } : o)
@@ -108,15 +151,11 @@ export function HomeFeed() {
       return new Map(prev).set(postId, updated);
     });
     api.post(`/encuestas/votar/${opcionId}`, { encuestaId }).catch(() => {
-      fetchPolls(); // revert on error
+      fetchPolls();
     });
   }
 
-  const [sentinelRef, sentinelVisible] = useIntersection({ threshold: 0.1, rootMargin: '200px' });
-  useEffect(() => {
-    if (sentinelVisible && hasMore && !loadingMore) loadMore();
-  }, [sentinelVisible, hasMore, loadingMore, loadMore]);
-
+  /* ── Post actions ── */
   async function handleCreatePost(content: string, imageUrl?: string): Promise<Post> {
     if (!user) throw new Error('No autenticado');
     return postService.createPost({ content, imageUrl }, user);
@@ -129,41 +168,56 @@ export function HomeFeed() {
     } catch { /* ignore */ }
   }
 
+  /* ── Infinite scroll sentinel ── */
+  const [sentinelRef, sentinelVisible] = useIntersection({ threshold: 0.1, rootMargin: '200px' });
+  useEffect(() => {
+    if (sentinelVisible && hasMore && !loadingMore) loadMore();
+  }, [sentinelVisible, hasMore, loadingMore, loadMore]);
+
+  /* ── Render ── */
   return (
     <div className="max-w-xl mx-auto px-3 py-4 space-y-3">
+
       {/* Stories */}
       <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] py-3 overflow-hidden shadow-sm">
         <StoryBar />
       </div>
 
+      {/* Composer */}
       {user && (
         <CreatePostCard
           author={user}
           onSubmit={handleCreatePost}
           onPostCreated={prependPost}
           onPollCreated={fetchPolls}
+          onAvisoCreated={fetchAvisos}
         />
       )}
 
+      {/* Feed */}
       {loading ? (
         Array.from({ length: 4 }).map((_, i) => <PostSkeleton key={i} />)
       ) : error ? (
         <ErrorState message={error} onRetry={refresh} />
-      ) : posts.length === 0 ? (
+      ) : feedItems.length === 0 ? (
         <EmptyFeed />
       ) : (
         <>
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={{ ...post, poll: polls.get(post.id) }}
-              currentUserId={user?.id}
-              onDelete={handleDeletePost}
-              onReact={handleReact}
-              onCommentAdded={handleCommentAdded}
-              onVote={(opcionId, encuestaId) => handleVote(post.id, opcionId, encuestaId)}
-            />
-          ))}
+          {feedItems.map((entry) =>
+            entry.kind === 'aviso' ? (
+              <AvisoFeedCard key={`aviso-${entry.aviso.id}`} aviso={entry.aviso} />
+            ) : (
+              <PostCard
+                key={`post-${entry.post.id}`}
+                post={{ ...entry.post, poll: polls.get(entry.post.id) }}
+                currentUserId={user?.id}
+                onDelete={handleDeletePost}
+                onReact={handleReact}
+                onCommentAdded={handleCommentAdded}
+                onVote={(opcionId, encuestaId) => handleVote(entry.post.id, opcionId, encuestaId)}
+              />
+            )
+          )}
 
           <div ref={sentinelRef} className="h-4" aria-hidden />
 

@@ -9,7 +9,8 @@ import { STORAGE_KEYS } from '@/lib/utils';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 interface Props {
-  onClose: () => void;
+  onClose:      () => void;
+  onPublished?: () => void;
 }
 
 async function uploadImage(file: File): Promise<string> {
@@ -27,7 +28,7 @@ async function uploadImage(file: File): Promise<string> {
   return data.url.startsWith('http') ? data.url : `${base}${data.url.startsWith('/') ? data.url : `/${data.url}`}`;
 }
 
-export function CreateAvisoModal({ onClose }: Props) {
+export function CreateAvisoModal({ onClose, onPublished }: Props) {
   const [titulo,    setTitulo]    = useState('');
   const [contenido, setContenido] = useState('');
   const [carrera,   setCarrera]   = useState('');
@@ -91,6 +92,7 @@ export function CreateAvisoModal({ onClose }: Props) {
         imagenUrl,
       });
       setSuccess(true);
+      onPublished?.();
       setTimeout(onClose, 1800);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al publicar el aviso');

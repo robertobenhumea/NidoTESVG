@@ -15,10 +15,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 const AVISO_ROLES = new Set(['AUTORIDAD', 'ADMIN', 'DOCENTE']);
 
 interface CreatePostCardProps {
-  author:         User;
-  onPostCreated:  (post: Post) => void;
-  onSubmit:       (content: string, imageUrl?: string) => Promise<Post>;
-  onPollCreated?: () => void;
+  author:           User;
+  onPostCreated:    (post: Post) => void;
+  onSubmit:         (content: string, imageUrl?: string) => Promise<Post>;
+  onPollCreated?:   () => void;
+  onAvisoCreated?:  () => void;
 }
 
 async function uploadImage(file: File): Promise<string> {
@@ -37,7 +38,7 @@ async function uploadImage(file: File): Promise<string> {
   return path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated }: CreatePostCardProps) {
+export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated, onAvisoCreated }: CreatePostCardProps) {
   const [expanded,      setExpanded]      = useState(false);
   const [content,       setContent]       = useState('');
   const [imageFile,     setImageFile]     = useState<File | null>(null);
@@ -437,7 +438,12 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
       </div>
 
       {/* Aviso modal — fuera del card para z-index correcto */}
-      {avisoOpen && <CreateAvisoModal onClose={() => setAvisoOpen(false)} />}
+      {avisoOpen && (
+        <CreateAvisoModal
+          onClose={() => setAvisoOpen(false)}
+          onPublished={onAvisoCreated}
+        />
+      )}
 
       {/* Image crop modal */}
       {cropSrc && cropFile && (
