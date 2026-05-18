@@ -187,6 +187,35 @@ export interface StoryGroup {
   allViewed: boolean;
 }
 
+/* ── Reclutamiento ── */
+
+export type TipoReclutamiento =
+  | 'PROYECTO' | 'HACKATHON' | 'INNOVATEC' | 'TORNEO'
+  | 'INVESTIGACION' | 'STARTUP' | 'OTRO';
+
+export type EstadoReclutamiento = 'ABIERTO' | 'COMPLETO' | 'CERRADO';
+
+export type EstadoSolicitud = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
+
+export interface ReclutamientoFeedItem {
+  id: number;
+  usuarioId: number;
+  nombreEquipo?: string;
+  nombreProyecto: string;
+  descripcion?: string;
+  objetivo?: string;
+  tipo: TipoReclutamiento;
+  habilidades: string[];
+  integrantesFaltantes: number;
+  fechaLimite?: string;
+  imagenUrl?: string;
+  estado: EstadoReclutamiento;
+  fecha: string;
+  creadorNombre?: string;
+  creadorAvatarUrl?: string;
+  miSolicitud?: EstadoSolicitud;
+}
+
 /* ── Messages ── */
 
 export interface BMensaje {

@@ -8,18 +8,20 @@ import { PostCard } from '@/components/feed/PostCard';
 import { CreatePostCard } from '@/components/feed/CreatePostCard';
 import { StoryBar } from '@/components/stories/StoryBar';
 import { AvisoFeedCard } from '@/components/feed/AvisoFeedCard';
+import { ReclutamientoFeedCard } from '@/components/feed/ReclutamientoFeedCard';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
 import { resolveUrl, getAvisoImageCache } from '@/lib/utils';
-import type { Post, Poll } from '@/types';
+import type { Post, Poll, ReclutamientoFeedItem } from '@/types';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
 /* ─────────────────────────────────────────────
    Types for the merged feed
 ───────────────────────────────────────────── */
 type FeedEntry =
-  | { kind: 'post';  post:  Post;          sortKey: number }
-  | { kind: 'aviso'; aviso: AvisoFeedItem; sortKey: number };
+  | { kind: 'post';           post:           Post;                  sortKey: number }
+  | { kind: 'aviso';          aviso:          AvisoFeedItem;         sortKey: number }
+  | { kind: 'reclutamiento';  reclutamiento:  ReclutamientoFeedItem; sortKey: number };
 
 /* ─────────────────────────────────────────────
    Skeleton / empty / error UI
@@ -82,8 +84,9 @@ export function HomeFeed() {
     handleReact, handleCommentAdded,
   } = useFeed();
 
-  const [polls,  setPolls]  = useState<Map<number, Poll>>(new Map());
-  const [avisos, setAvisos] = useState<AvisoFeedItem[]>([]);
+  const [polls,          setPolls]          = useState<Map<number, Poll>>(new Map());
+  const [avisos,         setAvisos]         = useState<AvisoFeedItem[]>([]);
+  const [reclutamientos, setReclutamientos] = useState<ReclutamientoFeedItem[]>([]);
 
   /* ── Fetch polls ── */
   const fetchPolls = useCallback(async () => {
@@ -134,25 +137,44 @@ export function HomeFeed() {
     } catch { /* fail silently — feed still works without avisos */ }
   }, []);
 
+  /* ── Fetch reclutamientos ── */
+  const fetchReclutamientos = useCallback(async () => {
+    try {
+      const raw = await api.get<ReclutamientoFeedItem[]>('/reclutamiento/activos');
+      const resolved = (Array.isArray(raw) ? raw : []).map((r) => ({
+        ...r,
+        imagenUrl:        resolveUrl(r.imagenUrl),
+        creadorAvatarUrl: resolveUrl(r.creadorAvatarUrl),
+        habilidades:      Array.isArray(r.habilidades) ? r.habilidades : [],
+      }));
+      setReclutamientos((prev) => {
+        const serverIds = new Set(resolved.map((r) => r.id));
+        const localOnly = prev.filter((r) => !serverIds.has(r.id));
+        return [...localOnly, ...resolved];
+      });
+    } catch { /* fail silently */ }
+  }, []);
+
   useEffect(() => {
     fetchPolls();
     fetchAvisos();
-  }, [fetchPolls, fetchAvisos]);
+    fetchReclutamientos();
+  }, [fetchPolls, fetchAvisos, fetchReclutamientos]);
 
-  /* ── Merge posts + avisos, sorted newest-first ── */
+  /* ── Merge posts + avisos + reclutamientos, sorted newest-first ── */
   const feedItems = useMemo((): FeedEntry[] => {
     const avisoEntries: FeedEntry[] = avisos.map((a) => ({
-      kind:    'aviso',
-      aviso:   a,
-      sortKey: new Date(a.fecha).getTime(),
+      kind: 'aviso', aviso: a, sortKey: new Date(a.fecha).getTime(),
     }));
     const postEntries: FeedEntry[] = posts.map((p) => ({
-      kind:    'post',
-      post:    p,
-      sortKey: new Date(p.createdAt).getTime(),
+      kind: 'post', post: p, sortKey: new Date(p.createdAt).getTime(),
     }));
-    return [...avisoEntries, ...postEntries].sort((a, b) => b.sortKey - a.sortKey);
-  }, [avisos, posts]);
+    const reclutamientoEntries: FeedEntry[] = reclutamientos.map((r) => ({
+      kind: 'reclutamiento', reclutamiento: r, sortKey: new Date(r.fecha).getTime(),
+    }));
+    return [...avisoEntries, ...postEntries, ...reclutamientoEntries]
+      .sort((a, b) => b.sortKey - a.sortKey);
+  }, [avisos, posts, reclutamientos]);
 
   /* ── Poll vote handler ── */
   function handleVote(postId: number, opcionId: number, encuestaId: number) {
@@ -211,12 +233,12 @@ export function HomeFeed() {
           onPostCreated={prependPost}
           onPollCreated={fetchPolls}
           onAvisoCreated={(aviso) => {
-            // Optimistic prepend: show immediately with the absolute image URL
-            // we already have from the upload, before fetchAvisos returns.
             setAvisos((prev) => [aviso, ...prev.filter((a) => a.id !== aviso.id)]);
-            // Background sync — backend may or may not return imagenUrl;
-            // fetchAvisos will merge without overwriting the local one.
             fetchAvisos();
+          }}
+          onReclutamientoCreated={(item) => {
+            setReclutamientos((prev) => [item, ...prev.filter((r) => r.id !== item.id)]);
+            fetchReclutamientos();
           }}
         />
       )}
@@ -233,6 +255,12 @@ export function HomeFeed() {
           {feedItems.map((entry) =>
             entry.kind === 'aviso' ? (
               <AvisoFeedCard key={`aviso-${entry.aviso.id}`} aviso={entry.aviso} />
+            ) : entry.kind === 'reclutamiento' ? (
+              <ReclutamientoFeedCard
+                key={`recl-${entry.reclutamiento.id}`}
+                item={entry.reclutamiento}
+                currentUserId={user?.id}
+              />
             ) : (
               <PostCard
                 key={`post-${entry.post.id}`}

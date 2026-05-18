@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { api } from '@/services/api';
 import { STORAGE_KEYS } from '@/lib/utils';
 import { CreateAvisoModal } from '@/components/feed/CreateAvisoModal';
+import { CreateReclutamientoModal } from '@/components/feed/CreateReclutamientoModal';
 import { ImageCropModal } from '@/components/feed/ImageCropModal';
-import type { User, Post } from '@/types';
+import type { User, Post, ReclutamientoFeedItem } from '@/types';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -16,11 +17,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 const AVISO_ROLES = new Set(['AUTORIDAD', 'ADMIN', 'DOCENTE']);
 
 interface CreatePostCardProps {
-  author:           User;
-  onPostCreated:    (post: Post) => void;
-  onSubmit:         (content: string, imageUrl?: string) => Promise<Post>;
-  onPollCreated?:   () => void;
-  onAvisoCreated?:  (aviso: AvisoFeedItem) => void;
+  author:                   User;
+  onPostCreated:            (post: Post) => void;
+  onSubmit:                 (content: string, imageUrl?: string) => Promise<Post>;
+  onPollCreated?:           () => void;
+  onAvisoCreated?:          (aviso: AvisoFeedItem) => void;
+  onReclutamientoCreated?:  (item: ReclutamientoFeedItem) => void;
 }
 
 async function uploadImage(file: File): Promise<string> {
@@ -39,7 +41,7 @@ async function uploadImage(file: File): Promise<string> {
   return path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated, onAvisoCreated }: CreatePostCardProps) {
+export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated, onAvisoCreated, onReclutamientoCreated }: CreatePostCardProps) {
   const [expanded,      setExpanded]      = useState(false);
   const [content,       setContent]       = useState('');
   const [imageFile,     setImageFile]     = useState<File | null>(null);
@@ -55,8 +57,10 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated,
   const [pollQ,         setPollQ]         = useState('');
   const [pollOpts,      setPollOpts]      = useState(['', '']);
   // Aviso modal
-  const [avisoOpen,     setAvisoOpen]     = useState(false);
-  const [avisoBlocked,  setAvisoBlocked]  = useState(false);
+  const [avisoOpen,           setAvisoOpen]           = useState(false);
+  const [avisoBlocked,        setAvisoBlocked]        = useState(false);
+  // Reclutamiento modal
+  const [reclutamientoOpen,   setReclutamientoOpen]   = useState(false);
 
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -238,6 +242,22 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated,
                   <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
                 <span className="text-xs sm:text-sm">Encuesta</span>
+              </button>
+
+              {/* Reclutar equipo */}
+              <button
+                onClick={() => setReclutamientoOpen(true)}
+                aria-label="Reclutar equipo"
+                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--brand)] transition-colors"
+              >
+                <svg className="size-4 text-[var(--brand)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <line x1="19" y1="8" x2="19" y2="14"/>
+                  <line x1="22" y1="11" x2="16" y2="11"/>
+                </svg>
+                <span className="text-xs sm:text-sm hidden sm:inline">Equipo</span>
+                <span className="text-xs sm:hidden">Equipo</span>
               </button>
 
               {/* Aviso — role-gated, shows friendly message when blocked */}
@@ -443,6 +463,14 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated,
         <CreateAvisoModal
           onClose={() => setAvisoOpen(false)}
           onPublished={onAvisoCreated}
+        />
+      )}
+
+      {/* Reclutamiento modal */}
+      {reclutamientoOpen && (
+        <CreateReclutamientoModal
+          onClose={() => setReclutamientoOpen(false)}
+          onPublished={onReclutamientoCreated}
         />
       )}
 
