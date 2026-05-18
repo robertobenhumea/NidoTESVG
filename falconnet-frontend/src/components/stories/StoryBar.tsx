@@ -1,33 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Avatar } from '@/components/ui/Avatar';
 import { StoryViewer } from '@/components/stories/StoryViewer';
 import { storyService } from '@/services/story.service';
 import { useAuth } from '@/hooks/useAuth';
 import type { StoryGroup } from '@/types';
 
-const GRADIENT_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f97316',
-  '#10b981', '#0ea5e9', '#1A1A2E', '#7c3aed',
-];
-
 const BG_PRESETS = [
-  { label: 'Noche',     value: '#1A1A2E' },
-  { label: 'Violeta',   value: '#6366f1' },
-  { label: 'Rosa',      value: '#ec4899' },
-  { label: 'Naranja',   value: '#f97316' },
-  { label: 'Verde',     value: '#10b981' },
-  { label: 'Azul',      value: '#0ea5e9' },
+  { label: 'Noche',   value: '#1A1A2E' },
+  { label: 'Violeta', value: '#6366f1' },
+  { label: 'Rosa',    value: '#ec4899' },
+  { label: 'Naranja', value: '#f97316' },
+  { label: 'Verde',   value: '#10b981' },
+  { label: 'Azul',    value: '#0ea5e9' },
 ];
 
-function CreateModal({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: () => void;
-}) {
+function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [text, setText]       = useState('');
   const [color, setColor]     = useState(BG_PRESETS[0].value);
   const [loading, setLoading] = useState(false);
@@ -63,8 +51,6 @@ function CreateModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm bg-[var(--bg-surface)] rounded-2xl overflow-hidden shadow-2xl">
-
-        {/* Preview */}
         <div
           className="h-48 flex items-center justify-center p-6 transition-colors duration-200"
           style={{ backgroundColor: color }}
@@ -73,25 +59,21 @@ function CreateModal({
             {text || <span className="opacity-50">Tu historia aparecerá aquí…</span>}
           </p>
         </div>
-
-        {/* Color picker */}
         <div className="flex gap-2 px-4 pt-4">
           {BG_PRESETS.map((p) => (
             <button
               key={p.value}
               onClick={() => setColor(p.value)}
               aria-label={p.label}
-              className="size-7 rounded-full ring-2 ring-offset-2 transition-all"
+              className="size-7 rounded-full transition-all"
               style={{
                 backgroundColor: p.value,
                 outline: color === p.value ? `2px solid ${p.value}` : 'none',
-                outlineOffset: '2px',
+                outlineOffset: '3px',
               }}
             />
           ))}
         </div>
-
-        {/* Text input */}
         <div className="px-4 pt-3 pb-4 space-y-3">
           <textarea
             value={text}
@@ -124,7 +106,7 @@ function CreateModal({
 }
 
 export function StoryBar() {
-  const { user }           = useAuth();
+  const { user }                        = useAuth();
   const [groups, setGroups]             = useState<StoryGroup[]>([]);
   const [viewedIds, setViewedIds]       = useState<Set<number>>(new Set());
   const [viewerGroupIdx, setViewerIdx]  = useState<number | null>(null);
@@ -164,29 +146,25 @@ export function StoryBar() {
     }
   }
 
-  // Compute allViewed based on local set
   const enrichedGroups: StoryGroup[] = groups.map((g) => ({
     ...g,
     allViewed: g.stories.every((s) => viewedIds.has(s.id)),
   }));
 
-  // Put current user's group first if exists
   const currentUserGroupIdx = enrichedGroups.findIndex((g) => g.user.id === user?.id);
   const orderedGroups: StoryGroup[] = currentUserGroupIdx > 0
-    ? [
-        enrichedGroups[currentUserGroupIdx],
-        ...enrichedGroups.filter((_, i) => i !== currentUserGroupIdx),
-      ]
+    ? [enrichedGroups[currentUserGroupIdx], ...enrichedGroups.filter((_, i) => i !== currentUserGroupIdx)]
     : enrichedGroups;
 
   if (loading) {
     return (
-      <div className="flex gap-3 px-3 pb-1 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-2.5 px-3 py-1.5 overflow-x-auto scrollbar-hide">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-1.5 shrink-0 w-16">
-            <div className="size-14 rounded-full bg-[var(--bg-elevated)] animate-pulse" />
-            <div className="h-2.5 w-10 rounded-full bg-[var(--bg-elevated)] animate-pulse" />
-          </div>
+          <div
+            key={i}
+            className="shrink-0 rounded-2xl bg-[var(--bg-elevated)] animate-pulse"
+            style={{ width: 100, height: 168 }}
+          />
         ))}
       </div>
     );
@@ -196,65 +174,132 @@ export function StoryBar() {
     <>
       <div
         ref={scrollRef}
-        className="flex gap-3 px-3 pb-1 overflow-x-auto scrollbar-hide"
+        className="flex gap-2.5 px-3 py-1.5 overflow-x-auto scrollbar-hide"
         aria-label="Historias"
       >
-        {/* Create story bubble — always first */}
+        {/* Create story card */}
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex flex-col items-center gap-1.5 shrink-0 w-16 group"
+          className="relative shrink-0 rounded-2xl overflow-hidden bg-[var(--bg-elevated)] group border border-[var(--border)] hover:border-[var(--brand)] transition-all select-none"
+          style={{ width: 100, height: 168 }}
           aria-label="Crear historia"
         >
-          <div className="relative size-14 rounded-full bg-[var(--bg-elevated)] border-2 border-dashed border-[var(--border)] group-hover:border-[var(--brand)] transition-colors flex items-center justify-center overflow-hidden">
+          {/* User avatar fills upper 64% */}
+          <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: 108 }}>
             {user?.avatarUrl ? (
-              <Avatar src={user.avatarUrl} name={user.displayName ?? user.username} size="lg" />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <Avatar src={undefined} name={user?.displayName ?? user?.username ?? '?'} size="lg" />
+              <div className="w-full h-full bg-gradient-to-br from-[var(--brand)] to-purple-600 flex items-center justify-center">
+                <span className="text-3xl font-bold text-white select-none">
+                  {(user?.displayName ?? user?.username ?? '?')[0]?.toUpperCase()}
+                </span>
+              </div>
             )}
-            <div className="absolute bottom-0 right-0 size-5 rounded-full bg-[var(--brand)] flex items-center justify-center ring-2 ring-[var(--bg-surface)]">
-              <svg className="size-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                <line x1="12" y1="5" x2="12" y2="19" strokeLinecap="round" />
-                <line x1="5" y1="12" x2="19" y2="12" strokeLinecap="round" />
+          </div>
+
+          {/* Bottom label area */}
+          <div
+            className="absolute inset-x-0 bottom-0 bg-[var(--bg-surface)] flex items-end justify-center pb-4"
+            style={{ top: 108 }}
+          >
+            <span className="text-[11px] font-semibold text-[var(--text-primary)] text-center leading-tight px-1.5">
+              Crear historia
+            </span>
+          </div>
+
+          {/* "+" badge at the boundary */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 z-10"
+            style={{ top: 92 }}
+          >
+            <div className="size-8 rounded-full bg-[var(--brand)] flex items-center justify-center ring-[3px] ring-[var(--bg-surface)] group-hover:scale-110 transition-transform">
+              <svg className="size-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
             </div>
           </div>
-          <span className="text-[11px] text-[var(--text-muted)] leading-none truncate w-full text-center">
-            Crear
-          </span>
         </button>
 
-        {/* Story groups */}
+        {/* Story group cards */}
         {orderedGroups.map((group, i) => {
-          const name = group.user.displayName ?? group.user.username;
-          const isViewed = group.allViewed;
+          const name       = group.user.displayName ?? group.user.username;
+          const isViewed   = group.allViewed;
+          const firstStory = group.stories[0];
+          const bgImage    = firstStory?.imageUrl;
+          const bgColor    = firstStory?.backgroundColor ?? '#1A1A2E';
+          const totalViews = group.stories.reduce((sum, s) => sum + s.viewCount, 0);
+
           return (
             <button
               key={group.user.id}
               onClick={() => setViewerIdx(i)}
-              className="flex flex-col items-center gap-1.5 shrink-0 w-16"
+              className="relative shrink-0 rounded-2xl overflow-hidden select-none active:scale-95 transition-transform"
+              style={{ width: 100, height: 168, backgroundColor: bgColor }}
               aria-label={`Historia de ${name}`}
             >
+              {/* Background image */}
+              {bgImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bgImage}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
+
+              {/* Gradient overlay */}
               <div
-                className="size-14 rounded-full p-0.5"
-                style={{
-                  background: isViewed
-                    ? 'var(--border)'
-                    : `linear-gradient(135deg, ${GRADIENT_COLORS[i % GRADIENT_COLORS.length]}, ${GRADIENT_COLORS[(i + 2) % GRADIENT_COLORS.length]})`,
-                }}
-              >
-                <div className="size-full rounded-full ring-2 ring-[var(--bg-surface)] overflow-hidden">
-                  <Avatar src={group.user.avatarUrl} name={name} size="lg" />
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, transparent 38%, rgba(0,0,0,0.65) 100%)' }}
+              />
+
+              {/* Avatar ring at top */}
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2">
+                <div
+                  className="p-[3px] rounded-full"
+                  style={{
+                    background: isViewed
+                      ? 'rgba(255,255,255,0.35)'
+                      : 'linear-gradient(135deg, #6366f1, #ec4899)',
+                  }}
+                >
+                  {group.user.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={group.user.avatarUrl}
+                      alt={name}
+                      className="w-9 h-9 rounded-full object-cover block"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-sm font-bold text-white select-none">
+                        {name[0]?.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <span className="text-[11px] text-[var(--text-secondary)] leading-none truncate w-full text-center">
-                {name}
-              </span>
+
+              {/* Name + view count */}
+              <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-3">
+                <p className="text-white text-[11px] font-semibold leading-tight truncate drop-shadow-sm">
+                  {name}
+                </p>
+                {totalViews > 0 && (
+                  <p className="text-white/65 text-[10px] tabular-nums mt-0.5 drop-shadow-sm">
+                    {totalViews.toLocaleString()} {totalViews === 1 ? 'vista' : 'vistas'}
+                  </p>
+                )}
+              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Story Viewer */}
       {viewerGroupIdx !== null && (
         <StoryViewer
           groups={orderedGroups}
@@ -266,7 +311,6 @@ export function StoryBar() {
         />
       )}
 
-      {/* Create Modal */}
       {createOpen && (
         <CreateModal
           onClose={() => setCreateOpen(false)}

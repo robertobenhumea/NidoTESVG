@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { api } from '@/services/api';
-import { resolveUrl } from '@/lib/utils';
+function resolveUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 interface RankEntry {
   id: number;

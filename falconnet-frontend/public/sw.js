@@ -1,6 +1,6 @@
 /* FalconNet Service Worker — v3 */
 
-const CACHE_VERSION = 'fn-v3';
+const CACHE_VERSION = 'fn-v4';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const IMAGE_CACHE   = `${CACHE_VERSION}-images`;
 const ALL_CACHES    = [STATIC_CACHE, IMAGE_CACHE];
@@ -49,9 +49,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  /* Next.js static assets (hashed) — cache-first */
+  /* Next.js static assets — network-first in dev, cache-first in prod */
   if (url.pathname.startsWith('/_next/static/')) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE, 500));
+    event.respondWith(networkFirst(request));
     return;
   }
 

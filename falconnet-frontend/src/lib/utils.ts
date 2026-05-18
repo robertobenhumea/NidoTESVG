@@ -44,33 +44,6 @@ export const STORAGE_KEYS = {
   THEME: 'fn_theme',
 } as const;
 
-/**
- * Toggle the `.dark` class on `<html>` without touching localStorage.
- * Optionally wraps the change in a smooth transition.
- */
-export function applyDarkClass(dark: boolean, animate = true): void {
-  const html = document.documentElement;
-  if (animate) {
-    html.classList.add('theme-transitioning');
-    setTimeout(() => html.classList.remove('theme-transitioning'), 250);
-  }
-  html.classList.toggle('dark', dark);
-}
-
-/**
- * Apply theme and persist choice as 'dark' or 'light' in localStorage.
- * Use `applyDarkClass` when the ThemeProvider is managing persistence.
- */
-export function applyTheme(dark: boolean): void {
-  applyDarkClass(dark);
-  localStorage.setItem(STORAGE_KEYS.THEME, dark ? 'dark' : 'light');
-}
-
-/**
- * Converts a backend-relative image path (e.g. "/imagenes/foo.jpg")
- * to an absolute URL using the configured API base.
- * Already-absolute URLs are returned unchanged.
- */
 export function resolveUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {

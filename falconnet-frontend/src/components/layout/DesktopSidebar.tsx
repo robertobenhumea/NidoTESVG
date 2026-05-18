@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
 import { ROUTES } from '@/lib/constants';
-import { cn, resolveUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
 
 /* ── Minimal icon set ── */
@@ -106,7 +106,7 @@ export function DesktopSidebar() {
           href={ROUTES.PROFILE}
           className="flex items-center gap-3 p-3 rounded-2xl hover:bg-[var(--bg-elevated)] transition-colors mb-2 group"
         >
-          <Avatar src={resolveUrl(user.avatarUrl)} name={user.displayName ?? user.username} size="md" />
+          <Avatar src={user.avatarUrl} name={user.displayName ?? user.username} size="md" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--text-primary)] truncate leading-tight">
               {user.displayName ?? user.username}

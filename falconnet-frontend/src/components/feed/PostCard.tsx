@@ -13,12 +13,28 @@ import { api } from '@/services/api';
 import type { Post, ReactionType, Poll } from '@/types';
 
 interface PostCardProps {
-  post: Post;
-  onDelete?: (id: number) => void;
-  onReact?: (postId: number, type: ReactionType) => void;
-  onCommentAdded?: (postId: number) => void;
-  onVote?: (opcionId: number, encuestaId: number) => void;
-  currentUserId?: number;
+  post:             Post;
+  onDelete?:        (id: number) => void;
+  onReact?:         (postId: number, type: ReactionType) => void;
+  onCommentAdded?:  (postId: number) => void;
+  onVote?:          (opcionId: number, encuestaId: number) => void;
+  currentUserId?:   number;
+}
+
+function RoleBadge({ role }: { role?: string }) {
+  if (!role) return null;
+  const r = role.toUpperCase();
+  if (r === 'ADMIN') return (
+    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 leading-none">
+      Admin
+    </span>
+  );
+  if (r === 'DOCENTE') return (
+    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-bold uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 leading-none">
+      Docente
+    </span>
+  );
+  return null;
 }
 
 function PollWidget({ poll, onVote }: { poll: Poll; onVote?: (opcionId: number, encuestaId: number) => void }) {
@@ -71,44 +87,28 @@ function PollWidget({ poll, onVote }: { poll: Poll; onVote?: (opcionId: number, 
   );
 }
 
-function IcTrash() {
+function PostImage({ src }: { src: string }) {
+  const [error, setError] = useState(false);
+  if (error) return null;
   return (
-    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" />
-      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
-    </svg>
-  );
-}
-function IcComment() {
-  return (
-    <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function IcShare() {
-  return (
-    <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" strokeLinecap="round" />
-      <polyline points="16 6 12 2 8 6" />
-      <line x1="12" y1="2" x2="12" y2="15" strokeLinecap="round" />
-    </svg>
-  );
-}
-function IcThumbUp() {
-  return (
-    <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M7 10v12" strokeLinecap="round" />
-      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="w-full bg-[var(--bg-elevated)] overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Imagen de la publicación"
+        onError={() => setError(true)}
+        className="w-full max-h-[480px] object-cover"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
   );
 }
 
 function AnnouncementCard({ post, currentUserId }: { post: Post; currentUserId?: number }) {
-  const author = post.author;
+  const author      = post.author;
   const displayName = author.displayName ?? author.username;
-  const isOwn = currentUserId === author.id;
+  const isOwn       = currentUserId === author.id;
 
   return (
     <article
@@ -139,24 +139,6 @@ function AnnouncementCard({ post, currentUserId }: { post: Post; currentUserId?:
         </div>
       </div>
     </article>
-  );
-}
-
-function PostImage({ src }: { src: string }) {
-  const [error, setError] = useState(false);
-  if (error) return null;
-  return (
-    <div className="w-full bg-[var(--bg-elevated)] overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt="Imagen de la publicación"
-        onError={() => setError(true)}
-        className="w-full max-h-[480px] object-cover"
-        loading="lazy"
-        decoding="async"
-      />
-    </div>
   );
 }
 
@@ -250,7 +232,6 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
     if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null; }
   }
 
-  // Touch: long-press shows picker; quick-tap toggles LIKE
   function onReactPointerDown(e: React.PointerEvent) {
     if (e.pointerType !== 'touch') return;
     e.preventDefault();
@@ -270,18 +251,15 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
     }
   }
 
-  // Mouse: hover shows picker after delay; click toggles LIKE
   function onReactMouseEnter() {
     holdRef.current = setTimeout(() => { holdRef.current = null; setPicker(true); }, 500);
   }
 
   function onReactMouseLeave() {
     clearHold();
-    // Don't close picker — pointer may be moving toward it
   }
 
   function onReactClick() {
-    // Only fires for mouse (touch handled by pointerUp)
     clearHold();
     if (!pickerOpen) onReact?.(post.id, 'LIKE');
   }
@@ -312,9 +290,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
   const rxInfo   = getReaction(activeRx);
 
   if (post.isAnnouncement) {
-    return (
-      <AnnouncementCard post={post} currentUserId={currentUserId} />
-    );
+    return <AnnouncementCard post={post} currentUserId={currentUserId} />;
   }
 
   return (
@@ -334,18 +310,28 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
           </button>
 
           <div className="flex-1 min-w-0">
-            <Link
-              href={`/profile/${author.id}`}
-              className="text-sm font-semibold text-[var(--text-primary)] hover:underline leading-tight block truncate"
-            >
-              {displayName}
-            </Link>
-            <time dateTime={post.createdAt} className="text-xs text-[var(--text-muted)]">
-              {timeAgo(post.createdAt)}
-            </time>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Link
+                href={`/profile/${author.id}`}
+                className="text-sm font-semibold text-[var(--text-primary)] hover:underline leading-tight truncate"
+              >
+                {displayName}
+              </Link>
+              <RoleBadge role={author.role} />
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {author.carrera && (
+                <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-elevated)] px-1.5 py-px rounded-full truncate max-w-[110px]">
+                  {author.carrera}
+                </span>
+              )}
+              <time dateTime={post.createdAt} className="text-xs text-[var(--text-muted)] shrink-0">
+                {timeAgo(post.createdAt)}
+              </time>
+            </div>
           </div>
 
-          {/* Post menu (delete for own, report for others) */}
+          {/* Post menu */}
           <div className="relative">
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -366,7 +352,11 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
                     onClick={() => { setMenuOpen(false); onDelete(post.id); }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                   >
-                    <IcTrash />
+                    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" />
+                      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
+                    </svg>
                     Eliminar
                   </button>
                 )}
@@ -404,7 +394,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         {/* ── Image ── */}
         {post.imageUrl && <PostImage src={post.imageUrl} />}
 
-        {/* ── Summary row (reactions/comments count) ── */}
+        {/* ── Summary row ── */}
         {(post.reactionCount > 0 || post.commentCount > 0) && (
           <div className="flex items-center justify-between px-4 py-1.5 text-xs text-[var(--text-muted)]">
             {post.reactionCount > 0 && (
@@ -426,7 +416,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         {/* ── Actions bar ── */}
         <div className="flex items-center px-2 py-1 border-t border-[var(--border)]">
 
-          {/* Reaction button wrapper — handles hover (desktop) */}
+          {/* Reaction button + picker */}
           <div
             className="relative flex-1"
             onMouseEnter={onReactMouseEnter}
@@ -449,7 +439,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
               aria-label={activeRx ? `${rxInfo?.label ?? 'Reacción'} (mantén para cambiar)` : 'Me gusta (mantén para más reacciones)'}
               aria-pressed={!!activeRx}
               className={cn(
-                'w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-none',
+                'w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-none',
                 activeRx
                   ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
@@ -458,37 +448,40 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
               {activeRx ? (
                 <span className="text-base leading-none">{rxInfo?.emoji}</span>
               ) : (
-                <IcThumbUp />
+                <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M7 10v12" strokeLinecap="round" />
+                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               )}
-              <span>{activeRx ? rxInfo?.label : 'Me gusta'}</span>
+              <span className="text-xs sm:text-sm">{activeRx ? rxInfo?.label : 'Me gusta'}</span>
             </button>
           </div>
 
-          {/* Comment button */}
+          {/* Comment */}
           <button
             onClick={() => setComments((v) => !v)}
             aria-label={`Comentarios · ${post.commentCount}`}
             aria-expanded={commentsOpen}
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
+              'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
               commentsOpen
                 ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
             )}
           >
-            <IcComment />
-            {post.commentCount > 0 && (
-              <span className="tabular-nums">{post.commentCount > 999 ? '999+' : post.commentCount}</span>
-            )}
+            <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs sm:text-sm">Comentar</span>
           </button>
 
-          {/* Share button */}
+          {/* Share */}
           <button
             onClick={handleShare}
             disabled={shareLoading}
             aria-label="Compartir publicación"
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
+              'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
               shareDone
                 ? 'text-green-500 bg-green-50 dark:bg-green-950/30'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
@@ -499,8 +492,13 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
                 <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             ) : (
-              <IcShare />
+              <svg className="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" strokeLinecap="round" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" strokeLinecap="round" />
+              </svg>
             )}
+            <span className="text-xs sm:text-sm">{shareDone ? '¡Listo!' : 'Compartir'}</span>
           </button>
         </div>
 
@@ -513,7 +511,6 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         )}
       </article>
 
-      {/* ── Avatar fullscreen modal ── */}
       <AvatarModal
         src={author.avatarUrl}
         name={displayName}
@@ -521,7 +518,6 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         onClose={() => setAvatar(false)}
       />
 
-      {/* ── Report modal ── */}
       {reportOpen && (
         <ReportModal
           postId={post.id}
