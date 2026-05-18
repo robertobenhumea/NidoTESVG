@@ -128,7 +128,7 @@ export function StoryCreator({ onClose, onCreated }: StoryCreatorProps) {
                   : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
               }`}
             >
-              <span className="mr-1.5">✏️</span> Texto
+              Texto
             </button>
             <button
               onClick={() => fileRef.current?.click()}
@@ -138,7 +138,7 @@ export function StoryCreator({ onClose, onCreated }: StoryCreatorProps) {
                   : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
               }`}
             >
-              <span className="mr-1.5">🖼️</span> Imagen
+              Imagen
             </button>
             <input
               ref={fileRef}

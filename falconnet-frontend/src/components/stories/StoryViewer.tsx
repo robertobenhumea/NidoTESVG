@@ -14,7 +14,7 @@ interface StoryViewerProps {
   currentUserId?:    number;
   onClose:           () => void;
   onGroupViewed?:    (groupIndex: number, storyIndex: number) => void;
-  onDelete?:         (storyId: number, groupIndex: number) => void;
+  onDelete?:         (storyId: number) => void;
 }
 
 export function StoryViewer({
@@ -38,10 +38,11 @@ export function StoryViewer({
   const isOwn        = story?.author.id === currentUserId;
   const totalStories = group?.stories.length ?? 0;
 
-  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startRef   = useRef<number>(0);
-  const elapsedRef = useRef<number>(0);
-  const touchRef   = useRef<{ x: number; y: number; time: number } | null>(null);
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startRef    = useRef<number>(0);
+  const elapsedRef  = useRef<number>(0);
+  const touchRef    = useRef<{ x: number; y: number; time: number } | null>(null);
+  const goToNextRef = useRef<() => void>(() => {});
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -60,6 +61,9 @@ export function StoryViewer({
       onClose();
     }
   }, [storyIdx, totalStories, groupIdx, groups.length, onClose]);
+
+  // Keep ref current so setInterval never calls a stale closure
+  useEffect(() => { goToNextRef.current = goToNext; }, [goToNext]);
 
   const goToPrev = useCallback(() => {
     elapsedRef.current = 0;
@@ -83,11 +87,11 @@ export function StoryViewer({
       if (elapsed >= STORY_DURATION) {
         clearTimer();
         elapsedRef.current = 0;
-        goToNext();
+        goToNextRef.current();
       }
     }, 50);
     setProgress(Math.min((elapsedRef.current / STORY_DURATION) * 100, 100));
-  }, [clearTimer, goToNext]);
+  }, [clearTimer]);
 
   // Reset + restart timer when story changes
   useEffect(() => {
@@ -185,18 +189,19 @@ export function StoryViewer({
     const deletedTotal = totalStories;
     const deletedIdx   = storyIdx;
 
-    onDelete?.(story.id, groupIdx);
+    onDelete?.(story.id);
     setDeleteConfirm(false);
 
-    if (deletedTotal > 1) {
-      const nextIdx = deletedIdx >= deletedTotal - 1 ? deletedIdx - 1 : deletedIdx;
-      elapsedRef.current = 0;
-      setProgress(0);
-      setImgLoaded(false);
-      setStoryIdx(nextIdx);
-      setPaused(false);
+    if (deletedTotal <= 1) {
+      onClose();
+      return;
     }
-    // If deletedTotal === 1, parent closes the viewer via setViewerIdx(null)
+    const nextIdx = deletedIdx >= deletedTotal - 1 ? deletedIdx - 1 : deletedIdx;
+    elapsedRef.current = 0;
+    setProgress(0);
+    setImgLoaded(false);
+    setStoryIdx(nextIdx);
+    setPaused(false);
   }
 
   if (!group || !story) return null;
@@ -249,11 +254,20 @@ export function StoryViewer({
           <div
             className="absolute inset-0 flex items-center justify-center p-10"
             style={{ backgroundColor: story.backgroundColor }}
-          />
+          >
+            {story.text && (
+              <p
+                className="text-white text-2xl font-bold text-center leading-relaxed break-words"
+                style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+              >
+                {story.text}
+              </p>
+            )}
+          </div>
         )}
 
-        {/* Text rendered on top (color stories OR image + text) */}
-        {story.text && (
+        {/* Text overlay — only for image + text stories */}
+        {story.text && story.imageUrl && (
           <div className="absolute inset-x-0 bottom-28 flex items-center justify-center px-6 z-[22] pointer-events-none">
             <p
               className="text-white text-2xl font-bold text-center leading-relaxed break-words"

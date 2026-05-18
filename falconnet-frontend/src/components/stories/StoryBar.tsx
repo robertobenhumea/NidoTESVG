@@ -33,17 +33,13 @@ export function StoryBar() {
     setViewedIds((prev) => new Set([...prev, story.id]));
   }
 
-  function handleDelete(storyId: number, groupIndex: number) {
+  function handleDelete(storyId: number) {
     storyService.delete(storyId).catch(() => {});
-    setGroups((prev) => {
-      const next = [...prev];
-      const g = { ...next[groupIndex], stories: next[groupIndex].stories.filter((s) => s.id !== storyId) };
-      if (g.stories.length === 0) next.splice(groupIndex, 1);
-      else next[groupIndex] = g;
-      return next;
-    });
-    // Close viewer if the deleted story was the last one in the group
-    if (groups[groupIndex]?.stories.length <= 1) setViewerIdx(null);
+    setGroups((prev) =>
+      prev
+        .map((g) => ({ ...g, stories: g.stories.filter((s) => s.id !== storyId) }))
+        .filter((g) => g.stories.length > 0)
+    );
   }
 
   const enrichedGroups: StoryGroup[] = groups.map((g) => ({
