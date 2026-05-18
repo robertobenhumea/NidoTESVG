@@ -56,6 +56,7 @@ export const ROUTES = {
   CORREOS:       '/correos',
   RECURSOS:      '/recursos',
   EVENTOS:       '/eventos',
+  EQUIPOS:       '/equipos',
   ADMIN:         '/admin',
 } as const;
 

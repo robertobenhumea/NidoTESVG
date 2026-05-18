@@ -116,6 +116,32 @@ public class ReclutamientoController {
         return ResponseEntity.ok(result);
     }
 
+    // ── GET /reclutamiento/{id} ───────────────────────────────────────────────
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable Long id, HttpServletRequest req) {
+        Usuario yo = getUsuario(req);
+        Reclutamiento r = reclutamientoRepo.findById(id).orElse(null);
+        if (r == null) return ResponseEntity.notFound().build();
+
+        Map<Long, String> misSolicitudes = solicitudRepo
+                .findByReclutamientoIdAndUsuarioId(id, yo.getId())
+                .map(s -> Map.of(id, s.getEstado().name()))
+                .orElse(Map.of());
+
+        Map<String, Object> result = toMap(r, yo.getId(), misSolicitudes);
+
+        // Solicitudes count for creator
+        if (r.getUsuarioId().equals(yo.getId())) {
+            long pending = solicitudRepo.findByReclutamientoIdOrderByFechaDesc(id).stream()
+                    .filter(s -> s.getEstado() == SolicitudReclutamiento.EstadoSolicitud.PENDIENTE)
+                    .count();
+            result.put("solicitudesPendientes", pending);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
     // ── GET /reclutamiento/mis ────────────────────────────────────────────────
 
     @GetMapping("/mis")
