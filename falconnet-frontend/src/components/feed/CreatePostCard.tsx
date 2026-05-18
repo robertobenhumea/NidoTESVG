@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { api } from '@/services/api';
 import { STORAGE_KEYS } from '@/lib/utils';
 import { CreateAvisoModal } from '@/components/feed/CreateAvisoModal';
+import { ImageCropModal } from '@/components/feed/ImageCropModal';
 import type { User, Post } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -44,6 +45,9 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
   const [uploading,     setUploading]     = useState(false);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState('');
+  // Crop modal — pending file waiting for user to confirm/cancel crop
+  const [cropSrc,       setCropSrc]       = useState<string | null>(null);
+  const [cropFile,      setCropFile]      = useState<File | null>(null);
   // Poll
   const [pollOpen,      setPollOpen]      = useState(false);
   const [pollQ,         setPollQ]         = useState('');
@@ -70,6 +74,8 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
     setContent('');
     setImageFile(null);
     setImagePreview(null);
+    setCropSrc(null);
+    setCropFile(null);
     setError('');
     setExpanded(false);
     setPollOpen(false);
@@ -81,13 +87,28 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { setError('Solo se permiten imágenes'); return; }
-    if (file.size > 5 * 1024 * 1024)    { setError('La imagen no puede pesar más de 5MB'); return; }
+    if (file.size > 10 * 1024 * 1024)   { setError('La imagen no puede pesar más de 10MB'); return; }
     setError('');
-    setImageFile(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.onload = (ev) => {
+      setCropSrc(ev.target?.result as string);
+      setCropFile(file);
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
+  }
+
+  function handleCropConfirm(cropped: File) {
+    const url = URL.createObjectURL(cropped);
+    setImageFile(cropped);
+    setImagePreview(url);
+    setCropSrc(null);
+    setCropFile(null);
+  }
+
+  function handleCropCancel() {
+    setCropSrc(null);
+    setCropFile(null);
   }
 
   function togglePoll() {
@@ -399,6 +420,16 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
 
       {/* Aviso modal — fuera del card para z-index correcto */}
       {avisoOpen && <CreateAvisoModal onClose={() => setAvisoOpen(false)} />}
+
+      {/* Image crop modal */}
+      {cropSrc && cropFile && (
+        <ImageCropModal
+          src={cropSrc}
+          file={cropFile}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </>
   );
 }

@@ -10,6 +10,7 @@ import { cn, timeAgo } from '@/lib/utils';
 import { REACTIONS } from '@/lib/constants';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
+import { PostMedia } from '@/components/feed/PostMedia';
 import type { Post, ReactionType, Poll } from '@/types';
 
 interface PostCardProps {
@@ -87,23 +88,6 @@ function PollWidget({ poll, onVote }: { poll: Poll; onVote?: (opcionId: number, 
   );
 }
 
-function PostImage({ src }: { src: string }) {
-  const [error, setError] = useState(false);
-  if (error) return null;
-  return (
-    <div className="w-full bg-[var(--bg-elevated)] overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt="Imagen de la publicación"
-        onError={() => setError(true)}
-        className="w-full max-h-[480px] object-cover"
-        loading="lazy"
-        decoding="async"
-      />
-    </div>
-  );
-}
 
 function AnnouncementCard({ post, currentUserId }: { post: Post; currentUserId?: number }) {
   const author      = post.author;
@@ -129,7 +113,11 @@ function AnnouncementCard({ post, currentUserId }: { post: Post; currentUserId?:
             {post.content}
           </p>
         )}
-        {post.imageUrl && <PostImage src={post.imageUrl} />}
+        {post.imageUrl && (
+          <div className="mt-2 rounded-xl overflow-hidden">
+            <PostMedia src={post.imageUrl} />
+          </div>
+        )}
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
           <Avatar src={author.avatarUrl} name={displayName} size="xs" />
           <span className="text-xs text-white/60">{displayName}</span>
@@ -392,7 +380,11 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         )}
 
         {/* ── Image ── */}
-        {post.imageUrl && <PostImage src={post.imageUrl} />}
+        {post.imageUrl && (
+          <div className={post.content || post.poll ? 'mt-1' : undefined}>
+            <PostMedia src={post.imageUrl} />
+          </div>
+        )}
 
         {/* ── Summary row ── */}
         {(post.reactionCount > 0 || post.commentCount > 0) && (
