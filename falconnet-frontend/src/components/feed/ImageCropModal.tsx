@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-// Output dimensions (4:3, 1200x900 JPEG)
 const ASPECT_W  = 4;
 const ASPECT_H  = 3;
 const OUTPUT_W  = 1200;
 const OUTPUT_H  = 900;
 const MAX_SCALE = 5;
+const MIN_SCALE = 0.25;
 
 interface ImageCropModalProps {
   src:       string;
@@ -17,60 +17,95 @@ interface ImageCropModalProps {
 }
 
 export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef       = useRef<HTMLImageElement>(null);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const imgRef        = useRef<HTMLImageElement>(null);
+  const fillScaleRef  = useRef(1);
 
-  // Interaction refs (avoid stale closures in listeners)
-  const isDragging  = useRef(false);
-  const dragStart   = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
-  const lastTouch   = useRef<{ x: number; y: number } | null>(null);
-  const lastPinch   = useRef<{ dist: number; initScale: number } | null>(null);
+  const isDragging = useRef(false);
+  const dragStart  = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const lastTouch  = useRef<{ x: number; y: number } | null>(null);
+  const lastPinch  = useRef<{ dist: number; initScale: number } | null>(null);
 
   const [offset,    setOffset]    = useState({ x: 0, y: 0 });
   const [scale,     setScale]     = useState(1);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [cropRect,  setCropRect]  = useState({ x: 0, y: 0, w: 0, h: 0 });
+
+  // Compute crop frame rect centered in the container
+  const updateCropRect = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const CW = el.clientWidth;
+    const CH = el.clientHeight;
+    const pad = 28;
+    let w = Math.min(CW - pad * 2, (CH - pad * 2) * ASPECT_W / ASPECT_H);
+    let h = w * ASPECT_H / ASPECT_W;
+    if (h > CH - pad * 2) { h = CH - pad * 2; w = h * ASPECT_W / ASPECT_H; }
+    setCropRect({ x: (CW - w) / 2, y: (CH - h) / 2, w, h });
+  }, []);
+
+  useEffect(() => {
+    updateCropRect();
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateCropRect);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateCropRect]);
+
+  // After image loads and crop rect is ready, set initial scale so image fills the crop frame
+  useEffect(() => {
+    if (!imgLoaded || cropRect.w === 0) return;
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container || !img.naturalWidth) return;
+    const CW = container.clientWidth;
+    const CH = container.clientHeight;
+    const cs = Math.min(CW / img.naturalWidth, CH / img.naturalHeight);
+    // scale at which image exactly covers the crop frame (like object-cover within crop area)
+    const fill = Math.max(
+      cropRect.w / (img.naturalWidth  * cs),
+      cropRect.h / (img.naturalHeight * cs),
+    );
+    fillScaleRef.current = fill;
+    setScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, fill)));
+  }, [imgLoaded, cropRect]);
 
   // ESC + body scroll lock
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onCancel(); }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
   }, [onCancel]);
 
-  // Non-passive wheel zoom on the crop container
+  // Non-passive wheel zoom
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const handler = (e: WheelEvent) => {
       e.preventDefault();
-      setScale((s) => Math.max(1, Math.min(MAX_SCALE, s - e.deltaY / 400)));
+      setScale((s) => Math.max(MIN_SCALE, Math.min(MAX_SCALE, s - e.deltaY / 400)));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
-  // Document-level mouse move/up for desktop drag
+  // Document-level mouse drag
   useEffect(() => {
-    function onMouseMove(e: MouseEvent) {
+    const onMove = (e: MouseEvent) => {
       if (!isDragging.current || !dragStart.current) return;
       setOffset({
         x: dragStart.current.ox + e.clientX - dragStart.current.x,
         y: dragStart.current.oy + e.clientY - dragStart.current.y,
       });
-    }
-    function onMouseUp() { isDragging.current = false; }
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
     };
+    const onUp = () => { isDragging.current = false; };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',  onUp);
+    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
   }, []);
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -105,19 +140,15 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY,
       );
-      const next = lastPinch.current.initScale * (dist / lastPinch.current.dist);
-      setScale(Math.max(1, Math.min(MAX_SCALE, next)));
+      setScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, lastPinch.current.initScale * (dist / lastPinch.current.dist))));
     }
   }
 
-  function handleTouchEnd() {
-    lastTouch.current = null;
-    lastPinch.current = null;
-  }
+  function handleTouchEnd() { lastTouch.current = null; lastPinch.current = null; }
 
   function resetCrop() {
     setOffset({ x: 0, y: 0 });
-    setScale(1);
+    setScale(fillScaleRef.current);
   }
 
   async function handleConfirm() {
@@ -132,22 +163,18 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
       const NW = img.naturalWidth;
       const NH = img.naturalHeight;
 
-      // Scale that makes the image cover the container with object-fit: cover at zoom=1
-      const coverScale = Math.max(CW / NW, CH / NH);
+      // object-contain base scale — maps natural px → CSS px at scale=1
+      const cs = Math.min(CW / NW, CH / NH);
 
-      // Natural image offset for the cover crop (centers the image)
-      const natOffsetX = (NW - CW / coverScale) / 2;
-      const natOffsetY = (NH - CH / coverScale) / 2;
+      // Formula: screen pixel (sx,sy) → image pixel
+      //   imgX = (sx - CW/2 - offset.x) / (scale * cs) + NW/2
+      //   imgY = (sy - CH/2 - offset.y) / (scale * cs) + NH/2
+      const { x: cropX, y: cropY, w: cropW, h: cropH } = cropRect;
 
-      // Container (0,0) in element space (see derivation in getCropRect)
-      const ex0 = CW / 2 * (1 - 1 / scale) - offset.x / scale;
-      const ey0 = CH / 2 * (1 - 1 / scale) - offset.y / scale;
-
-      // Source rect in natural image coords
-      const srcX = natOffsetX + ex0 / coverScale;
-      const srcY = natOffsetY + ey0 / coverScale;
-      const srcW = CW / (scale * coverScale);
-      const srcH = CH / (scale * coverScale);
+      const srcX = (cropX              - CW / 2 - offset.x) / (scale * cs) + NW / 2;
+      const srcY = (cropY              - CH / 2 - offset.y) / (scale * cs) + NH / 2;
+      const srcW = cropW / (scale * cs);
+      const srcH = cropH / (scale * cs);
 
       // Clamp to image bounds
       const clSrcX = Math.max(0, Math.min(NW - 1, srcX));
@@ -161,13 +188,16 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
       const ctx = canvas.getContext('2d');
       if (!ctx) { onConfirm(file); return; }
 
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, OUTPUT_W, OUTPUT_H);
       ctx.drawImage(img, clSrcX, clSrcY, clSrcW, clSrcH, 0, 0, OUTPUT_W, OUTPUT_H);
 
       await new Promise<void>((resolve) => {
         canvas.toBlob((blob) => {
-          onConfirm(blob
-            ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
-            : file,
+          onConfirm(
+            blob
+              ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+              : file,
           );
           resolve();
         }, 'image/jpeg', 0.92);
@@ -180,10 +210,10 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black select-none">
+    <div className="fixed inset-0 z-[200] flex flex-col bg-black select-none">
 
-      {/* Top bar */}
-      <div className="w-full max-w-lg flex items-center justify-between px-4 py-3 shrink-0">
+      {/* ── Top bar ── */}
+      <div className="w-full flex items-center justify-between px-4 py-3 shrink-0">
         <button
           onClick={onCancel}
           className="h-9 px-4 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
@@ -200,35 +230,32 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
         </button>
       </div>
 
-      {/* Crop viewport */}
+      {/* ── Image area ── */}
+      {/* Full image is visible; crop frame shows the selected region */}
       <div
         ref={containerRef}
-        className="relative w-full max-w-lg overflow-hidden bg-black"
-        style={{
-          aspectRatio: `${ASPECT_W}/${ASPECT_H}`,
-          cursor:      'grab',
-          touchAction: 'none',
-        }}
+        className="relative flex-1 w-full overflow-hidden"
+        style={{ cursor: 'grab', touchAction: 'none' }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        aria-label="Área de recorte — arrastra para reencuadrar"
+        aria-label="Área de ajuste — arrastra para reencuadrar"
       >
-        {/* Loading skeleton */}
         {!imgLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-white/10" />
+          <div className="absolute inset-0 animate-pulse bg-white/5" aria-hidden />
         )}
 
+        {/* Full image — object-contain keeps the entire image visible */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={imgRef}
           src={src}
           alt=""
           draggable={false}
-          onLoad={() => setImgLoaded(true)}
-          className="absolute inset-0 w-full h-full object-cover"
+          onLoad={() => { setImgLoaded(true); updateCropRect(); }}
+          className="absolute inset-0 w-full h-full object-contain"
           style={{
             transform:       `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
             transformOrigin: 'center',
@@ -237,34 +264,55 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
           }}
         />
 
-        {/* Rule-of-thirds grid overlay */}
-        {imgLoaded && (
+        {/* Dark overlay + crop frame — four-rect technique avoids SVG complexity */}
+        {imgLoaded && cropRect.w > 0 && (
           <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            {/* Vertical thirds */}
-            <div className="absolute inset-y-0 left-1/3 w-px bg-white/20" />
-            <div className="absolute inset-y-0 left-2/3 w-px bg-white/20" />
-            {/* Horizontal thirds */}
-            <div className="absolute inset-x-0 top-1/3 h-px bg-white/20" />
-            <div className="absolute inset-x-0 top-2/3 h-px bg-white/20" />
-            {/* Corner brackets */}
-            <div className="absolute top-3 left-3 size-5 border-t-2 border-l-2 border-white/70 rounded-tl" />
-            <div className="absolute top-3 right-3 size-5 border-t-2 border-r-2 border-white/70 rounded-tr" />
-            <div className="absolute bottom-3 left-3 size-5 border-b-2 border-l-2 border-white/70 rounded-bl" />
-            <div className="absolute bottom-3 right-3 size-5 border-b-2 border-r-2 border-white/70 rounded-br" />
+
+            {/* Dimmed regions outside the crop frame */}
+            <div className="absolute top-0 left-0 right-0 bg-black/65"
+              style={{ height: cropRect.y }} />
+            <div className="absolute left-0 right-0 bottom-0 bg-black/65"
+              style={{ top: cropRect.y + cropRect.h }} />
+            <div className="absolute bg-black/65"
+              style={{ top: cropRect.y, height: cropRect.h, left: 0, width: cropRect.x }} />
+            <div className="absolute bg-black/65"
+              style={{ top: cropRect.y, height: cropRect.h, left: cropRect.x + cropRect.w, right: 0 }} />
+
+            {/* Crop frame */}
+            <div
+              className="absolute border border-white/70"
+              style={{ left: cropRect.x, top: cropRect.y, width: cropRect.w, height: cropRect.h }}
+            >
+              {/* Rule-of-thirds */}
+              <div className="absolute inset-y-0 left-1/3  w-px bg-white/20" />
+              <div className="absolute inset-y-0 left-2/3  w-px bg-white/20" />
+              <div className="absolute inset-x-0 top-1/3   h-px bg-white/20" />
+              <div className="absolute inset-x-0 top-2/3   h-px bg-white/20" />
+
+              {/* Corner brackets */}
+              <div className="absolute top-0    left-0  size-5 border-t-2 border-l-2 border-white rounded-tl" />
+              <div className="absolute top-0    right-0 size-5 border-t-2 border-r-2 border-white rounded-tr" />
+              <div className="absolute bottom-0 left-0  size-5 border-b-2 border-l-2 border-white rounded-bl" />
+              <div className="absolute bottom-0 right-0 size-5 border-b-2 border-r-2 border-white rounded-br" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Bottom controls */}
-      <div className="w-full max-w-lg px-4 pt-4 pb-6 space-y-3 shrink-0">
+      {/* ── Bottom controls ── */}
+      <div
+        className="w-full px-4 pt-4 pb-6 space-y-3 shrink-0"
+        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      >
         {/* Zoom slider */}
         <div className="flex items-center gap-3">
           <svg className="size-4 text-white/40 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" />
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" />
           </svg>
           <input
             type="range"
-            min={1}
+            min={MIN_SCALE}
             max={MAX_SCALE}
             step={0.01}
             value={scale}
@@ -273,13 +321,13 @@ export function ImageCropModal({ src, file, onConfirm, onCancel }: ImageCropModa
             aria-label="Zoom"
           />
           <svg className="size-5 text-white/40 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" />
-            <line x1="11" y1="8" x2="11" y2="14" strokeLinecap="round" />
-            <line x1="8" y1="11" x2="14" y2="11" strokeLinecap="round" />
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" strokeLinecap="round" />
+            <line x1="11" y1="8"  x2="11"   y2="14"    strokeLinecap="round" />
+            <line x1="8"  y1="11" x2="14"   y2="11"    strokeLinecap="round" />
           </svg>
         </div>
 
-        {/* Hints + reset */}
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-white/35">
             Arrastra · Pellizca · Scroll para zoom
