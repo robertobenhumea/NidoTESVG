@@ -88,10 +88,12 @@ function ProductCard({
   listing,
   onFavorite,
   onClick,
+  onContact,
 }: {
   listing: MarketplaceListing;
   onFavorite: (id: number) => void;
   onClick: (listing: MarketplaceListing) => void;
+  onContact: (listing: MarketplaceListing) => void;
 }) {
   const isSold   = listing.status === 'VENDIDO';
   const isPaused = listing.status === 'PAUSADO';
@@ -158,6 +160,20 @@ function ProductCard({
           <span className="text-[11px] text-[var(--text-muted)] truncate flex-1">{listing.vendorName}</span>
           <span className="text-[11px] text-[var(--text-muted)] shrink-0">{timeAgo(listing.createdAt)}</span>
         </div>
+
+        {!unavailable ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onContact(listing); }}
+            className="mt-2 w-full h-8 rounded-xl bg-[var(--brand)] text-white text-xs font-semibold hover:bg-[var(--brand-hover)] transition-colors flex items-center justify-center gap-1.5"
+          >
+            <IcMessage />
+            Contactar
+          </button>
+        ) : (
+          <div className="mt-2 w-full h-8 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-muted)] text-xs font-medium flex items-center justify-center">
+            {STATUS_CONFIG[listing.status].label}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -793,6 +809,7 @@ export default function MarketplacePage() {
                 listing={l}
                 onFavorite={handleFavorite}
                 onClick={handleOpenDetail}
+                onContact={handleOpenContact}
               />
             ))}
           </div>
