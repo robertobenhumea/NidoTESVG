@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['next/font'],
     staleTimes: {
       dynamic: 0,
-      static: 0,
+      static: 30,
     },
   },
 
@@ -61,14 +61,7 @@ const nextConfig: NextConfig = {
               ],
             },
           ]
-        : [
-            {
-              source: '/_next/static/(.*)',
-              headers: [
-                { key: 'Cache-Control', value: 'no-store' },
-              ],
-            },
-          ]),
+        : []),
       {
         source: '/sw.js',
         headers: [
