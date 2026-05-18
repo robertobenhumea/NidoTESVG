@@ -196,7 +196,7 @@ export function SolicitarModal({
         onClick={(e) => e.stopPropagation()}
         className="relative w-full sm:max-w-md bg-[var(--bg-surface)] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         style={{
-          maxHeight: '92dvh',
+          maxHeight: 'min(92dvh, 92vh)',
           /* Mobile: slide from bottom */
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(100%) scale(0.98)',
           opacity: visible ? 1 : 0,
@@ -242,7 +242,7 @@ export function SolicitarModal({
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
           {phase === 'success' ? (
             <SuccessView proyectoNombre={proyectoNombre} />
           ) : (
