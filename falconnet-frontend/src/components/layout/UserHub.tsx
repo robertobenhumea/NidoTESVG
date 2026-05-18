@@ -174,24 +174,26 @@ export function UserHub() {
   return (
     <div ref={ref} className="relative">
 
-      {/* ── Trigger button ── */}
+      {/* ── Trigger button — apps-launcher style ── */}
       <button
         onClick={toggle}
-        aria-label="Menú de usuario"
+        aria-label="Centro de herramientas"
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative rounded-full focus-visible:outline-2 focus-visible:outline-[var(--brand)] focus-visible:outline-offset-2 transition-transform duration-100 active:scale-95"
+        className={cn(
+          'relative size-10 flex items-center justify-center rounded-xl transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--brand)] focus-visible:outline-offset-2',
+          open
+            ? 'bg-[var(--brand-muted)] text-[var(--brand)]'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+        )}
       >
-        <Avatar
-          src={user.avatarUrl}
-          name={displayName}
-          size="sm"
-        />
-        {/* Online dot */}
-        <span
-          aria-hidden
-          className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-[var(--bg-surface)]"
-        />
+        {/* 2×2 grid icon — signals "apps / hub" */}
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3"  y="3"  width="8" height="8" rx="2" />
+          <rect x="13" y="3"  width="8" height="8" rx="2" />
+          <rect x="3"  y="13" width="8" height="8" rx="2" />
+          <rect x="13" y="13" width="8" height="8" rx="2" />
+        </svg>
       </button>
 
       {/* ── Panel ── */}
