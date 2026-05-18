@@ -1,6 +1,6 @@
 /* FalconNet Service Worker — v3 */
 
-const CACHE_VERSION = 'fn-v4';
+const CACHE_VERSION = 'fn-v5';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const IMAGE_CACHE   = `${CACHE_VERSION}-images`;
 const ALL_CACHES    = [STATIC_CACHE, IMAGE_CACHE];

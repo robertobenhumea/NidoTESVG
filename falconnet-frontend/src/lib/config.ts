@@ -33,7 +33,7 @@ export const config = {
     marketplace:       true,
     groups:            true,   // Phase 3: communities
     search:            true,   // Phase 3: search page
-    pwa:               true,
+    pwa:               process.env.NODE_ENV === 'production',
   },
 
   pagination: {

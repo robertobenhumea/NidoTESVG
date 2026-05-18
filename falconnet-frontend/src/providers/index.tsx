@@ -14,8 +14,15 @@ import { logger } from '@/lib/logger';
  */
 function PWASetup() {
   useEffect(() => {
-    if (!config.features.pwa) return;
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    if (!config.features.pwa) {
+      // In dev, unregister any lingering SW so it never serves stale chunks
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
+      return;
+    }
 
     navigator.serviceWorker
       .register(config.sw.path, { scope: config.sw.scope })
