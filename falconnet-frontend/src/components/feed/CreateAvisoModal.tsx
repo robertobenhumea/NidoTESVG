@@ -4,13 +4,25 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { ImageCropModal } from '@/components/feed/ImageCropModal';
-import { STORAGE_KEYS } from '@/lib/utils';
+import { STORAGE_KEYS, resolveUrl } from '@/lib/utils';
+import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
+// Raw shape returned by POST /avisos
+interface BAviso {
+  id:             number;
+  titulo:         string;
+  contenido:      string;
+  carrera?:       string;
+  imagenUrl?:     string;
+  fecha:          string;
+  creadorNombre?: string;
+}
+
 interface Props {
   onClose:      () => void;
-  onPublished?: () => void;
+  onPublished?: (aviso: AvisoFeedItem) => void;
 }
 
 async function uploadImage(file: File): Promise<string> {
@@ -83,16 +95,32 @@ export function CreateAvisoModal({ onClose, onPublished }: Props) {
     setError('');
     setLoading(true);
     try {
-      let imagenUrl: string | undefined;
-      if (imageFile) imagenUrl = await uploadImage(imageFile);
-      await api.post('/avisos', {
+      // Upload image first — we keep the absolute URL regardless of what
+      // the backend persists, so the optimistic feed entry always has it.
+      let uploadedUrl: string | undefined;
+      if (imageFile) uploadedUrl = await uploadImage(imageFile);
+
+      const created = await api.post<BAviso>('/avisos', {
         titulo:    titulo.trim(),
         contenido: contenido.trim(),
         carrera:   carrera.trim() || undefined,
-        imagenUrl,
+        imagenUrl: uploadedUrl,
       });
+
+      // Build the optimistic feed item. Prefer the URL we uploaded (already
+      // absolute). Fall back to whatever the backend returns, resolved.
+      const avisoItem: AvisoFeedItem = {
+        id:             created.id,
+        titulo:         titulo.trim(),
+        contenido:      contenido.trim(),
+        carrera:        carrera.trim() || undefined,
+        imagenUrl:      uploadedUrl ?? resolveUrl(created.imagenUrl),
+        fecha:          created.fecha ?? new Date().toISOString(),
+        creadorNombre:  created.creadorNombre,
+      };
+
       setSuccess(true);
-      onPublished?.();
+      onPublished?.(avisoItem);
       setTimeout(onClose, 1800);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al publicar el aviso');

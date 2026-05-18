@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/services/api';
 import { PostMedia } from '@/components/feed/PostMedia';
-import { timeAgo } from '@/lib/utils';
+import { timeAgo, resolveUrl } from '@/lib/utils';
 
 interface Aviso {
   id: number;
@@ -138,7 +138,11 @@ export default function AvisosPage() {
 
   useEffect(() => {
     api.get<Aviso[]>('/avisos')
-      .then(setAvisos)
+      .then((data) =>
+        setAvisos(
+          data.map((a) => ({ ...a, imagenUrl: resolveUrl(a.imagenUrl) }))
+        )
+      )
       .catch(() => setError('No se pudieron cargar los avisos.'))
       .finally(() => setLoading(false));
   }, []);

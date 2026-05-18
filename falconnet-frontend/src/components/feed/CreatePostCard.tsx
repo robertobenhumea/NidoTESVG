@@ -8,6 +8,7 @@ import { STORAGE_KEYS } from '@/lib/utils';
 import { CreateAvisoModal } from '@/components/feed/CreateAvisoModal';
 import { ImageCropModal } from '@/components/feed/ImageCropModal';
 import type { User, Post } from '@/types';
+import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -19,7 +20,7 @@ interface CreatePostCardProps {
   onPostCreated:    (post: Post) => void;
   onSubmit:         (content: string, imageUrl?: string) => Promise<Post>;
   onPollCreated?:   () => void;
-  onAvisoCreated?:  () => void;
+  onAvisoCreated?:  (aviso: AvisoFeedItem) => void;
 }
 
 async function uploadImage(file: File): Promise<string> {

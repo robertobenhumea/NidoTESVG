@@ -10,6 +10,7 @@ import { StoryBar } from '@/components/stories/StoryBar';
 import { AvisoFeedCard } from '@/components/feed/AvisoFeedCard';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
+import { resolveUrl } from '@/lib/utils';
 import type { Post, Poll } from '@/types';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
@@ -106,11 +107,24 @@ export function HomeFeed() {
     } catch { /* polls are optional */ }
   }, []);
 
-  /* ── Fetch avisos — separate backend resource, merged into feed ── */
+  /* ── Fetch avisos — separate backend resource, merged into feed ──
+     Always resolve imagenUrl: the backend may return relative paths
+     like "/imagenes/abc.jpg" which must be prefixed with the API base
+     URL before being passed to PostMedia (which uses <img src>).     */
   const fetchAvisos = useCallback(async () => {
     try {
-      const data = await api.get<AvisoFeedItem[]>('/avisos');
-      setAvisos(Array.isArray(data) ? data : []);
+      const raw = await api.get<AvisoFeedItem[]>('/avisos');
+      const resolved = (Array.isArray(raw) ? raw : []).map((a) => ({
+        ...a,
+        imagenUrl: resolveUrl(a.imagenUrl),
+      }));
+      setAvisos((prev) => {
+        // Merge: keep any locally-prepended avisos whose id doesn't appear
+        // in the server list yet (race condition on slow backends).
+        const serverIds = new Set(resolved.map((a) => a.id));
+        const localOnly = prev.filter((a) => !serverIds.has(a.id));
+        return [...localOnly, ...resolved];
+      });
     } catch { /* fail silently — feed still works without avisos */ }
   }, []);
 
@@ -190,7 +204,14 @@ export function HomeFeed() {
           onSubmit={handleCreatePost}
           onPostCreated={prependPost}
           onPollCreated={fetchPolls}
-          onAvisoCreated={fetchAvisos}
+          onAvisoCreated={(aviso) => {
+            // Optimistic prepend: show immediately with the absolute image URL
+            // we already have from the upload, before fetchAvisos returns.
+            setAvisos((prev) => [aviso, ...prev.filter((a) => a.id !== aviso.id)]);
+            // Background sync — backend may or may not return imagenUrl;
+            // fetchAvisos will merge without overwriting the local one.
+            fetchAvisos();
+          }}
         />
       )}
 
