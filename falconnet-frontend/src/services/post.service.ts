@@ -29,6 +29,7 @@ function mapBPost(b: BPublicacion, userMap: Map<number, User>): Post {
     commentCount: 0,
     userReaction: undefined,
     isAnnouncement: b.esAnuncio ?? false,
+    expiresAt: b.expiresAt,
   };
 }
 

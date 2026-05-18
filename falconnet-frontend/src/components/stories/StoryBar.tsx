@@ -8,9 +8,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { getInitials } from '@/lib/utils';
 import type { StoryGroup, User } from '@/types';
 
-const CARD_W     = 104;
-const CARD_H     = 178;
-const SCROLL_STEP = 340; // ~3 cards + gaps
+const CARD_W     = 100;
+const CARD_H     = 170;
+const SCROLL_STEP = 320;
 
 /* ─────────────────────────────────────────────
    Skeleton
@@ -423,7 +423,7 @@ export function StoryBar() {
         {/* Scrollable row */}
         <div
           ref={scrollRef}
-          className="flex gap-2.5 px-3 py-2 overflow-x-auto scrollbar-hide"
+          className="flex gap-2 sm:gap-2.5 px-2 sm:px-3 py-2 overflow-x-auto scrollbar-hide"
           style={{ cursor: 'grab' }}
           aria-label="Historias"
           onMouseDown={onMouseDown}

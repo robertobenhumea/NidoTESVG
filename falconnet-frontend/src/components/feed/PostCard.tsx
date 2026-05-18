@@ -22,6 +22,29 @@ interface PostCardProps {
   currentUserId?:   number;
 }
 
+/** Returns null (not visible), 'new' (< 2h old), or 'expiring' (< 2h left). */
+function useExpiryStatus(createdAt: string, expiresAt?: string): null | 'new' | 'expiring' {
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  if (!expiresAt) return ageMs < 2 * 3_600_000 ? 'new' : null;
+  const leftMs = new Date(expiresAt).getTime() - Date.now();
+  if (leftMs <= 0) return null;
+  if (leftMs < 2 * 3_600_000) return 'expiring';
+  if (ageMs < 2 * 3_600_000) return 'new';
+  return null;
+}
+
+function ExpiryBadge({ status }: { status: 'new' | 'expiring' }) {
+  return status === 'new' ? (
+    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 leading-none">
+      Nuevo
+    </span>
+  ) : (
+    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 leading-none">
+      Expira pronto
+    </span>
+  );
+}
+
 function RoleBadge({ role }: { role?: string }) {
   if (!role) return null;
   const r = role.toUpperCase();
@@ -201,9 +224,10 @@ function ReportModal({ postId, onClose, onSent }: { postId: number; onClose: () 
 }
 
 export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, currentUserId }: PostCardProps) {
-  const author      = post.author;
-  const displayName = author.displayName ?? author.username;
-  const isOwn       = currentUserId === author.id;
+  const author       = post.author;
+  const displayName  = author.displayName ?? author.username;
+  const isOwn        = currentUserId === author.id;
+  const expiryStatus = useExpiryStatus(post.createdAt, post.expiresAt);
 
   const [pickerOpen, setPicker]         = useState(false);
   const [commentsOpen, setComments]     = useState(false);
@@ -288,7 +312,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         aria-label={`Publicación de ${displayName}`}
       >
         {/* ── Header ── */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2.5 px-3 sm:px-4 pt-3 sm:pt-4 pb-2.5 sm:pb-3">
           <button
             onClick={() => setAvatar(true)}
             aria-label={`Ver foto de ${displayName}`}
@@ -307,15 +331,16 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
               </Link>
               <RoleBadge role={author.role} />
             </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {author.carrera && (
-                <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-elevated)] px-1.5 py-px rounded-full truncate max-w-[110px]">
+                <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-elevated)] px-1.5 py-px rounded-full truncate max-w-[100px]">
                   {author.carrera}
                 </span>
               )}
               <time dateTime={post.createdAt} className="text-xs text-[var(--text-muted)] shrink-0">
                 {timeAgo(post.createdAt)}
               </time>
+              {expiryStatus && <ExpiryBadge status={expiryStatus} />}
             </div>
           </div>
 
@@ -369,7 +394,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
 
         {/* ── Content ── */}
         {post.content && (
-          <p className="px-4 pb-3 text-[15px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap break-words">
+          <p className="px-3 sm:px-4 pb-3 text-[15px] text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap break-words">
             {post.content}
           </p>
         )}
@@ -388,7 +413,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
 
         {/* ── Summary row ── */}
         {(post.reactionCount > 0 || post.commentCount > 0) && (
-          <div className="flex items-center justify-between px-4 py-1.5 text-xs text-[var(--text-muted)]">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 text-xs text-[var(--text-muted)]">
             {post.reactionCount > 0 && (
               <span>
                 {post.reactionCount} reacción{post.reactionCount !== 1 ? 'es' : ''}
@@ -406,7 +431,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
         )}
 
         {/* ── Actions bar ── */}
-        <div className="flex items-center px-2 py-1 border-t border-[var(--border)]">
+        <div className="flex items-center px-1 sm:px-2 py-0.5 border-t border-[var(--border)]">
 
           {/* Reaction button + picker */}
           <div
@@ -431,7 +456,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
               aria-label={activeRx ? `${rxInfo?.label ?? 'Reacción'} (mantén para cambiar)` : 'Me gusta (mantén para más reacciones)'}
               aria-pressed={!!activeRx}
               className={cn(
-                'w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-none',
+                'w-full flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2.5 sm:py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-none',
                 activeRx
                   ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
@@ -455,7 +480,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
             aria-label={`Comentarios · ${post.commentCount}`}
             aria-expanded={commentsOpen}
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
+              'flex-1 flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2.5 sm:py-2 rounded-xl text-sm font-medium transition-colors duration-150',
               commentsOpen
                 ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
@@ -473,7 +498,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
             disabled={shareLoading}
             aria-label="Compartir publicación"
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150',
+              'flex-1 flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2.5 sm:py-2 rounded-xl text-sm font-medium transition-colors duration-150',
               shareDone
                 ? 'text-green-500 bg-green-50 dark:bg-green-950/30'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',

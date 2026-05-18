@@ -29,6 +29,7 @@ export interface BPublicacion {
   compartida?: boolean;
   publicacionOriginalId?: number;
   allowComments?: boolean;
+  expiresAt?: string;
 }
 
 export interface BFeedPage {
@@ -147,6 +148,7 @@ export interface Post {
   userReaction?: ReactionType;
   isAnnouncement?: boolean;
   poll?: Poll;
+  expiresAt?: string;
 }
 
 export interface Comment {
