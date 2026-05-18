@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
   /* ── Bundle optimization ── */
   experimental: {
     optimizePackageImports: ['next/font'],
+    staleTimes: {
+      dynamic: 0,
+      static: 0,
+    },
   },
 
   /* ── Security & performance headers ── */
@@ -57,7 +61,14 @@ const nextConfig: NextConfig = {
               ],
             },
           ]
-        : []),
+        : [
+            {
+              source: '/_next/static/(.*)',
+              headers: [
+                { key: 'Cache-Control', value: 'no-store' },
+              ],
+            },
+          ]),
       {
         source: '/sw.js',
         headers: [
