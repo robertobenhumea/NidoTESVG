@@ -6,9 +6,19 @@ import { timeAgo } from '@/lib/utils';
 import { storyService } from '@/services/story.service';
 import type { StoryGroup } from '@/types';
 
-const STORY_DURATION = 5000;
+/* ─────────────────────────────────────────────
+   Constants
+───────────────────────────────────────────── */
+const STORY_DURATION  = 6000;  // ms per story
+const HOLD_THRESHOLD  = 180;   // ms — tap vs long-press
+const TAP_MOVE_MAX    = 14;    // px — max drift to still count as tap
+const SWIPE_DOWN_MIN  = 80;    // px — swipe-down to close
+const SWIPE_HOR_MIN   = 55;    // px — horizontal swipe to change group
 
-interface StoryViewerProps {
+/* ─────────────────────────────────────────────
+   Types
+───────────────────────────────────────────── */
+interface Props {
   groups:            StoryGroup[];
   initialGroupIndex: number;
   currentUserId?:    number;
@@ -17,6 +27,9 @@ interface StoryViewerProps {
   onDelete?:         (storyId: number) => void;
 }
 
+/* ─────────────────────────────────────────────
+   Component
+───────────────────────────────────────────── */
 export function StoryViewer({
   groups,
   initialGroupIndex,
@@ -24,32 +37,78 @@ export function StoryViewer({
   onClose,
   onGroupViewed,
   onDelete,
-}: StoryViewerProps) {
-  const [groupIdx, setGroupIdx]           = useState(initialGroupIndex);
-  const [storyIdx, setStoryIdx]           = useState(0);
-  const [paused, setPaused]               = useState(false);
-  const [progress, setProgress]           = useState(0);
-  const [imgLoaded, setImgLoaded]         = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [swipeDy, setSwipeDy]             = useState(0);
+}: Props) {
+
+  /* ── State ── */
+  const [groupIdx,       setGroupIdx]       = useState(initialGroupIndex);
+  const [storyIdx,       setStoryIdx]       = useState(0);
+  const [progress,       setProgress]       = useState(0);
+  const [imgLoaded,      setImgLoaded]      = useState(false);
+  const [deleteConfirm,  setDeleteConfirm]  = useState(false);
+  const [holdPaused,     setHoldPaused]     = useState(false);   // visual only
+  const [swipeDy,        setSwipeDy]        = useState(0);
+  const [tapFlash,       setTapFlash]       = useState<'left' | 'right' | null>(null);
 
   const group        = groups[groupIdx];
   const story        = group?.stories[storyIdx];
   const isOwn        = story?.author.id === currentUserId;
   const totalStories = group?.stories.length ?? 0;
 
-  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startRef    = useRef<number>(0);
-  const elapsedRef  = useRef<number>(0);
-  const touchRef    = useRef<{ x: number; y: number; time: number } | null>(null);
+  /* ── rAF timer refs (no React state — direct control) ── */
+  const rafRef      = useRef<number>(0);
+  const startAtRef  = useRef<number>(0);   // performance.now() when this segment started
+  const storedMsRef = useRef<number>(0);   // ms accumulated before current segment
+
+  /* ── Stable navigation ref (avoids stale closure inside rAF) ── */
   const goToNextRef = useRef<() => void>(() => {});
 
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  /* ── Pointer tracking refs ── */
+  const pointerRef   = useRef<{ x: number; y: number; t: number } | null>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoldRef    = useRef(false);     // currently in long-press pause
+  const tapFlashRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ─────────────────────────────────────────
+     rAF tick — always reads from refs, never
+     captures stale state via closure
+  ───────────────────────────────────────── */
+  const tickRef = useRef<(now: number) => void>(() => {});
+  tickRef.current = (now: number) => {
+    const elapsed = storedMsRef.current + (now - startAtRef.current);
+    setProgress(Math.min((elapsed / STORY_DURATION) * 100, 100));
+    if (elapsed >= STORY_DURATION) {
+      storedMsRef.current = 0;
+      goToNextRef.current();
+      return;
+    }
+    rafRef.current = requestAnimationFrame(tickRef.current);
+  };
+
+  /* ─────────────────────────────────────────
+     Timer controls — pure ref operations
+  ───────────────────────────────────────── */
+  const startTimer = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    startAtRef.current = performance.now();
+    rafRef.current = requestAnimationFrame(tickRef.current);
   }, []);
 
+  const pauseTimer = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current += performance.now() - startAtRef.current;
+  }, []);
+
+  const resumeTimer = useCallback(() => {
+    startAtRef.current = performance.now();
+    rafRef.current = requestAnimationFrame(tickRef.current);
+  }, []);
+
+  /* ─────────────────────────────────────────
+     Navigation
+  ───────────────────────────────────────── */
   const goToNext = useCallback(() => {
-    elapsedRef.current = 0;
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current = 0;
     setProgress(0);
     setImgLoaded(false);
     if (storyIdx < totalStories - 1) {
@@ -62,11 +121,11 @@ export function StoryViewer({
     }
   }, [storyIdx, totalStories, groupIdx, groups.length, onClose]);
 
-  // Keep ref current so setInterval never calls a stale closure
   useEffect(() => { goToNextRef.current = goToNext; }, [goToNext]);
 
   const goToPrev = useCallback(() => {
-    elapsedRef.current = 0;
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current = 0;
     setProgress(0);
     setImgLoaded(false);
     if (storyIdx > 0) {
@@ -75,47 +134,52 @@ export function StoryViewer({
       setGroupIdx((g) => g - 1);
       setStoryIdx(0);
     }
+    // at very first story: do nothing (just restart timer via effect)
   }, [storyIdx, groupIdx]);
 
-  const startTimer = useCallback(() => {
-    clearTimer();
-    startRef.current = performance.now();
-    timerRef.current = setInterval(() => {
-      const elapsed = elapsedRef.current + (performance.now() - startRef.current);
-      const pct = Math.min((elapsed / STORY_DURATION) * 100, 100);
-      setProgress(pct);
-      if (elapsed >= STORY_DURATION) {
-        clearTimer();
-        elapsedRef.current = 0;
-        goToNextRef.current();
-      }
-    }, 50);
-    setProgress(Math.min((elapsedRef.current / STORY_DURATION) * 100, 100));
-  }, [clearTimer]);
+  const goToNextGroup = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current = 0;
+    setProgress(0);
+    setImgLoaded(false);
+    if (groupIdx < groups.length - 1) {
+      setGroupIdx((g) => g + 1);
+      setStoryIdx(0);
+    } else {
+      onClose();
+    }
+  }, [groupIdx, groups.length, onClose]);
 
-  // Reset + restart timer when story changes
+  const goToPrevGroup = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current = 0;
+    setProgress(0);
+    setImgLoaded(false);
+    if (groupIdx > 0) {
+      setGroupIdx((g) => g - 1);
+      setStoryIdx(0);
+    }
+  }, [groupIdx]);
+
+  /* ─────────────────────────────────────────
+     Story/group change effect
+     Restarts timer whenever current story changes.
+     Does NOT restart if user is currently holding.
+  ───────────────────────────────────────── */
   useEffect(() => {
-    elapsedRef.current = 0;
+    storedMsRef.current = 0;
     setProgress(0);
     setImgLoaded(false);
     setDeleteConfirm(false);
-    if (!paused) startTimer();
-    return clearTimer;
+    setHoldPaused(false);
+
+    if (!isHoldRef.current) startTimer();
+
+    return () => cancelAnimationFrame(rafRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIdx, storyIdx]);
 
-  // Pause / resume
-  useEffect(() => {
-    if (paused) {
-      clearTimer();
-      elapsedRef.current += performance.now() - startRef.current;
-    } else if (!deleteConfirm) {
-      startTimer();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
-
-  // Mark viewed
+  /* ── Mark viewed ── */
   useEffect(() => {
     if (!story) return;
     onGroupViewed?.(groupIdx, storyIdx);
@@ -123,7 +187,7 @@ export function StoryViewer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIdx, storyIdx, story?.id]);
 
-  // Keyboard navigation
+  /* ── Keyboard navigation ── */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape')          { e.preventDefault(); onClose(); }
@@ -134,82 +198,162 @@ export function StoryViewer({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, goToNext, goToPrev]);
 
-  // Scroll lock — guaranteed cleanup
+  /* ── Body scroll lock ── */
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // Pointer handlers for tap navigation + swipe-down
+  /* ─────────────────────────────────────────
+     Tap flash (brief visual indicator)
+  ───────────────────────────────────────── */
+  function flashTap(side: 'left' | 'right') {
+    if (tapFlashRef.current) clearTimeout(tapFlashRef.current);
+    setTapFlash(side);
+    tapFlashRef.current = setTimeout(() => setTapFlash(null), 220);
+  }
+
+  function clearHoldTimer() {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Pointer handlers
+
+     Architecture:
+     • pointerDown  → schedule hold timer (don't pause yet)
+     • hold fires   → user is pressing: pause timer
+     • pointerUp    → if was hold: resume. if was tap: navigate.
+     • pointerCancel→ cancel hold, resume if holding
+
+     Key insight: for quick taps the timer is NEVER paused —
+     it keeps running and resets only on navigation.
+     This matches Instagram/Facebook behaviour exactly.
+  ───────────────────────────────────────── */
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (deleteConfirm) return;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-    touchRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    pointerRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    isHoldRef.current  = false;
     setSwipeDy(0);
-    setPaused(true);
+
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null;
+      if (!pointerRef.current) return;    // already released — was a tap
+      isHoldRef.current = true;
+      pauseTimer();
+      setHoldPaused(true);
+    }, HOLD_THRESHOLD);
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!touchRef.current) return;
-    const dy = e.clientY - touchRef.current.y;
-    if (dy > 0) setSwipeDy(Math.min(dy, 180));
+    if (!pointerRef.current) return;
+
+    const dx = Math.abs(e.clientX - pointerRef.current.x);
+    const dy = e.clientY - pointerRef.current.y;
+
+    // Movement cancels long-press (it's a swipe)
+    if ((dx > 10 || Math.abs(dy) > 10) && holdTimerRef.current) {
+      clearHoldTimer();
+    }
+
+    if (dy > 0) setSwipeDy(Math.min(dy, 200));
   }
 
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    const start = touchRef.current;
-    touchRef.current = null;
-    const wasSwipeDy = swipeDy;
-    setSwipeDy(0);
-    setPaused(false);
+    const start = pointerRef.current;
+    pointerRef.current = null;
+    clearHoldTimer();
+
+    /* ── Long-press release: just resume ── */
+    if (isHoldRef.current) {
+      isHoldRef.current = false;
+      setHoldPaused(false);
+      setSwipeDy(0);
+      if (!deleteConfirm) resumeTimer();
+      return;
+    }
+
     if (!start) return;
 
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
-    const dt = Date.now() - start.time;
+    const dx        = e.clientX - start.x;
+    const dy        = e.clientY - start.y;
+    const dt        = performance.now() - start.t;
+    const absDx     = Math.abs(dx);
+    const absDy     = Math.abs(dy);
+    const curSwipeDy = swipeDy;
+    setSwipeDy(0);
 
-    // Swipe down → close
-    if (dy > 100 && Math.abs(dx) < 90 && dt < 600) { onClose(); return; }
+    /* ── Swipe down → close ── */
+    if (dy > SWIPE_DOWN_MIN && absDx < 90 && dt < 600) {
+      onClose();
+      return;
+    }
 
-    // Short tap → navigate
-    if (dt < 280 && Math.abs(dx) < 20 && Math.abs(dy) < 20 && wasSwipeDy < 15) {
+    /* ── Horizontal swipe → change group ── */
+    if (absDx > SWIPE_HOR_MIN && absDy < 50 && dt < 500) {
+      if (dx < 0) goToNextGroup();
+      else        goToPrevGroup();
+      return;
+    }
+
+    /* ── Quick tap → story navigation ── */
+    if (dt < 400 && absDx < TAP_MOVE_MAX && absDy < TAP_MOVE_MAX && curSwipeDy < 15) {
       const pct = e.clientX / window.innerWidth;
-      if (pct < 0.35)      goToPrev();
-      else if (pct > 0.65) goToNext();
+      if (pct < 0.35) {
+        flashTap('left');
+        goToPrev();
+      } else if (pct > 0.65) {
+        flashTap('right');
+        goToNext();
+      }
     }
   }
 
   function handlePointerCancel() {
-    touchRef.current = null;
+    pointerRef.current = null;
+    clearHoldTimer();
+    if (isHoldRef.current) {
+      isHoldRef.current = false;
+      setHoldPaused(false);
+      resumeTimer();
+    }
     setSwipeDy(0);
-    setPaused(false);
   }
 
+  /* ── Delete ── */
   function handleDelete() {
     if (!story) return;
     const deletedTotal = totalStories;
     const deletedIdx   = storyIdx;
-
     onDelete?.(story.id);
     setDeleteConfirm(false);
+    setHoldPaused(false);
 
-    if (deletedTotal <= 1) {
-      onClose();
-      return;
-    }
+    if (deletedTotal <= 1) { onClose(); return; }
+
     const nextIdx = deletedIdx >= deletedTotal - 1 ? deletedIdx - 1 : deletedIdx;
-    elapsedRef.current = 0;
+    cancelAnimationFrame(rafRef.current);
+    storedMsRef.current = 0;
     setProgress(0);
     setImgLoaded(false);
     setStoryIdx(nextIdx);
-    setPaused(false);
   }
 
+  /* ── Guard ── */
   if (!group || !story) return null;
 
   const displayName  = story.author.displayName ?? story.author.username;
   const swipeScale   = 1 - (swipeDy / 1800);
   const swipeOpacity = 1 - (swipeDy / 260);
 
+  /* ─────────────────────────────────────────
+     Render
+  ───────────────────────────────────────── */
   return (
     <div
       className="fixed inset-0 z-[200] bg-black flex items-center justify-center"
@@ -217,17 +361,17 @@ export function StoryViewer({
       aria-modal
       aria-label="Visor de historias"
     >
-      {/* Story container — swipe transforms applied here */}
+      {/* Story container — swipe-down transform applied here */}
       <div
         className="relative w-full h-full overflow-hidden select-none"
         style={{
-          maxWidth: 430,
-          isolation: 'isolate',
-          transform:  swipeDy > 0
+          maxWidth:    430,
+          isolation:   'isolate',
+          transform:   swipeDy > 0
             ? `translateY(${swipeDy * 0.45}px) scale(${swipeScale})`
             : undefined,
-          opacity:    swipeDy > 0 ? swipeOpacity : 1,
-          transition: swipeDy === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : 'none',
+          opacity:     swipeDy > 0 ? swipeOpacity : 1,
+          transition:  swipeDy === 0 ? 'transform 0.22s ease, opacity 0.22s ease' : 'none',
           touchAction: 'none',
         }}
       >
@@ -266,25 +410,25 @@ export function StoryViewer({
           </div>
         )}
 
-        {/* Text overlay — only for image + text stories */}
+        {/* Text overlay for image+text stories */}
         {story.text && story.imageUrl && (
           <div className="absolute inset-x-0 bottom-28 flex items-center justify-center px-6 z-[22] pointer-events-none">
             <p
               className="text-white text-2xl font-bold text-center leading-relaxed break-words"
-              style={{ textShadow: story.imageUrl ? '0 2px 14px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.6)' : '0 2px 8px rgba(0,0,0,0.3)' }}
+              style={{ textShadow: '0 2px 14px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.6)' }}
             >
               {story.text}
             </p>
           </div>
         )}
 
-        {/* Gradient overlays for readability */}
+        {/* Gradient overlays */}
         <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-[21]"
              style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
         <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none z-[21]"
              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
 
-        {/* ── Progress bars — z-30 (above tap zone) ── */}
+        {/* ── Progress bars ── */}
         <div
           className="absolute inset-x-0 top-0 z-30 px-3 flex gap-1"
           style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
@@ -293,13 +437,17 @@ export function StoryViewer({
             <div key={i} className="flex-1 h-[3px] rounded-full bg-white/30 overflow-hidden">
               <div
                 className="h-full bg-white rounded-full"
-                style={{ width: i < storyIdx ? '100%' : i === storyIdx ? `${progress}%` : '0%' }}
+                style={{
+                  width: i < storyIdx ? '100%'
+                       : i === storyIdx ? `${progress}%`
+                       : '0%',
+                }}
               />
             </div>
           ))}
         </div>
 
-        {/* ── Header controls — z-30 ── */}
+        {/* ── Header: avatar + controls ── */}
         <div
           className="absolute inset-x-0 z-30 px-3 flex items-center gap-2.5"
           style={{ top: 'calc(max(12px, env(safe-area-inset-top)) + 14px)' }}
@@ -315,7 +463,7 @@ export function StoryViewer({
 
           {isOwn && (
             <button
-              onClick={() => { setDeleteConfirm(true); clearTimer(); setPaused(true); }}
+              onClick={() => { setDeleteConfirm(true); pauseTimer(); setHoldPaused(true); }}
               aria-label="Eliminar historia"
               className="size-9 flex items-center justify-center rounded-full text-white/90 hover:bg-white/20 active:bg-white/30 transition-colors"
             >
@@ -339,7 +487,7 @@ export function StoryViewer({
           </button>
         </div>
 
-        {/* ── View count (own stories) — z-30 ── */}
+        {/* ── View count (own stories) ── */}
         {isOwn && !deleteConfirm && (
           <div
             className="absolute inset-x-0 flex justify-center z-30 pointer-events-none"
@@ -357,7 +505,7 @@ export function StoryViewer({
           </div>
         )}
 
-        {/* ── Tap zone — z-20 (below controls at z-30) ── */}
+        {/* ── Tap zones (z-20 — below header at z-30) ── */}
         <div
           className="absolute inset-0 z-20"
           onPointerDown={handlePointerDown}
@@ -366,7 +514,59 @@ export function StoryViewer({
           onPointerCancel={handlePointerCancel}
         />
 
-        {/* ── Delete confirmation — z-40 (above everything) ── */}
+        {/* ── Left tap flash indicator ── */}
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 bottom-0 z-[23] pointer-events-none flex items-center pl-4"
+          style={{
+            width:      '35%',
+            background: tapFlash === 'left'
+              ? 'linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 100%)'
+              : 'transparent',
+            transition: 'background 0.12s ease',
+          }}
+        >
+          {tapFlash === 'left' && (
+            <div className="size-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+              <svg className="size-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* ── Right tap flash indicator ── */}
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 bottom-0 z-[23] pointer-events-none flex items-center justify-end pr-4"
+          style={{
+            width:      '35%',
+            background: tapFlash === 'right'
+              ? 'linear-gradient(to left, rgba(0,0,0,0.3) 0%, transparent 100%)'
+              : 'transparent',
+            transition: 'background 0.12s ease',
+          }}
+        >
+          {tapFlash === 'right' && (
+            <div className="size-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+              <svg className="size-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* ── Long-press pause indicator ── */}
+        {holdPaused && !deleteConfirm && (
+          <div className="absolute inset-0 z-[24] pointer-events-none flex items-center justify-center">
+            <div className="flex items-center gap-[6px] px-5 py-3.5 rounded-full bg-black/55 backdrop-blur-md shadow-xl">
+              <div className="w-[3.5px] h-7 bg-white rounded-full" />
+              <div className="w-[3.5px] h-7 bg-white rounded-full" />
+            </div>
+          </div>
+        )}
+
+        {/* ── Delete confirmation ── */}
         {deleteConfirm && (
           <div
             className="absolute inset-0 z-40 flex items-end justify-center"
@@ -390,7 +590,8 @@ export function StoryViewer({
                 <button
                   onClick={() => {
                     setDeleteConfirm(false);
-                    setPaused(false);
+                    setHoldPaused(false);
+                    resumeTimer();
                   }}
                   className="flex-1 h-12 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-hover)] transition-colors border-r border-[var(--border)]"
                 >
@@ -408,10 +609,10 @@ export function StoryViewer({
         )}
       </div>
 
-      {/* ── Desktop group arrows — outside container ── */}
+      {/* ── Desktop group arrows ── */}
       {groupIdx > 0 && (
         <button
-          onClick={goToPrev}
+          onClick={goToPrevGroup}
           aria-label="Grupo anterior"
           className="absolute left-4 top-1/2 -translate-y-1/2 z-[201] hidden sm:flex size-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
         >
@@ -422,7 +623,7 @@ export function StoryViewer({
       )}
       {groupIdx < groups.length - 1 && (
         <button
-          onClick={goToNext}
+          onClick={goToNextGroup}
           aria-label="Grupo siguiente"
           className="absolute right-4 top-1/2 -translate-y-1/2 z-[201] hidden sm:flex size-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-colors"
         >
