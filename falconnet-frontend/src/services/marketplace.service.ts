@@ -1,4 +1,5 @@
 import { api } from '@/services/api';
+import { STORAGE_KEYS } from '@/lib/utils';
 import type {
   BProducto, BProductoPage, BUser, MarketplaceListing, ProductoCategoria, ProductoEstado,
 } from '@/types';
@@ -63,11 +64,33 @@ export const marketplaceService = {
     return api.post<BProducto>('/market/productos', data);
   },
 
+  async uploadImage(file: File): Promise<string> {
+    const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+    const token = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.TOKEN) : null;
+    const formData = new FormData();
+    formData.append('archivo', file);
+    const res = await fetch(`${base}/imagenes/subir`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Error al subir imagen');
+    const data = await res.json() as { url: string };
+    return data.url;
+  },
+
   async toggleFavorite(productoId: number): Promise<void> {
     await api.post(`/market/favoritos/${productoId}`);
   },
 
-  async requestPurchase(productoId: number): Promise<void> {
-    await api.post('/market/solicitudes', { productoId });
+  async requestPurchase(payload: {
+    productoId: number;
+    nombreComprador: string;
+    aula?: string;
+    edificio?: string;
+    horario?: string;
+    mensaje?: string;
+  }): Promise<void> {
+    await api.post('/market/solicitudes', payload);
   },
 };
