@@ -239,6 +239,14 @@ public class ReclutamientoController {
         if (body != null) {
             String msg = (String) body.get("mensaje");
             if (msg != null && !msg.isBlank()) s.setMensaje(msg.trim());
+            String carrera = (String) body.get("carrera");
+            if (carrera != null && !carrera.isBlank()) s.setCarrera(carrera.trim());
+            String semestre = (String) body.get("semestre");
+            if (semestre != null && !semestre.isBlank()) s.setSemestre(semestre.trim());
+            String experiencia = (String) body.get("experiencia");
+            if (experiencia != null && !experiencia.isBlank()) s.setExperiencia(experiencia.trim());
+            String githubUrl = (String) body.get("githubUrl");
+            if (githubUrl != null && !githubUrl.isBlank()) s.setGithubUrl(githubUrl.trim());
         }
         solicitudRepo.save(s);
 
@@ -253,6 +261,19 @@ public class ReclutamientoController {
         notificacionRepo.save(notif);
 
         return ResponseEntity.ok(Map.of("estado", "PENDIENTE", "mensaje", "Solicitud enviada correctamente"));
+    }
+
+    // ── DELETE /reclutamiento/{id}/solicitar ─────────────────────────────────
+
+    @DeleteMapping("/{id}/solicitar")
+    public ResponseEntity<?> cancelarSolicitud(@PathVariable Long id, HttpServletRequest req) {
+        Usuario yo = getUsuario(req);
+        SolicitudReclutamiento s = solicitudRepo.findByReclutamientoIdAndUsuarioId(id, yo.getId()).orElse(null);
+        if (s == null) return ResponseEntity.notFound().build();
+        if (s.getEstado() != SolicitudReclutamiento.EstadoSolicitud.PENDIENTE)
+            return ResponseEntity.badRequest().body("Solo puedes cancelar solicitudes pendientes");
+        solicitudRepo.delete(s);
+        return ResponseEntity.ok(Map.of("cancelada", true));
     }
 
     // ── GET /reclutamiento/{id}/solicitudes ───────────────────────────────────
@@ -275,10 +296,13 @@ public class ReclutamientoController {
             m.put("mensaje", s.getMensaje());
             m.put("fecha",   s.getFecha());
             usuarioRepo.findById(s.getUsuarioId()).ifPresent(u -> {
-                m.put("usuarioId",  u.getId());
-                m.put("nombre",     u.getUsername() != null ? u.getUsername() : u.getCorreo());
-                m.put("avatarUrl",  u.getFotoPerfil());
-                m.put("carrera",    u.getCarrera());
+                m.put("usuarioId",    u.getId());
+                m.put("nombre",       u.getUsername() != null ? u.getUsername() : u.getCorreo());
+                m.put("avatarUrl",    u.getFotoPerfil());
+                m.put("carrera",      s.getCarrera() != null ? s.getCarrera() : u.getCarrera());
+                m.put("semestre",     s.getSemestre());
+                m.put("experiencia",  s.getExperiencia());
+                m.put("githubUrl",    s.getGithubUrl());
             });
             return m;
         }).collect(Collectors.toList());

@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { PostMedia } from '@/components/feed/PostMedia';
 import { Avatar } from '@/components/ui/Avatar';
+import { SolicitarModal } from '@/components/reclutamiento/SolicitarModal';
 import { api } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 import { timeAgo, resolveUrl, truncate } from '@/lib/utils';
 import type { ReclutamientoFeedItem, TipoReclutamiento, EstadoSolicitud } from '@/types';
 
@@ -21,72 +23,6 @@ const TIPO_CONFIG: Record<TipoReclutamiento, { label: string; gradient: string; 
 };
 
 /* ─────────────────────────────────────────────
-   Solicitar modal (inline, lightweight)
-───────────────────────────────────────────── */
-function SolicitarModal({
-  proyectoNombre,
-  onConfirm,
-  onClose,
-  loading,
-}: {
-  proyectoNombre: string;
-  onConfirm: (mensaje: string) => void;
-  onClose: () => void;
-  loading: boolean;
-}) {
-  const [mensaje, setMensaje] = useState('');
-
-  return (
-    <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="absolute inset-0" onClick={onClose} aria-hidden />
-      <div
-        className="relative w-full sm:max-w-sm bg-[var(--bg-surface)] rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 flex flex-col gap-4"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal
-      >
-        <div className="sm:hidden w-10 h-1 rounded-full bg-[var(--border-strong)] mx-auto" />
-        <div>
-          <h3 className="text-sm font-bold text-[var(--text-primary)]">
-            Solicitar unirme a "{proyectoNombre}"
-          </h3>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            El creador verá tu perfil y este mensaje (opcional).
-          </p>
-        </div>
-        <textarea
-          value={mensaje}
-          onChange={(e) => setMensaje(e.target.value)}
-          placeholder="¿Por qué quieres unirte? ¿Qué puedes aportar?…"
-          rows={3}
-          maxLength={400}
-          className="w-full resize-none rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] text-sm px-3 py-2.5 focus:outline-none focus:border-[var(--brand)] transition-colors leading-relaxed"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] disabled:opacity-40 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => onConfirm(mensaje)}
-            disabled={loading}
-            className="flex-1 h-10 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-          >
-            {loading
-              ? <svg className="size-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="15 85" strokeLinecap="round"/></svg>
-              : null}
-            {loading ? 'Enviando…' : 'Enviar solicitud'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
    Main card
 ───────────────────────────────────────────── */
 interface Props {
@@ -95,38 +31,38 @@ interface Props {
 }
 
 export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
-  const [expanded,        setExpanded]        = useState(false);
-  const [solicitudState,  setSolicitudState]   = useState<EstadoSolicitud | undefined>(item.miSolicitud);
-  const [showModal,       setShowModal]        = useState(false);
-  const [soliciting,      setSoliciting]       = useState(false);
-  const [solError,        setSolError]         = useState('');
+  const { user } = useAuth();
 
-  const config     = TIPO_CONFIG[item.tipo] ?? TIPO_CONFIG.OTRO;
-  const isOwn      = item.usuarioId === currentUserId;
-  const isClosed   = item.estado !== 'ABIERTO';
-  const isLong     = (item.descripcion?.length ?? 0) > 220;
-  const avatarSrc  = resolveUrl(item.creadorAvatarUrl);
+  const [expanded,       setExpanded]       = useState(false);
+  const [solicitudState, setSolicitudState]  = useState<EstadoSolicitud | undefined>(item.miSolicitud);
+  const [showModal,      setShowModal]       = useState(false);
+  const [canceling,      setCanceling]       = useState(false);
+  const [cancelError,    setCancelError]     = useState('');
 
-  async function handleSolicitar(mensaje: string) {
-    setSoliciting(true);
-    setSolError('');
+  const config    = TIPO_CONFIG[item.tipo] ?? TIPO_CONFIG.OTRO;
+  const isOwn     = item.usuarioId === currentUserId;
+  const isClosed  = item.estado !== 'ABIERTO';
+  const isLong    = (item.descripcion?.length ?? 0) > 220;
+  const avatarSrc = resolveUrl(item.creadorAvatarUrl);
+
+  async function handleCancelar() {
+    if (!confirm('¿Cancelar tu solicitud para este equipo?')) return;
+    setCanceling(true);
+    setCancelError('');
     try {
-      await api.post(`/reclutamiento/${item.id}/solicitar`, { mensaje: mensaje.trim() || undefined });
-      setSolicitudState('PENDIENTE');
-      setShowModal(false);
+      await api.delete(`/reclutamiento/${item.id}/solicitar`);
+      setSolicitudState(undefined);
     } catch {
-      setSolError('No se pudo enviar la solicitud. Intenta de nuevo.');
+      setCancelError('No se pudo cancelar. Intenta de nuevo.');
     } finally {
-      setSoliciting(false);
+      setCanceling(false);
     }
   }
 
   function renderCTA() {
     if (isOwn) {
       return (
-        <span className="text-xs font-medium text-[var(--text-muted)] px-2">
-          Tu publicación
-        </span>
+        <span className="text-xs font-medium text-[var(--text-muted)] px-2">Tu publicación</span>
       );
     }
     if (isClosed) {
@@ -138,10 +74,19 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
     }
     if (solicitudState === 'PENDIENTE') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] text-xs font-semibold text-[var(--text-secondary)]">
-          <svg className="size-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Solicitud enviada
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            <svg className="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Solicitud enviada
+          </span>
+          <button
+            onClick={handleCancelar}
+            disabled={canceling}
+            className="text-[11px] text-[var(--text-muted)] hover:text-red-500 disabled:opacity-40 transition-colors underline underline-offset-2"
+          >
+            {canceling ? 'Cancelando…' : 'Cancelar'}
+          </button>
+        </div>
       );
     }
     if (solicitudState === 'ACEPTADA') {
@@ -155,13 +100,14 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
     if (solicitudState === 'RECHAZADA') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-100 dark:bg-red-950/40 text-xs font-semibold text-red-600 dark:text-red-400">
-          Rechazado
+          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Solicitud rechazada
         </span>
       );
     }
     return (
       <button
-        onClick={() => { setSolError(''); setShowModal(true); }}
+        onClick={() => setShowModal(true)}
         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 hover:opacity-90"
         style={{ background: config.gradient }}
       >
@@ -185,7 +131,6 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
       >
         {/* ── Gradient header ── */}
         <div className="px-4 pt-3.5 pb-3.5 relative" style={{ background: config.gradient }}>
-          {/* Top row: badge + estado */}
           <div className="flex items-start justify-between gap-2 mb-2">
             <span
               className="inline-flex items-center gap-1.5 text-white/90 text-[10px] font-extrabold uppercase tracking-widest rounded-full px-2.5 py-0.5 leading-none"
@@ -211,19 +156,16 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
             )}
           </div>
 
-          {/* Project name */}
           <h2 className="text-[17px] font-black text-white leading-tight mb-0.5 drop-shadow-sm">
             {item.nombreProyecto}
           </h2>
 
-          {/* Team name if different */}
           {item.nombreEquipo && (
             <p className="text-[12px] text-white/70 font-medium">
               Equipo: {item.nombreEquipo}
             </p>
           )}
 
-          {/* Integrantes faltantes */}
           <div className="flex items-center gap-1.5 mt-2.5">
             <div className="flex -space-x-1.5">
               {Array.from({ length: Math.min(item.integrantesFaltantes, 4) }).map((_, i) => (
@@ -253,7 +195,6 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
 
         {/* ── Body ── */}
         <div className="bg-[var(--bg-surface)] px-4 py-3.5 space-y-3">
-          {/* Description */}
           {item.descripcion && (
             <div>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap break-words">
@@ -270,7 +211,6 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
             </div>
           )}
 
-          {/* Habilidades tags */}
           {item.habilidades.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {item.habilidades.map((h) => (
@@ -278,9 +218,9 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
                   key={h}
                   className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors"
                   style={{
-                    background: `${config.accent}12`,
-                    borderColor: `${config.accent}30`,
-                    color: config.accent,
+                    background:   `${config.accent}12`,
+                    borderColor:  `${config.accent}30`,
+                    color:        config.accent,
                   }}
                 >
                   {h}
@@ -289,7 +229,6 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
             </div>
           )}
 
-          {/* Meta row */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)]">
             {item.fechaLimite && (
               <span className="flex items-center gap-1">
@@ -307,36 +246,35 @@ export function ReclutamientoFeedCard({ item, currentUserId }: Props) {
             </span>
           </div>
 
-          {solError && (
-            <p className="text-xs text-red-500">{solError}</p>
+          {cancelError && (
+            <p className="text-xs text-red-500">{cancelError}</p>
           )}
         </div>
 
-        {/* ── Footer: creator + CTA ── */}
+        {/* ── Footer ── */}
         <div className="bg-[var(--bg-surface)] border-t border-[var(--border)] px-4 py-2.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar
-              src={avatarSrc}
-              name={item.creadorNombre ?? '?'}
-              size="xs"
-            />
+            <Avatar src={avatarSrc} name={item.creadorNombre ?? '?'} size="xs" />
             <p className="text-xs text-[var(--text-muted)] truncate">
               <span className="font-semibold text-[var(--text-secondary)]">
                 {item.creadorNombre}
               </span>
             </p>
           </div>
-
           {renderCTA()}
         </div>
       </article>
 
+      {/* Portal modal — renders at document.body, escapes all stacking contexts */}
       {showModal && (
         <SolicitarModal
+          reclutamientoId={item.id}
           proyectoNombre={item.nombreProyecto}
-          onConfirm={handleSolicitar}
+          tipoGradient={config.gradient}
+          tipoLabel={config.label}
+          initialCarrera={user?.carrera ?? ''}
+          onSuccess={(estado) => setSolicitudState(estado)}
           onClose={() => setShowModal(false)}
-          loading={soliciting}
         />
       )}
     </>

@@ -23,6 +23,18 @@ public class SolicitudReclutamiento {
     @Column(columnDefinition = "TEXT")
     private String mensaje;
 
+    @Column(length = 120)
+    private String carrera;
+
+    @Column(length = 20)
+    private String semestre;
+
+    @Column(columnDefinition = "TEXT")
+    private String experiencia;
+
+    @Column(name = "github_url", length = 500)
+    private String githubUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoSolicitud estado = EstadoSolicitud.PENDIENTE;
@@ -48,6 +60,14 @@ public class SolicitudReclutamiento {
     public void setUsuarioId(Long v)              { this.usuarioId = v; }
     public String getMensaje()                    { return mensaje; }
     public void setMensaje(String v)              { this.mensaje = v; }
+    public String getCarrera()                    { return carrera; }
+    public void setCarrera(String v)              { this.carrera = v; }
+    public String getSemestre()                   { return semestre; }
+    public void setSemestre(String v)             { this.semestre = v; }
+    public String getExperiencia()                { return experiencia; }
+    public void setExperiencia(String v)          { this.experiencia = v; }
+    public String getGithubUrl()                  { return githubUrl; }
+    public void setGithubUrl(String v)            { this.githubUrl = v; }
     public EstadoSolicitud getEstado()            { return estado; }
     public void setEstado(EstadoSolicitud v)      { this.estado = v; }
     public LocalDateTime getFecha()               { return fecha; }
