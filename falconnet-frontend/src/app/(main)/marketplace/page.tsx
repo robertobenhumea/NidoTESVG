@@ -29,15 +29,17 @@ const STATUS_LABELS: Record<string, string> = {
 function ProductCard({
   listing,
   onFavorite,
+  onRequest,
 }: {
   listing: MarketplaceListing;
   onFavorite: (id: number) => void;
+  onRequest: (listing: MarketplaceListing) => void;
 }) {
   const isSold    = listing.status === 'VENDIDO';
   const isPaused  = listing.status === 'PAUSADO';
 
   return (
-    <div className={`bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col ${isSold || isPaused ? 'opacity-70' : ''}`}>
+    <div className={`bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200 ${isSold || isPaused ? 'opacity-70' : ''}`}>
       {/* Image */}
       <div className="relative aspect-[4/3] bg-[var(--bg-elevated)]">
         {listing.imageUrl ? (
@@ -95,6 +97,119 @@ function ProductCard({
           <Avatar src={listing.vendorAvatar} name={listing.vendorName} size="xs" />
           <span className="text-xs text-[var(--text-muted)] truncate">{listing.vendorName}</span>
           <span className="text-xs text-[var(--text-muted)] ml-auto shrink-0">{timeAgo(listing.createdAt)}</span>
+        </div>
+
+        {!isSold && !isPaused && (
+          <button
+            onClick={() => onRequest(listing)}
+            className="mt-2 w-full h-8 rounded-xl bg-[var(--brand)] text-white text-xs font-semibold hover:bg-[var(--brand-hover)] transition-colors"
+          >
+            Solicitar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PurchaseModal({
+  listing,
+  onClose,
+}: {
+  listing: MarketplaceListing;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  async function handleConfirm() {
+    setLoading(true);
+    setError('');
+    try {
+      await marketplaceService.requestPurchase(listing.id);
+      setDone(true);
+    } catch {
+      setError('No se pudo enviar la solicitud. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm bg-[var(--bg-surface)] rounded-2xl overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-4">
+          {done ? (
+            <div className="text-center py-4">
+              <div className="size-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
+                <svg className="size-7 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="text-base font-bold text-[var(--text-primary)]">¡Solicitud enviada!</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">El vendedor recibirá tu solicitud de compra.</p>
+              <button
+                onClick={onClose}
+                className="mt-4 w-full h-10 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] transition-colors"
+              >
+                Listo
+              </button>
+            </div>
+          ) : (
+            <>
+              <h3 className="text-base font-bold text-[var(--text-primary)] mb-1">Solicitar compra</h3>
+              <p className="text-sm text-[var(--text-muted)] mb-4">
+                Se le notificará a{' '}
+                <span className="font-medium text-[var(--text-primary)]">{listing.vendorName}</span>{' '}
+                que estás interesado en:
+              </p>
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-[var(--bg-elevated)] mb-4">
+                <div className="size-12 rounded-xl bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center shrink-0 overflow-hidden">
+                  {listing.imageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={listing.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl">🛍️</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[var(--text-primary)] leading-tight line-clamp-2">{listing.title}</p>
+                  <p className="text-sm font-bold text-[var(--brand)] mt-0.5">
+                    ${listing.price.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
+                  </p>
+                </div>
+              </div>
+
+              {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading}
+                  className="flex-1 h-10 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Enviando…' : 'Confirmar'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -220,6 +335,7 @@ export default function MarketplacePage() {
   const [query, setQuery]         = useState('');
   const [category, setCategory]   = useState<ProductoCategoria | null>(null);
   const [createOpen, setCreate]   = useState(false);
+  const [purchaseListing, setPurchaseListing] = useState<MarketplaceListing | null>(null);
   const [error, setError]         = useState('');
   const searchTimeout             = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -339,7 +455,7 @@ export default function MarketplacePage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {listings.map((l) => (
-              <ProductCard key={l.id} listing={l} onFavorite={handleFavorite} />
+              <ProductCard key={l.id} listing={l} onFavorite={handleFavorite} onRequest={setPurchaseListing} />
             ))}
           </div>
 
@@ -362,6 +478,14 @@ export default function MarketplacePage() {
         <CreateListingModal
           onClose={() => setCreate(false)}
           onCreated={() => { setCreate(false); load(true); }}
+        />
+      )}
+
+      {/* Purchase Modal */}
+      {purchaseListing && (
+        <PurchaseModal
+          listing={purchaseListing}
+          onClose={() => setPurchaseListing(null)}
         />
       )}
     </div>

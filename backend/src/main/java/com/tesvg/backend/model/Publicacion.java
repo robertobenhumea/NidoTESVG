@@ -46,6 +46,9 @@ public class Publicacion {
     @Column(name = "allow_comments", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean allowComments = true;
 
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
     public enum Tipo {
         texto, imagen, video
     }
@@ -77,4 +80,6 @@ public class Publicacion {
     public void setPublicacionOriginalId(Long publicacionOriginalId) { this.publicacionOriginalId = publicacionOriginalId; }
     public Boolean getAllowComments() { return allowComments == null || allowComments; }
     public void setAllowComments(Boolean allowComments) { this.allowComments = allowComments; }
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
 }

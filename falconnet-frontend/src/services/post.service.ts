@@ -1,4 +1,10 @@
 import { api } from './api';
+function resolveUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
 import type { Post, User, BPublicacion, BFeedPage, BUser, ReactionType } from '@/types';
 import { mapBUser } from '@/types';
 
@@ -16,23 +22,29 @@ function mapBPost(b: BPublicacion, userMap: Map<number, User>): Post {
     id: b.id,
     author,
     content: b.contenido ?? '',
-    imageUrl: b.imagenUrl ?? undefined,
+    imageUrl: resolveUrl(b.imagenUrl),
     createdAt: b.fecha,
     updatedAt: undefined,
     reactionCount: 0,
     commentCount: 0,
     userReaction: undefined,
+    isAnnouncement: b.esAnuncio ?? false,
+    expiresAt: b.expiresAt,
   };
+}
+
+async function safeGet<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try { return await promise; } catch { return fallback; }
 }
 
 export const postService = {
   async getFeed(page = 0, size = 15): Promise<{ posts: Post[]; hasMore: boolean; page: number }> {
     const [feedData, users, myReactions, allReactions, allComments] = await Promise.all([
       api.get<BFeedPage>(`/publicaciones?page=${page}&size=${size}`),
-      api.get<BUser[]>('/usuarios'),
-      api.get<Record<string, string>>('/interacciones/mis-reacciones'),
-      api.get<Record<string, Record<string, number>>>('/interacciones/reacciones-todos'),
-      api.get<Record<string, unknown[]>>('/interacciones/comentarios-todos'),
+      safeGet(api.get<BUser[]>('/usuarios'), [] as BUser[]),
+      safeGet(api.get<Record<string, string>>('/interacciones/mis-reacciones'), {} as Record<string, string>),
+      safeGet(api.get<Record<string, Record<string, number>>>('/interacciones/reacciones-todos'), {} as Record<string, Record<string, number>>),
+      safeGet(api.get<Record<string, unknown[]>>('/interacciones/comentarios-todos'), {} as Record<string, unknown[]>),
     ]);
 
     const userMap = buildUserMap(users);
@@ -90,5 +102,9 @@ export const postService = {
 
   async deletePost(postId: number): Promise<void> {
     await api.delete(`/publicaciones/${postId}`);
+  },
+
+  async sharePost(postId: number, comentario?: string): Promise<void> {
+    await api.post(`/publicaciones/compartir/${postId}`, comentario ? { comentario } : {});
   },
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
@@ -8,7 +8,17 @@ import { AvatarModal } from '@/components/ui/AvatarModal';
 import { PostCard } from '@/components/feed/PostCard';
 import { userService } from '@/services/user.service';
 import { postService } from '@/services/post.service';
+import { api } from '@/services/api';
 import type { User, Post } from '@/types';
+
+interface Insignia {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  icono: string;
+  tipo: string;
+  fecha?: string;
+}
 
 function ProfileSkeleton() {
   return (
@@ -43,18 +53,22 @@ interface ProfileStats {
   isFollowing: boolean;
 }
 
-export function ProfileView() {
+export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const { user: currentUser } = useAuth();
   const searchParams           = useSearchParams();
-  const queryId                = searchParams.get('id');
+  const queryId                = propUserId ? String(propUserId) : searchParams.get('id');
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts]             = useState<Post[]>([]);
   const [stats, setStats]             = useState<ProfileStats>({ followers: 0, following: 0, isFollowing: false });
+  const [insignias, setInsignias]     = useState<Insignia[]>([]);
   const [loading, setLoading]         = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
   const [error, setError]             = useState('');
   const [avatarOpen, setAvatarOpen]   = useState(false);
+  const coverInputRef                 = useRef<HTMLInputElement>(null);
+  const { updateUser }                = useAuth();
 
   const targetId    = queryId ? Number(queryId) : currentUser?.id;
   const isOwnProfile = !queryId || queryId === String(currentUser?.id);
@@ -64,15 +78,17 @@ export function ProfileView() {
     setLoading(true);
     setError('');
     try {
-      const [user, userPosts, followStatus, followersData, followingData] = await Promise.all([
+      const [user, userPosts, followStatus, followersData, followingData, badges] = await Promise.all([
         isOwnProfile ? userService.getMe() : userService.getUser(targetId),
         postService.getUserPosts(targetId),
         !isOwnProfile ? userService.getFollowStatus(targetId) : Promise.resolve(null),
         userService.getFollowerCount(targetId),
         userService.getFollowingCount(targetId),
+        api.get<Insignia[]>(`/insignias/usuario/${targetId}`).catch(() => [] as Insignia[]),
       ]);
       setProfileUser(user);
       setPosts(userPosts);
+      setInsignias(badges);
       setStats({
         followers:   followersData,
         following:   followingData,
@@ -86,6 +102,22 @@ export function ProfileView() {
   }, [targetId, isOwnProfile]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !isOwnProfile) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 10 * 1024 * 1024) return;
+    e.target.value = '';
+    setCoverUploading(true);
+    try {
+      const updated = await userService.uploadAndSetCover(file);
+      setProfileUser((prev) => prev ? { ...prev, coverUrl: updated.coverUrl } : prev);
+      updateUser({ coverUrl: updated.coverUrl });
+    } catch { /* ignore */ } finally {
+      setCoverUploading(false);
+    }
+  }
 
   async function handleFollow() {
     if (!targetId || isOwnProfile || followLoading) return;
@@ -122,7 +154,31 @@ export function ProfileView() {
     <>
       <div className="max-w-2xl mx-auto">
         {/* Cover */}
-        <div className="h-40 bg-gradient-to-br from-[var(--brand-muted)] to-[var(--brand)] rounded-b-2xl" />
+        <div className="relative h-40 rounded-b-2xl overflow-hidden">
+          {profileUser.coverUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={profileUser.coverUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[var(--brand-muted)] to-[var(--brand)]" />
+          )}
+          {isOwnProfile && (
+            <>
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                disabled={coverUploading}
+                aria-label="Cambiar foto de portada"
+                className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/50 text-white text-xs font-medium backdrop-blur-sm hover:bg-black/70 transition-colors disabled:opacity-50"
+              >
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                {coverUploading ? 'Subiendo…' : 'Cambiar portada'}
+              </button>
+              <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+            </>
+          )}
+        </div>
 
         {/* Profile header */}
         <div className="px-4 pb-4">
@@ -164,6 +220,11 @@ export function ProfileView() {
               {displayName}
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-0.5">@{profileUser.username}</p>
+            {(profileUser.grupo || profileUser.carrera) && (
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {[profileUser.carrera, profileUser.grupo].filter(Boolean).join(' · ')}
+              </p>
+            )}
             {profileUser.bio && (
               <p className="text-sm text-[var(--text-secondary)] mt-2 leading-relaxed">
                 {profileUser.bio}
@@ -187,6 +248,25 @@ export function ProfileView() {
             ))}
           </div>
         </div>
+
+        {/* Insignias */}
+        {insignias.length > 0 && (
+          <div className="px-4 py-3 border-b border-[var(--border)]">
+            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Insignias</p>
+            <div className="flex flex-wrap gap-2">
+              {insignias.map((ins) => (
+                <div
+                  key={ins.id}
+                  title={ins.descripcion}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)]"
+                >
+                  <span className="text-base leading-none">{ins.icono}</span>
+                  <span className="text-xs font-medium text-[var(--text-primary)]">{ins.nombre}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Posts */}
         <div className="px-3 pb-8 space-y-3">

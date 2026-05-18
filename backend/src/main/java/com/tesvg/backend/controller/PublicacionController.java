@@ -39,9 +39,11 @@ public class PublicacionController {
         Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+        LocalDateTime now = LocalDateTime.now();
         publicacion.setUsuarioId(usuario.getId());
-        publicacion.setFecha(LocalDateTime.now());
-        publicacion.setEsAnuncio(false); // nunca anuncio desde esta ruta
+        publicacion.setFecha(now);
+        publicacion.setEsAnuncio(false);
+        publicacion.setExpiresAt(now.plusHours(24));
 
         return ResponseEntity.ok(publicacionRepository.save(publicacion));
     }
@@ -123,8 +125,8 @@ public class PublicacionController {
         if (page == null) {
             return ResponseEntity.ok(publicacionRepository.findAllByOrderByFechaDesc());
         }
-        Page<Publicacion> result = publicacionRepository.findAllByOrderByFechaDesc(
-                PageRequest.of(page, size));
+        Page<Publicacion> result = publicacionRepository.findActiveFeed(
+                LocalDateTime.now(), PageRequest.of(page, size));
         return ResponseEntity.ok(Map.of(
                 "content",  result.getContent(),
                 "hasMore",  !result.isLast(),

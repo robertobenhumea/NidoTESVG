@@ -36,7 +36,7 @@ function MemberList({ detail, currentUserId }: { detail: GroupDetail; currentUse
           {detail.members.map((m) => (
             <Link
               key={m.userId}
-              href={`/profile?id=${m.userId}`}
+              href={`/profile/${m.userId}`}
               className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
             >
               <Avatar src={m.avatarUrl} name={m.name} size="sm" />
@@ -64,11 +64,11 @@ function PostItem({ post }: { post: GroupPost }) {
   return (
     <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-4">
       <div className="flex items-center gap-2.5 mb-3">
-        <Link href={`/profile?id=${post.authorId}`}>
+        <Link href={`/profile/${post.authorId}`}>
           <Avatar src={post.authorAvatar} name={post.authorName} size="sm" />
         </Link>
         <div className="flex-1 min-w-0">
-          <Link href={`/profile?id=${post.authorId}`} className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate block">
+          <Link href={`/profile/${post.authorId}`} className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate block">
             {post.authorName}
           </Link>
           <p className="text-xs text-[var(--text-muted)]">{timeAgo(post.createdAt)}</p>

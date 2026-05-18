@@ -44,26 +44,39 @@ export const STORAGE_KEYS = {
   THEME: 'fn_theme',
 } as const;
 
-/**
- * Toggle the `.dark` class on `<html>` without touching localStorage.
- * Optionally wraps the change in a smooth transition.
- */
-export function applyDarkClass(dark: boolean, animate = true): void {
-  const html = document.documentElement;
-  if (animate) {
-    html.classList.add('theme-transitioning');
-    setTimeout(() => html.classList.remove('theme-transitioning'), 250);
+export function resolveUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    return path;
   }
-  html.classList.toggle('dark', dark);
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-/**
- * Apply theme and persist choice as 'dark' or 'light' in localStorage.
- * Use `applyDarkClass` when the ThemeProvider is managing persistence.
- */
-export function applyTheme(dark: boolean): void {
-  applyDarkClass(dark);
-  localStorage.setItem(STORAGE_KEYS.THEME, dark ? 'dark' : 'light');
+/** Cache aviso image URLs in localStorage so images survive page refreshes.
+ *  The backend Aviso entity likely has no imagenUrl field; we persist the
+ *  uploaded URL client-side as a fallback.                                  */
+const AVISO_IMG_CACHE_KEY = 'fn_aviso_imgs';
+
+export function cacheAvisoImage(avisoId: number, url: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const store: Record<string, string> = JSON.parse(
+      localStorage.getItem(AVISO_IMG_CACHE_KEY) ?? '{}'
+    );
+    store[avisoId] = url;
+    // Keep cache bounded (last 100 entries)
+    const keys = Object.keys(store);
+    if (keys.length > 100) delete store[keys[0]];
+    localStorage.setItem(AVISO_IMG_CACHE_KEY, JSON.stringify(store));
+  } catch { /* non-critical */ }
+}
+
+export function getAvisoImageCache(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(AVISO_IMG_CACHE_KEY) ?? '{}');
+  } catch { return {}; }
 }
 
 /** Clamp a number between min and max. */

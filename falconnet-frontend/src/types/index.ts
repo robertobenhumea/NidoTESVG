@@ -29,6 +29,7 @@ export interface BPublicacion {
   compartida?: boolean;
   publicacionOriginalId?: number;
   allowComments?: boolean;
+  expiresAt?: string;
 }
 
 export interface BFeedPage {
@@ -69,10 +70,19 @@ export function mapBUser(b: BUser): User {
     username: b.username,
     email: b.correo,
     displayName: b.username,
-    avatarUrl: b.fotoPerfil ?? undefined,
+    avatarUrl: b.fotoPerfil ? resolveBackendUrl(b.fotoPerfil) : undefined,
+    coverUrl: b.fotoPortada ? resolveBackendUrl(b.fotoPortada) : undefined,
     bio: b.bio ?? undefined,
     role: b.rol ?? undefined,
+    grupo: b.grupo ?? undefined,
+    carrera: b.carrera ?? undefined,
   };
+}
+
+function resolveBackendUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 /* ── Auth ── */
@@ -83,8 +93,11 @@ export interface User {
   email: string;
   displayName?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   bio?: string;
   role?: string;
+  grupo?: string;
+  carrera?: string;
 }
 
 export interface AuthTokens {
@@ -109,6 +122,20 @@ export interface RegisterRequest {
 
 export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
 
+export interface PollOption {
+  id: number;
+  texto: string;
+  votos: number;
+}
+
+export interface Poll {
+  id: number;
+  pregunta: string;
+  opciones: PollOption[];
+  total: number;
+  miVoto?: number; // opcionId voted by current user, undefined if not voted
+}
+
 export interface Post {
   id: number;
   author: User;
@@ -119,6 +146,9 @@ export interface Post {
   reactionCount: number;
   commentCount: number;
   userReaction?: ReactionType;
+  isAnnouncement?: boolean;
+  poll?: Poll;
+  expiresAt?: string;
 }
 
 export interface Comment {
@@ -157,6 +187,35 @@ export interface StoryGroup {
   user: User;
   stories: Story[];
   allViewed: boolean;
+}
+
+/* ── Reclutamiento ── */
+
+export type TipoReclutamiento =
+  | 'PROYECTO' | 'HACKATHON' | 'INNOVATEC' | 'TORNEO'
+  | 'INVESTIGACION' | 'STARTUP' | 'OTRO';
+
+export type EstadoReclutamiento = 'ABIERTO' | 'COMPLETO' | 'CERRADO';
+
+export type EstadoSolicitud = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
+
+export interface ReclutamientoFeedItem {
+  id: number;
+  usuarioId: number;
+  nombreEquipo?: string;
+  nombreProyecto: string;
+  descripcion?: string;
+  objetivo?: string;
+  tipo: TipoReclutamiento;
+  habilidades: string[];
+  integrantesFaltantes: number;
+  fechaLimite?: string;
+  imagenUrl?: string;
+  estado: EstadoReclutamiento;
+  fecha: string;
+  creadorNombre?: string;
+  creadorAvatarUrl?: string;
+  miSolicitud?: EstadoSolicitud;
 }
 
 /* ── Messages ── */

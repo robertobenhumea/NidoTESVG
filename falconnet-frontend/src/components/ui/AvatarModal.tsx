@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { getInitials } from '@/lib/utils';
 
 interface AvatarModalProps {
@@ -12,6 +11,12 @@ interface AvatarModalProps {
 }
 
 export function AvatarModal({ src, name, open, onClose }: AvatarModalProps) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -33,11 +38,11 @@ export function AvatarModal({ src, name, open, onClose }: AvatarModalProps) {
       aria-modal
       aria-label={`Foto de perfil de ${name}`}
     >
-      {/* Close button */}
       <button
-        className="absolute top-safe-top right-4 top-4 size-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
+        className="absolute top-4 right-4 size-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
         onClick={onClose}
         aria-label="Cerrar"
+        style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
           <line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round" />
@@ -45,29 +50,26 @@ export function AvatarModal({ src, name, open, onClose }: AvatarModalProps) {
         </svg>
       </button>
 
-      {/* Avatar */}
       <div
         className="relative size-64 md:size-80 rounded-full overflow-hidden ring-4 ring-white/20"
         onClick={(e) => e.stopPropagation()}
       >
-        {src ? (
-          <Image
+        {src && !imgError ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
             src={src}
             alt={`Foto de ${name}`}
-            fill
-            className="object-cover"
-            sizes="320px"
-            priority
+            onError={() => setImgError(true)}
+            className="w-full h-full object-cover"
           />
         ) : (
-          <div className="size-full bg-[var(--brand-muted)] flex items-center justify-center text-[var(--brand-text)] text-6xl font-bold select-none">
+          <div className="size-full bg-gradient-to-br from-[var(--brand-muted)] to-[var(--brand)] flex items-center justify-center text-white text-6xl font-bold select-none">
             {getInitials(name)}
           </div>
         )}
       </div>
 
-      {/* Name */}
-      <p className="mt-5 text-white font-semibold text-lg drop-shadow-sm">
+      <p className="mt-5 text-white font-semibold text-lg drop-shadow-sm select-none">
         {name}
       </p>
     </div>

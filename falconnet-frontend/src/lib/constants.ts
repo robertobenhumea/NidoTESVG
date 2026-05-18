@@ -51,6 +51,13 @@ export const ROUTES = {
   CREATE:        '/create',
   GROUPS:        '/groups',
   SEARCH:        '/search',
+  AVISOS:        '/avisos',
+  RANKING:       '/ranking',
+  CORREOS:       '/correos',
+  RECURSOS:      '/recursos',
+  EVENTOS:       '/eventos',
+  EQUIPOS:       '/equipos',
+  ADMIN:         '/admin',
 } as const;
 
 export type AppRoute = typeof ROUTES[keyof typeof ROUTES];

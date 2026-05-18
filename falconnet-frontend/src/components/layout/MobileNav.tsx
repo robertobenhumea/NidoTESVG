@@ -105,7 +105,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-[var(--bg-surface)] border-t border-[var(--border)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-[var(--bg-surface)]/90 backdrop-blur-md border-t border-[var(--border)]"
       style={{ paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="flex items-center justify-around h-[var(--nav-bottom-h)] px-2">
