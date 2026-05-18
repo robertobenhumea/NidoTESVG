@@ -141,6 +141,7 @@ export function HomeFeed() {
           author={user}
           onSubmit={handleCreatePost}
           onPostCreated={prependPost}
+          onPollCreated={fetchPolls}
         />
       )}
 
