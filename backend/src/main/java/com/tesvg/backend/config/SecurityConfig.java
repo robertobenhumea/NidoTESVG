@@ -94,6 +94,7 @@ public class SecurityConfig {
                         "/encuestas/**",
                         "/eventos/**",
                         "/avisos/**",
+                        "/reclutamiento/**",
                         "/insignias/**",
                         "/recursos/**",
                         "/ranking/**",
