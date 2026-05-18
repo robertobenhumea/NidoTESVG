@@ -53,6 +53,32 @@ export function resolveUrl(path?: string | null): string | undefined {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+/** Cache aviso image URLs in localStorage so images survive page refreshes.
+ *  The backend Aviso entity likely has no imagenUrl field; we persist the
+ *  uploaded URL client-side as a fallback.                                  */
+const AVISO_IMG_CACHE_KEY = 'fn_aviso_imgs';
+
+export function cacheAvisoImage(avisoId: number, url: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const store: Record<string, string> = JSON.parse(
+      localStorage.getItem(AVISO_IMG_CACHE_KEY) ?? '{}'
+    );
+    store[avisoId] = url;
+    // Keep cache bounded (last 100 entries)
+    const keys = Object.keys(store);
+    if (keys.length > 100) delete store[keys[0]];
+    localStorage.setItem(AVISO_IMG_CACHE_KEY, JSON.stringify(store));
+  } catch { /* non-critical */ }
+}
+
+export function getAvisoImageCache(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(AVISO_IMG_CACHE_KEY) ?? '{}');
+  } catch { return {}; }
+}
+
 /** Clamp a number between min and max. */
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);

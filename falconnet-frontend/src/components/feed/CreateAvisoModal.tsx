@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { api } from '@/services/api';
 import { Button } from '@/components/ui/Button';
 import { ImageCropModal } from '@/components/feed/ImageCropModal';
-import { STORAGE_KEYS, resolveUrl } from '@/lib/utils';
+import { STORAGE_KEYS, resolveUrl, cacheAvisoImage } from '@/lib/utils';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -119,6 +119,7 @@ export function CreateAvisoModal({ onClose, onPublished }: Props) {
         creadorNombre:  created.creadorNombre,
       };
 
+      if (avisoItem.imagenUrl && avisoItem.id) cacheAvisoImage(avisoItem.id, avisoItem.imagenUrl);
       setSuccess(true);
       onPublished?.(avisoItem);
       setTimeout(onClose, 1800);

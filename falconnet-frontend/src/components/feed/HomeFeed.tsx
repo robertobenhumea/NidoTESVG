@@ -10,7 +10,7 @@ import { StoryBar } from '@/components/stories/StoryBar';
 import { AvisoFeedCard } from '@/components/feed/AvisoFeedCard';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
-import { resolveUrl } from '@/lib/utils';
+import { resolveUrl, getAvisoImageCache } from '@/lib/utils';
 import type { Post, Poll } from '@/types';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
@@ -114,16 +114,22 @@ export function HomeFeed() {
   const fetchAvisos = useCallback(async () => {
     try {
       const raw = await api.get<AvisoFeedItem[]>('/avisos');
+      const imageCache = getAvisoImageCache();
       const resolved = (Array.isArray(raw) ? raw : []).map((a) => ({
         ...a,
-        imagenUrl: resolveUrl(a.imagenUrl),
+        imagenUrl: resolveUrl(a.imagenUrl) ?? (a.id ? imageCache[String(a.id)] : undefined),
       }));
       setAvisos((prev) => {
-        // Merge: keep any locally-prepended avisos whose id doesn't appear
-        // in the server list yet (race condition on slow backends).
+        const prevMap = new Map(prev.map((a) => [a.id, a]));
         const serverIds = new Set(resolved.map((a) => a.id));
         const localOnly = prev.filter((a) => !serverIds.has(a.id));
-        return [...localOnly, ...resolved];
+        // Preserve any imagenUrl the client already has (optimistic or cached)
+        // if the backend didn't return one.
+        const merged = resolved.map((a) => ({
+          ...a,
+          imagenUrl: a.imagenUrl ?? prevMap.get(a.id)?.imagenUrl,
+        }));
+        return [...localOnly, ...merged];
       });
     } catch { /* fail silently — feed still works without avisos */ }
   }, []);
