@@ -54,6 +54,7 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
   const [pollOpts,      setPollOpts]      = useState(['', '']);
   // Aviso modal
   const [avisoOpen,     setAvisoOpen]     = useState(false);
+  const [avisoBlocked,  setAvisoBlocked]  = useState(false);
 
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -237,24 +238,41 @@ export function CreatePostCard({ author, onPostCreated, onSubmit, onPollCreated 
                 <span className="text-xs sm:text-sm">Encuesta</span>
               </button>
 
-              {/* Aviso — habilitado por rol */}
-              <button
-                onClick={() => { if (canCreateAviso) setAvisoOpen(true); }}
-                disabled={!canCreateAviso}
-                title={canCreateAviso ? 'Publicar aviso institucional' : 'Solo para docentes y administración'}
-                aria-label="Publicar aviso"
-                className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-medium transition-colors ${
-                  canCreateAviso
-                    ? 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-red-500'
-                    : 'text-[var(--text-muted)] opacity-35 cursor-not-allowed'
-                }`}
-              >
-                <svg className="size-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 11l19-9-9 19-2-8-8-2z" />
-                </svg>
-                <span className="text-xs sm:text-sm hidden sm:inline">Aviso</span>
-                <span className="text-xs sm:hidden">Avisar</span>
-              </button>
+              {/* Aviso — role-gated, shows friendly message when blocked */}
+              <div className="flex-1 relative">
+                <button
+                  onClick={() => {
+                    if (canCreateAviso) {
+                      setAvisoOpen(true);
+                    } else {
+                      setAvisoBlocked(true);
+                      setTimeout(() => setAvisoBlocked(false), 2800);
+                    }
+                  }}
+                  aria-label={canCreateAviso ? 'Publicar aviso institucional' : 'Sin permisos para crear avisos'}
+                  title={canCreateAviso ? 'Publicar aviso institucional' : undefined}
+                  className={`w-full flex items-center justify-center gap-1.5 h-9 rounded-xl text-sm font-medium transition-colors ${
+                    canCreateAviso
+                      ? 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-red-500'
+                      : 'text-[var(--text-muted)] opacity-40 cursor-not-allowed'
+                  }`}
+                >
+                  <svg className="size-4 text-red-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 11l19-9-9 19-2-8-8-2z" />
+                  </svg>
+                  <span className="text-xs sm:text-sm hidden sm:inline">Aviso</span>
+                  <span className="text-xs sm:hidden">Avisar</span>
+                </button>
+
+                {/* Blocked tooltip — works on mobile too */}
+                {avisoBlocked && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl shadow-xl px-3 py-2.5 z-20 pointer-events-none">
+                    <p className="text-[11px] text-center text-[var(--text-secondary)] leading-snug">
+                      Solo el personal autorizado puede publicar avisos oficiales.
+                    </p>
+                  </div>
+                )}
+              </div>
 
             </div>
           </div>
