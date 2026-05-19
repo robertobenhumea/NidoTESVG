@@ -1,7 +1,8 @@
 import { api } from '@/services/api';
 import { STORAGE_KEYS } from '@/lib/utils';
 import type {
-  BProducto, BProductoPage, BUser, MarketplaceListing, ProductoCategoria, ProductoEstado,
+  BProducto, BProductoPage, BUser, MarketplaceListing, ProductoCategoria,
+  BSolicitudCompra, SolicitudCompra,
 } from '@/types';
 import { mapBUser } from '@/types';
 
@@ -92,5 +93,26 @@ export const marketplaceService = {
     mensaje?: string;
   }): Promise<void> {
     await api.post('/market/solicitudes', payload);
+  },
+
+  async getSolicitudesRecibidas(): Promise<SolicitudCompra[]> {
+    const raw = await api.get<BSolicitudCompra[]>('/market/solicitudes/recibidas');
+    return raw.map((s) => ({
+      id: s.id,
+      productoId: s.productoId,
+      productoTitulo: s.productoTitulo ?? `Producto #${s.productoId}`,
+      productoImageUrl: s.productoImagen ?? undefined,
+      compradorNombre: s.compradorNombre ?? s.nombreComprador,
+      compradorAvatar: s.compradorFoto ?? undefined,
+      mensaje: s.mensaje ?? undefined,
+      lugar: s.aula ?? s.edificio ?? undefined,
+      horario: s.horario ?? undefined,
+      estado: s.estado,
+      createdAt: s.fecha,
+    }));
+  },
+
+  async actualizarSolicitud(id: number, estado: string): Promise<void> {
+    await api.put(`/market/solicitudes/${id}/estado`, { estado });
   },
 };

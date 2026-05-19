@@ -79,19 +79,19 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
       <div
-        className="relative w-full sm:max-w-xl bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-sheet-in sm:animate-fade-in"
+        className="relative w-full sm:max-w-xl bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         style={{ maxHeight: '92dvh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle (mobile only) */}
-        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0">
-          <div className="w-9 h-1 rounded-full bg-[var(--border-strong)]" />
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
         </div>
 
         {/* Header */}
@@ -211,7 +211,10 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[var(--border)] px-4 py-3 flex items-center justify-between gap-2 shrink-0 bg-[var(--bg-surface)]">
+            <div
+              className="border-t border-[var(--border)] px-4 py-3 flex items-center justify-between gap-2 shrink-0 bg-[var(--bg-surface)]"
+              style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+            >
               <div className="min-w-0">
                 {error && (
                   <p className="text-xs text-[var(--error)] truncate">{error}</p>

@@ -40,7 +40,7 @@ function Dialog({ open, onClose, title, children, fullHeightMobile = false, clas
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center lg:items-center"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       aria-modal="true"
       role="dialog"
       aria-label={title}
@@ -60,21 +60,21 @@ function Dialog({ open, onClose, title, children, fullHeightMobile = false, clas
           'bg-[var(--bg-surface)] border border-[var(--border)]',
           'shadow-2xl shadow-black/20 dark:shadow-black/60',
           // Mobile: bottom sheet
-          'rounded-t-3xl',
-          fullHeightMobile ? 'h-[90svh] flex flex-col' : '',
-          // Desktop: card
-          'lg:rounded-2xl lg:max-w-md lg:mx-4',
+          'rounded-t-2xl',
+          fullHeightMobile ? 'max-h-[90dvh] flex flex-col' : 'max-h-[90dvh] overflow-y-auto',
+          // Desktop: centered card
+          'sm:rounded-2xl sm:max-w-md sm:mx-4',
           className,
         )}
       >
         {/* Drag handle — mobile only */}
-        <div className="flex justify-center pt-3 pb-1 lg:hidden" aria-hidden>
+        <div className="flex justify-center pt-3 pb-1 sm:hidden" aria-hidden>
           <div className="w-10 h-1 rounded-full bg-[var(--border)]" />
         </div>
 
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)] shrink-0">
             <h2 className="text-base font-semibold text-[var(--text-primary)]">{title}</h2>
             <button
               onClick={onClose}
@@ -89,7 +89,10 @@ function Dialog({ open, onClose, title, children, fullHeightMobile = false, clas
         )}
 
         {/* Body */}
-        <div className={cn('p-5', fullHeightMobile && 'flex-1 overflow-y-auto')}>
+        <div
+          className={cn('p-5', fullHeightMobile && 'flex-1 overflow-y-auto')}
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+        >
           {children}
         </div>
       </div>

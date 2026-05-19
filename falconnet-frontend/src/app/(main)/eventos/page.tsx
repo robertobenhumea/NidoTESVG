@@ -55,15 +55,26 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full sm:max-w-md bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90dvh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
           <h2 className="text-sm font-bold text-[var(--text-primary)]">Nuevo evento</h2>
           <button onClick={onClose} className="size-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]">
             <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/><line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 space-y-3 overflow-y-auto flex-1"
+          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
           <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título del evento *" maxLength={150}
             className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descripción (opcional)" rows={3} maxLength={500}

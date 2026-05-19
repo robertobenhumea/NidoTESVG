@@ -148,12 +148,16 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" onClick={onClose}>
-      <div className="flex-1 bg-black/60 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="bg-[var(--bg-surface)] rounded-t-3xl shadow-xl max-h-[92dvh] flex flex-col"
+        className="relative w-full sm:max-w-lg bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[92dvh] flex flex-col border border-[var(--border)]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
           <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
           <button
@@ -166,7 +170,7 @@ function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () 
             </svg>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           {children}
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarModal } from '@/components/ui/AvatarModal';
@@ -185,15 +185,25 @@ function ReportModal({ postId, onClose, onSent }: { postId: number; onClose: () 
   }
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-sm bg-[var(--bg-surface)] rounded-2xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full sm:max-w-sm bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden max-h-[90dvh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
           <h3 className="text-base font-bold text-[var(--text-primary)]">Reportar publicación</h3>
           <button onClick={onClose} className="size-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]">
             <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round"/><line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <div className="p-4 space-y-2">
+        <div
+          className="p-4 space-y-2 overflow-y-auto"
+          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
           <p className="text-xs text-[var(--text-muted)] mb-3">¿Por qué reportas esta publicación?</p>
           {MOTIVOS.map((m) => (
             <label key={m} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--bg-elevated)] cursor-pointer transition-colors">
@@ -230,6 +240,7 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
   const expiryStatus = useExpiryStatus(post.createdAt, post.expiresAt);
 
   const [pickerOpen, setPicker]         = useState(false);
+  const [pickerClosing, setPickerClos]  = useState(false);
   const [commentsOpen, setComments]     = useState(false);
   const [avatarOpen, setAvatar]         = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
@@ -239,32 +250,53 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
   const [menuOpen, setMenuOpen]         = useState(false);
   const holdRef                         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didHoldRef                      = useRef(false);
+  const closingTimerRef                 = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function clearHold() {
     if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null; }
   }
 
-  function onReactPointerDown(e: React.PointerEvent) {
-    if (e.pointerType !== 'touch') return;
-    e.preventDefault();
+  /** Close picker with 150ms fade-out animation */
+  const closePicker = useCallback(() => {
+    if (!pickerOpen) return;
+    setPickerClos(true);
+    if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
+    closingTimerRef.current = setTimeout(() => {
+      setPickerClos(false);
+      setPicker(false);
+    }, 150);
+  }, [pickerOpen]);
+
+  // ── Touch events (mobile) ──────────────────────────────────────────────────
+  function onReactTouchStart(e: React.TouchEvent) {
     didHoldRef.current = false;
     holdRef.current = setTimeout(() => {
       didHoldRef.current = true;
       holdRef.current = null;
       setPicker(true);
-    }, 420);
+    }, 500);
   }
 
-  function onReactPointerUp(e: React.PointerEvent) {
-    if (e.pointerType !== 'touch') return;
+  function onReactTouchEnd(e: React.TouchEvent) {
     if (holdRef.current) {
       clearHold();
-      if (!didHoldRef.current) onReact?.(post.id, 'LIKE');
+      if (!didHoldRef.current && !pickerOpen) {
+        // Quick tap → toggle LIKE, prevent ghost click
+        e.preventDefault();
+        onReact?.(post.id, 'LIKE');
+      }
     }
   }
 
+  function onReactTouchMove() {
+    // Finger moved → cancel long-press
+    clearHold();
+  }
+
+  // ── Mouse events (desktop) ─────────────────────────────────────────────────
   function onReactMouseEnter() {
-    holdRef.current = setTimeout(() => { holdRef.current = null; setPicker(true); }, 500);
+    // Only trigger on desktop (no touch)
+    holdRef.current = setTimeout(() => { holdRef.current = null; setPicker(true); }, 400);
   }
 
   function onReactMouseLeave() {
@@ -273,16 +305,17 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
 
   function onReactClick() {
     clearHold();
-    if (!pickerOpen) onReact?.(post.id, 'LIKE');
+    if (!pickerOpen && !pickerClosing) onReact?.(post.id, 'LIKE');
   }
 
   function onWrapperMouseLeave() {
     clearHold();
-    setPicker(false);
+    closePicker();
   }
 
   function handlePickerSelect(type: ReactionType) {
-    setPicker(false);
+    // Close immediately then react — ensures no double-fire on mobile
+    closePicker();
     onReact?.(post.id, type);
   }
 
@@ -441,22 +474,23 @@ export function PostCard({ post, onDelete, onReact, onCommentAdded, onVote, curr
           >
             <ReactionPicker
               open={pickerOpen}
+              closing={pickerClosing}
               current={activeRx}
               onSelect={handlePickerSelect}
-              onClose={() => setPicker(false)}
+              onClose={closePicker}
             />
 
             <button
-              onPointerDown={onReactPointerDown}
-              onPointerUp={onReactPointerUp}
-              onPointerCancel={clearHold}
+              onTouchStart={onReactTouchStart}
+              onTouchEnd={onReactTouchEnd}
+              onTouchMove={onReactTouchMove}
               onMouseEnter={onReactMouseEnter}
               onMouseLeave={onReactMouseLeave}
               onClick={onReactClick}
               aria-label={activeRx ? `${rxInfo?.label ?? 'Reacción'} (mantén para cambiar)` : 'Me gusta (mantén para más reacciones)'}
               aria-pressed={!!activeRx}
               className={cn(
-                'w-full flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2.5 sm:py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-none',
+                'w-full flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2.5 sm:py-2 rounded-xl text-sm font-medium transition-colors duration-150 select-none touch-manipulation',
                 activeRx
                   ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',

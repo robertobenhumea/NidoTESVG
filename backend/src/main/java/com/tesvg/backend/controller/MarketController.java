@@ -335,8 +335,12 @@ public class MarketController {
         s.setFecha(LocalDateTime.now());
         solicitudRepo.save(s);
 
-        String notifMsg = s.getNombreComprador() + " quiere comprar \"" + p.getTitulo() + "\"";
-        notificacionService.crearYPush(p.getVendedorId(), "COMPRA", notifMsg, s.getId());
+        try {
+            String notifMsg = s.getNombreComprador() + " quiere comprar \"" + p.getTitulo() + "\"";
+            notificacionService.crearYPush(p.getVendedorId(), "COMPRA", notifMsg, s.getId());
+        } catch (Exception e) {
+            // La notificación no debe impedir que la solicitud se guarde correctamente
+        }
 
         return ResponseEntity.ok(solicitudToMap(s));
     }
@@ -391,15 +395,19 @@ public class MarketController {
         solicitudRepo.save(s);
 
         if (isVendor) {
-            Producto p = productoRepo.findById(s.getProductoId()).orElse(null);
-            String titulo = p != null ? p.getTitulo() : "un producto";
-            String msg = switch (newEstado) {
-                case ACEPTADA  -> "Tu solicitud para \"" + titulo + "\" fue aceptada ✓";
-                case RECHAZADA -> "Tu solicitud para \"" + titulo + "\" fue rechazada";
-                case ENTREGADA -> "Tu compra de \"" + titulo + "\" fue marcada como entregada";
-                default        -> "Tu solicitud fue actualizada";
-            };
-            notificacionService.crearYPush(s.getCompradorId(), "COMPRA", msg, s.getId());
+            try {
+                Producto p = productoRepo.findById(s.getProductoId()).orElse(null);
+                String titulo = p != null ? p.getTitulo() : "un producto";
+                String msg = switch (newEstado) {
+                    case ACEPTADA  -> "Tu solicitud para \"" + titulo + "\" fue aceptada ✓";
+                    case RECHAZADA -> "Tu solicitud para \"" + titulo + "\" fue rechazada";
+                    case ENTREGADA -> "Tu compra de \"" + titulo + "\" fue marcada como entregada";
+                    default        -> "Tu solicitud fue actualizada";
+                };
+                notificacionService.crearYPush(s.getCompradorId(), "COMPRA", msg, s.getId());
+            } catch (Exception e) {
+                // La notificación no debe impedir que el estado se actualice correctamente
+            }
         }
 
         return ResponseEntity.ok(solicitudToMap(s));

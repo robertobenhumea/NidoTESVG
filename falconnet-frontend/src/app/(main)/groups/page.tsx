@@ -99,17 +99,25 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md bg-[var(--bg-surface)] rounded-2xl p-5 shadow-2xl"
+        className="relative w-full sm:max-w-md bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <h2 className="font-bold text-[var(--text-primary)]">Nueva comunidad</h2>
           <button onClick={onClose} className="size-8 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors">✕</button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form
+          onSubmit={handleSubmit}
+          className="px-5 pb-5 space-y-3"
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+        >
           <input
             required
             value={nombre}

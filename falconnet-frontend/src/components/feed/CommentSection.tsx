@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { commentService } from '@/services/comment.service';
+import { CommentReactionButton } from '@/components/feed/CommentReactionButton';
 import { useAuth } from '@/hooks/useAuth';
 import { timeAgo } from '@/lib/utils';
-import type { Comment } from '@/types';
+import type { Comment, ReactionType } from '@/types';
 
 interface CommentSectionProps {
   postId: number;
@@ -41,14 +42,22 @@ function CommentItem({ comment, currentUserId, onDelete }: {
             {comment.content}
           </p>
         </div>
-        <div className="flex items-center gap-3 mt-1 px-1">
+        <div className="flex items-center gap-2 mt-1 px-1">
           <time className="text-[10px] text-[var(--text-muted)]">
             {timeAgo(comment.createdAt)}
           </time>
+
+          {/* Reaction button for this comment */}
+          <CommentReactionButton
+            commentId={comment.id}
+            initialCount={comment.reactionCount ?? 0}
+            initialReaction={comment.userReaction as ReactionType | undefined}
+          />
+
           {isOwn && (
             <button
               onClick={() => onDelete(comment.id)}
-              className="text-[10px] text-[var(--text-muted)] hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+              className="text-[10px] text-[var(--text-muted)] hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 ml-auto"
               aria-label="Eliminar comentario"
             >
               Eliminar

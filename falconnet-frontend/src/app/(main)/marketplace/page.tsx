@@ -7,7 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { timeAgo, resolveUrl } from '@/lib/utils';
 import { marketplaceService } from '@/services/marketplace.service';
 import { useAuth } from '@/hooks/useAuth';
-import type { MarketplaceListing, ProductoCategoria } from '@/types';
+import type { MarketplaceListing, ProductoCategoria, SolicitudCompra } from '@/types';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -79,6 +79,310 @@ function IcMessage() {
     <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
+  );
+}
+
+function IcCheck() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function IcX() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function IcBox() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  );
+}
+
+function IcCalendar() {
+  return (
+    <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function IcClock() {
+  return (
+    <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+/* ─── Solicitud Estado Badge ─────────────────────────────────── */
+
+const SOLICITUD_STATUS: Record<string, { label: string; bg: string; text: string }> = {
+  PENDIENTE:  { label: 'Pendiente',  bg: 'bg-amber-100 dark:bg-amber-900/30',   text: 'text-amber-700 dark:text-amber-400' },
+  ACEPTADA:   { label: 'Aceptada',   bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' },
+  RECHAZADA:  { label: 'Rechazada',  bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-400' },
+  ENTREGADA:  { label: 'Entregada',  bg: 'bg-gray-100 dark:bg-gray-800',        text: 'text-gray-500 dark:text-gray-400' },
+};
+
+/* ─── SolicitudCard ──────────────────────────────────────────── */
+
+function SolicitudCard({
+  solicitud,
+  onUpdate,
+}: {
+  solicitud: SolicitudCompra;
+  onUpdate: (id: number, estado: string) => void;
+}) {
+  const [updating, setUpdating] = useState<string | null>(null);
+  const isPending = solicitud.estado === 'PENDIENTE';
+  const statusCfg = SOLICITUD_STATUS[solicitud.estado] ?? SOLICITUD_STATUS.PENDIENTE;
+
+  async function handleAction(estado: string) {
+    setUpdating(estado);
+    try {
+      await onUpdate(solicitud.id, estado);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  return (
+    <div
+      className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden transition-all duration-300"
+      style={{ opacity: updating ? 0.7 : 1 }}
+    >
+      {/* Product row */}
+      <div className="flex items-center gap-3 p-3 border-b border-[var(--border)]">
+        <div className="size-12 shrink-0 rounded-xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
+          {solicitud.productoImageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={resolveUrl(solicitud.productoImageUrl) ?? solicitud.productoImageUrl}
+              alt={solicitud.productoTitulo}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-xl">📦</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">{solicitud.productoTitulo}</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
+            <IcCalendar />
+            {timeAgo(solicitud.createdAt)}
+          </p>
+        </div>
+        {/* Estado badge */}
+        <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusCfg.bg} ${statusCfg.text}`}>
+          {statusCfg.label}
+        </span>
+      </div>
+
+      {/* Buyer info + message */}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <Avatar src={solicitud.compradorAvatar} name={solicitud.compradorNombre} size="xs" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-[var(--text-primary)]">{solicitud.compradorNombre}</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Comprador</p>
+          </div>
+        </div>
+
+        {solicitud.mensaje && (
+          <p className="text-xs text-[var(--text-primary)] bg-[var(--bg-elevated)] rounded-xl p-2.5 leading-relaxed line-clamp-3">
+            {solicitud.mensaje}
+          </p>
+        )}
+
+        {(solicitud.lugar || solicitud.horario) && (
+          <div className="flex flex-wrap gap-2">
+            {solicitud.lugar && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-muted)] bg-[var(--bg-elevated)] px-2 py-1 rounded-lg">
+                <IcPin />{solicitud.lugar}
+              </span>
+            )}
+            {solicitud.horario && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-muted)] bg-[var(--bg-elevated)] px-2 py-1 rounded-lg">
+                <IcClock />{solicitud.horario}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons — only when PENDIENTE */}
+      {isPending && (
+        <div className="flex gap-2 px-3 pb-3">
+          <button
+            onClick={() => handleAction('ACEPTADA')}
+            disabled={updating !== null}
+            className="flex-1 min-h-[36px] rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            <IcCheck />
+            {updating === 'ACEPTADA' ? 'Aceptando…' : 'Aceptar'}
+          </button>
+          <button
+            onClick={() => handleAction('RECHAZADA')}
+            disabled={updating !== null}
+            className="flex-1 min-h-[36px] rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            <IcX />
+            {updating === 'RECHAZADA' ? 'Rechazando…' : 'Rechazar'}
+          </button>
+          <button
+            onClick={() => handleAction('ENTREGADA')}
+            disabled={updating !== null}
+            className="flex-1 min-h-[36px] rounded-xl bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            <IcBox />
+            {updating === 'ENTREGADA' ? 'Marcando…' : 'Vendido'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── SolicitudSkeleton ──────────────────────────────────────── */
+
+function SolicitudSkeleton() {
+  return (
+    <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden animate-pulse">
+      <div className="flex items-center gap-3 p-3 border-b border-[var(--border)]">
+        <div className="size-12 rounded-xl bg-[var(--bg-elevated)]" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3.5 w-2/3 rounded-full bg-[var(--bg-elevated)]" />
+          <div className="h-3 w-1/3 rounded-full bg-[var(--bg-elevated)]" />
+        </div>
+        <div className="h-5 w-16 rounded-full bg-[var(--bg-elevated)]" />
+      </div>
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="size-5 rounded-full bg-[var(--bg-elevated)]" />
+          <div className="h-3 w-28 rounded-full bg-[var(--bg-elevated)]" />
+        </div>
+        <div className="h-10 rounded-xl bg-[var(--bg-elevated)]" />
+      </div>
+    </div>
+  );
+}
+
+/* ─── SolicitudesPanel ───────────────────────────────────────── */
+
+function SolicitudesPanel() {
+  const [solicitudes, setSolicitudes] = useState<SolicitudCompra[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    marketplaceService.getSolicitudesRecibidas()
+      .then((data) => setSolicitudes(data))
+      .catch(() => setError('No se pudieron cargar las solicitudes.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleUpdate(id: number, estado: string) {
+    // Optimistic update
+    const prev = solicitudes;
+    setSolicitudes((s) =>
+      s.map((sol) =>
+        sol.id === id
+          ? { ...sol, estado: estado as SolicitudCompra['estado'] }
+          : sol,
+      ),
+    );
+    try {
+      await marketplaceService.actualizarSolicitud(id, estado);
+    } catch {
+      // Rollback on failure
+      setSolicitudes(prev);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => <SolicitudSkeleton key={i} />)}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 space-y-3">
+        <p className="text-sm text-[var(--text-muted)]">{error}</p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError('');
+            marketplaceService.getSolicitudesRecibidas()
+              .then((data) => setSolicitudes(data))
+              .catch(() => setError('No se pudieron cargar las solicitudes.'))
+              .finally(() => setLoading(false));
+          }}
+          className="text-sm text-[var(--brand)] hover:underline"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (solicitudes.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="size-16 rounded-2xl bg-[var(--bg-elevated)] flex items-center justify-center mx-auto mb-4 text-3xl select-none">
+          📬
+        </div>
+        <p className="text-sm font-semibold text-[var(--text-primary)]">Sin solicitudes aún</p>
+        <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[220px] mx-auto">
+          Cuando alguien quiera comprar uno de tus productos, verás sus solicitudes aquí.
+        </p>
+      </div>
+    );
+  }
+
+  const pending  = solicitudes.filter((s) => s.estado === 'PENDIENTE');
+  const finished = solicitudes.filter((s) => s.estado !== 'PENDIENTE');
+
+  return (
+    <div className="space-y-5">
+      {pending.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+            Pendientes · {pending.length}
+          </p>
+          <div className="space-y-3">
+            {pending.map((s) => (
+              <SolicitudCard key={s.id} solicitud={s} onUpdate={handleUpdate} />
+            ))}
+          </div>
+        </div>
+      )}
+      {finished.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+            Historial · {finished.length}
+          </p>
+          <div className="space-y-3">
+            {finished.map((s) => (
+              <SolicitudCard key={s.id} solicitud={s} onUpdate={handleUpdate} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -192,9 +496,7 @@ function ProductDetailModal({
   onFavorite: (id: number) => void;
   onContact: (listing: MarketplaceListing) => void;
 }) {
-  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -210,15 +512,15 @@ function ProductDetailModal({
   const categoryIcon = CATEGORY_ICONS[listing.category] ?? '📦';
   const imageUrl = listing.imageUrl ? (resolveUrl(listing.imageUrl) ?? listing.imageUrl) : null;
 
-  if (!mounted) return null;
+  if (typeof document === 'undefined') return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-lg bg-[var(--bg-surface)] sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95dvh] flex flex-col"
+        className="w-full sm:max-w-lg bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95dvh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image header */}
@@ -308,7 +610,10 @@ function ProductDetailModal({
           </div>
 
           {/* CTA */}
-          <div className="p-4 pt-0 mt-auto">
+          <div
+            className="p-4 pt-0 mt-auto shrink-0"
+            style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+          >
             <button
               onClick={() => !unavailable && onContact(listing)}
               disabled={unavailable}
@@ -340,7 +645,7 @@ function ContactModal({
   const [mensaje, setMensaje] = useState('');
   const [aula, setAula]       = useState('');
   const [horario, setHorario] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [done, setDone]       = useState(false);
   const [error, setError]     = useState('');
 
@@ -352,7 +657,7 @@ function ContactModal({
 
   async function handleSend() {
     if (!nombre.trim()) { setError('Ingresa tu nombre.'); return; }
-    setLoading(true);
+    setSending(true);
     setError('');
     try {
       await marketplaceService.requestPurchase({
@@ -363,24 +668,34 @@ function ContactModal({
         horario: horario.trim() || undefined,
       });
       setDone(true);
-    } catch {
+      // Auto-cierre después de mostrar confirmación
+      setTimeout(onClose, 2000);
+    } catch (err) {
+      console.error('CONTACT ERROR:', err);
       setError('No se pudo enviar. Intenta de nuevo.');
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   }
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm bg-[var(--bg-surface)] rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full sm:max-w-sm bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
         {done ? (
-          <div className="p-6 text-center">
+          <div
+            className="p-6 text-center"
+            style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+          >
             <div className="size-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-3">
               <svg className="size-7 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
                 <polyline points="20 6 9 17 4 12" />
@@ -394,12 +709,12 @@ function ContactModal({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
               <h3 className="text-sm font-bold text-[var(--text-primary)]">Contactar vendedor</h3>
               <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><IcClose /></button>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
               {/* Product mini-card */}
               <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-elevated)]">
                 <div className="size-11 rounded-xl overflow-hidden shrink-0 bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center">
@@ -445,23 +760,28 @@ function ContactModal({
               </div>
 
               {error && <p className="text-xs text-red-500">{error}</p>}
+            </div>
 
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSend}
-                  disabled={loading}
-                  className="flex-1 h-10 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50 transition-colors"
-                >
-                  {loading ? 'Enviando…' : 'Enviar'}
-                </button>
-              </div>
+            {/* Buttons always visible at bottom */}
+            <div
+              className="flex gap-2 p-4 pt-3 border-t border-[var(--border)] shrink-0 bg-[var(--bg-surface)]"
+              style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+            >
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={sending}
+                className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] disabled:opacity-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending}
+                className="flex-1 h-10 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50 transition-colors"
+              >
+                {sending ? 'Enviando…' : 'Enviar'}
+              </button>
             </div>
           </>
         )}
@@ -555,14 +875,18 @@ function CreateListingModal({ onClose, onCreated }: { onClose: () => void; onCre
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className="w-full sm:max-w-md bg-[var(--bg-surface)] sm:rounded-2xl overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full sm:max-w-md bg-[var(--bg-surface)] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh]">
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)] shrink-0">
           <h2 className="text-base font-bold text-[var(--text-primary)]">Nueva publicación</h2>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><IcClose /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 max-h-[80dvh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 overflow-y-auto flex-1">
           {/* Image upload */}
           <div>
             <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Foto del producto</label>
@@ -630,7 +954,10 @@ function CreateListingModal({ onClose, onCreated }: { onClose: () => void; onCre
 
           {error && <p className="text-xs text-red-500">{error}</p>}
 
-          <div className="flex gap-2 pt-1">
+          <div
+            className="flex gap-2 pt-1 pb-1"
+            style={{ paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}
+          >
             <button type="button" onClick={onClose} className="flex-1 h-10 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors">
               Cancelar
             </button>
@@ -665,8 +992,12 @@ function CardSkeleton() {
 
 /* ─── Page ───────────────────────────────────────────────────── */
 
+type MarketTab = 'explorar' | 'solicitudes';
+
 export default function MarketplacePage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab]       = useState<MarketTab>('explorar');
+  const [hasOwnListings, setHasOwnListings] = useState(false);
   const [listings, setListings]         = useState<MarketplaceListing[]>([]);
   const [loading, setLoading]           = useState(true);
   const [loadingMore, setLoadingMore]   = useState(false);
@@ -680,10 +1011,10 @@ export default function MarketplacePage() {
   const [error, setError]               = useState('');
   const searchTimeout                   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (reset = false) => {
+  const load = useCallback(async (reset = false, pageOverride?: number) => {
     if (reset) { setLoading(true); } else { setLoadingMore(true); }
     setError('');
-    const currentPage = reset ? 0 : page;
+    const currentPage = pageOverride ?? (reset ? 0 : page);
     try {
       const data = await marketplaceService.getListings({
         page: currentPage,
@@ -691,20 +1022,28 @@ export default function MarketplacePage() {
         q: query || undefined,
         categoria: category ?? undefined,
       });
-      setListings((prev) => reset ? data.listings : [...prev, ...data.listings]);
+      setListings((prev) => {
+        const merged = reset ? data.listings : [...prev, ...data.listings];
+        return merged;
+      });
       setHasMore(data.hasMore);
       setPage(data.page + 1);
+      // If any listing belongs to this user, show the solicitudes tab
+      setHasOwnListings((already) => {
+        if (already) return true;
+        return data.listings.some((l) => l.vendorId === (user?.id ?? -1));
+      });
     } catch {
       setError('No se pudo cargar el marketplace.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [page, query, category]);
+  }, [page, query, category, user?.id]);
 
   useEffect(() => {
-    setPage(0);
-    load(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(true, 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, category]);
 
@@ -752,78 +1091,111 @@ export default function MarketplacePage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" />
-        </svg>
-        <input
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Buscar artículos…"
-          className="w-full h-10 pl-9 pr-4 rounded-xl text-sm bg-[var(--bg-elevated)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] border border-[var(--border)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
-        />
-      </div>
-
-      {/* Category chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-3 sm:-mx-4 px-3 sm:px-4">
-        {CATEGORIES.map((cat) => (
+      {/* Tab switcher — only shown when user has own listings */}
+      {hasOwnListings && (
+        <div className="flex gap-1 bg-[var(--bg-elevated)] p-1 rounded-xl border border-[var(--border)]">
           <button
-            key={String(cat.value)}
-            onClick={() => setCategory(cat.value)}
-            className={`shrink-0 h-8 px-3.5 rounded-full text-sm font-medium transition-colors ${
-              category === cat.value
-                ? 'bg-[var(--brand)] text-white'
-                : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+            onClick={() => setActiveTab('explorar')}
+            className={`flex-1 h-8 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'explorar'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
-            {cat.label}
+            Explorar
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setActiveTab('solicitudes')}
+            className={`flex-1 h-8 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'solicitudes'
+                ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            Mis solicitudes
+          </button>
+        </div>
+      )}
 
-      {/* Grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
-        </div>
-      ) : error ? (
-        <div className="text-center py-12 space-y-3">
-          <p className="text-sm text-[var(--text-muted)]">{error}</p>
-          <button onClick={() => load(true)} className="text-sm text-[var(--brand)] hover:underline">Reintentar</button>
-        </div>
-      ) : listings.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-4xl mb-3 select-none">🛍️</div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">Sin resultados</p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">Sé el primero en publicar algo.</p>
-          <button onClick={() => setCreateOpen(true)} className="mt-4 text-sm font-medium text-[var(--brand)] hover:underline">
-            Publicar ahora
-          </button>
-        </div>
+      {/* Solicitudes tab content */}
+      {activeTab === 'solicitudes' && hasOwnListings ? (
+        <SolicitudesPanel />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {listings.map((l) => (
-              <ProductCard
-                key={l.id}
-                listing={l}
-                onFavorite={handleFavorite}
-                onClick={handleOpenDetail}
-                onContact={handleOpenContact}
-              />
+          {/* Search */}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" />
+            </svg>
+            <input
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Buscar artículos…"
+              className="w-full h-10 pl-9 pr-4 rounded-xl text-sm bg-[var(--bg-elevated)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] border border-[var(--border)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
+            />
+          </div>
+
+          {/* Category chips */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-3 sm:-mx-4 px-3 sm:px-4">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={String(cat.value)}
+                onClick={() => setCategory(cat.value)}
+                className={`shrink-0 h-8 px-3.5 rounded-full text-sm font-medium transition-colors ${
+                  category === cat.value
+                    ? 'bg-[var(--brand)] text-white'
+                    : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                }`}
+              >
+                {cat.label}
+              </button>
             ))}
           </div>
 
-          {hasMore && (
-            <div className="flex justify-center pt-2">
-              <button
-                onClick={() => load(false)}
-                disabled={loadingMore}
-                className="h-9 px-6 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] disabled:opacity-50 transition-colors"
-              >
-                {loadingMore ? 'Cargando…' : 'Ver más'}
+          {/* Grid */}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 space-y-3">
+              <p className="text-sm text-[var(--text-muted)]">{error}</p>
+              <button onClick={() => load(true)} className="text-sm text-[var(--brand)] hover:underline">Reintentar</button>
+            </div>
+          ) : listings.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-4xl mb-3 select-none">🛍️</div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Sin resultados</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">Sé el primero en publicar algo.</p>
+              <button onClick={() => setCreateOpen(true)} className="mt-4 text-sm font-medium text-[var(--brand)] hover:underline">
+                Publicar ahora
               </button>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {listings.map((l) => (
+                  <ProductCard
+                    key={l.id}
+                    listing={l}
+                    onFavorite={handleFavorite}
+                    onClick={handleOpenDetail}
+                    onContact={handleOpenContact}
+                  />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => load(false)}
+                    disabled={loadingMore}
+                    className="h-9 px-6 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] disabled:opacity-50 transition-colors"
+                  >
+                    {loadingMore ? 'Cargando…' : 'Ver más'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

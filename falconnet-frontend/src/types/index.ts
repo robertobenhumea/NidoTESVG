@@ -156,6 +156,19 @@ export interface Comment {
   author: User;
   content: string;
   createdAt: string;
+  reactionCount?: number;
+  userReaction?: ReactionType;
+}
+
+export interface BComentarioReaccionResponse {
+  accion: 'dado' | 'quitado' | 'cambiado';
+  tipo?: string;
+  reactionCount: number;
+}
+
+export interface BComentarioReaccionData {
+  reactionCount: number;
+  userReaction: string | null;
 }
 
 /* ── Stories ── */
@@ -331,6 +344,44 @@ export interface MarketplaceListing {
   quantity: number;
   isFavorite: boolean;
   favoriteCount: number;
+}
+
+export type SolicitudEstado = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA' | 'ENTREGADA';
+
+export interface BSolicitudCompra {
+  id: number;
+  productoId: number;
+  compradorId: number;
+  vendedorId: number;
+  nombreComprador: string;
+  aula?: string;
+  edificio?: string;
+  horario?: string;
+  mensaje?: string;
+  estado: SolicitudEstado;
+  fecha: string;
+  productoTitulo?: string;
+  productoPrecio?: number;
+  productoImagen?: string;
+  productoCategoria?: string;
+  compradorNombre?: string;
+  compradorFoto?: string;
+  vendedorNombre?: string;
+  vendedorFoto?: string;
+}
+
+export interface SolicitudCompra {
+  id: number;
+  productoId: number;
+  productoTitulo: string;
+  productoImageUrl?: string;
+  compradorNombre: string;
+  compradorAvatar?: string;
+  mensaje?: string;
+  lugar?: string;
+  horario?: string;
+  estado: SolicitudEstado;
+  createdAt: string;
 }
 
 /* ── API ── */

@@ -1,12 +1,14 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/auth.service';
 import { useUnreadCounts } from '@/hooks/useUnreadCounts';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 
@@ -22,7 +24,7 @@ function Ic({ d, d2, fill }: { d: string; d2?: string; fill?: boolean }) {
   );
 }
 const IcProfile   = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="7" r="4"/></svg>;
-const IcSettings  = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IcSettings  = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const IcTeam      = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 2L2 7l10 5 10-5-10-5z" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 17l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const IcMail      = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" strokeLinecap="round" strokeLinejoin="round"/><polyline points="22,6 12,13 2,6" strokeLinecap="round"/></svg>;
 const IcRanking   = () => <svg className="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" strokeLinecap="round" strokeLinejoin="round"/><polyline points="17 6 23 6 23 12" strokeLinecap="round" strokeLinejoin="round"/></svg>;
@@ -118,13 +120,27 @@ export function UserHub() {
   const router   = useRouter();
   const pathname = usePathname();
   const unread   = useUnreadCounts();
+  const isMobile = useIsMobile(640);
 
   const [open,    setOpen]    = useState(false);
   const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // panelTop: pixels from viewport top where the panel starts
+  const [panelTop, setPanelTop] = useState(0);
+
+  const btnRef   = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Portal needs document — only available client-side
+  useEffect(() => { setMounted(true); }, []);
 
   /* ── Open / close with animation ── */
   const openHub = useCallback(() => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPanelTop(rect.bottom + 8);
+    }
     setOpen(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
   }, []);
@@ -142,7 +158,10 @@ export function UserHub() {
   useEffect(() => {
     if (!open) return;
     function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) closeHub();
+      const target = e.target as Node;
+      const inBtn   = btnRef.current?.contains(target);
+      const inPanel = panelRef.current?.contains(target);
+      if (!inBtn && !inPanel) closeHub();
     }
     function onEsc(e: KeyboardEvent) {
       if (e.key === 'Escape') closeHub();
@@ -172,11 +191,130 @@ export function UserHub() {
   const isActive = (path: string, exact = false) =>
     exact ? pathname === path : pathname === path || pathname.startsWith(path + '/');
 
-  return (
-    <div ref={ref} className="relative">
+  /* ── Portal panel — rendered in document.body to escape backdrop-filter containing block ── */
+  const portalContent = open && mounted ? createPortal(
+    <>
+      {/* Backdrop — mobile only, starts below navbar */}
+      {isMobile && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-[59] bg-black/40"
+          style={{ top: 'var(--nav-h)' }}
+          aria-hidden
+          onClick={closeHub}
+        />
+      )}
 
-      {/* ── Trigger button — apps-launcher style ── */}
+      {/* Panel — fixed to viewport, never clipped by parent backdrop-filter */}
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-label="Centro de herramientas"
+        style={{
+          position: 'fixed',
+          top: panelTop,
+          right: 12,
+          width: 'min(320px, calc(100vw - 24px))',
+          maxHeight: '80dvh',
+          zIndex: 60,
+          opacity:   visible ? 1 : 0,
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.97)',
+          transition: 'opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1)',
+        }}
+        className="flex flex-col border border-[var(--border)] bg-[var(--bg-surface)] shadow-2xl shadow-black/20 dark:shadow-black/60 rounded-2xl overflow-hidden"
+      >
+        {/* ── User header ── */}
+        <div
+          className="px-4 pt-4 pb-4 shrink-0"
+          style={{
+            background: 'linear-gradient(160deg, var(--brand-muted) 0%, transparent 80%)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className="relative">
+              <Avatar src={user.avatarUrl} name={displayName} size="lg" />
+              <span
+                aria-hidden
+                className="absolute bottom-0.5 right-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-[var(--bg-surface)]"
+              />
+            </div>
+            <Link
+              href={ROUTES.PROFILE}
+              onClick={closeHub}
+              className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--brand)] transition-colors mt-1"
+            >
+              Ver perfil
+              <IcChevron />
+            </Link>
+          </div>
+
+          <p className="text-sm font-bold text-[var(--text-primary)] leading-tight truncate">
+            {displayName}
+          </p>
+          <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">@{user.username}</p>
+
+          <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+            <RoleBadge role={user.role} />
+            {user.carrera && (
+              <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-elevated)] border border-[var(--border)] px-2 py-0.5 rounded-full truncate max-w-[140px]">
+                {user.carrera}
+              </span>
+            )}
+            <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+              En línea
+            </span>
+          </div>
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div className="overflow-y-auto flex-1 scrollbar-hide pb-1">
+
+          <SectionLabel>Cuenta</SectionLabel>
+          <HubItem href={ROUTES.PROFILE}  icon={<IcProfile />}  label="Mi perfil"     active={isActive(ROUTES.PROFILE, true)} onClick={closeHub} />
+          <HubItem href={ROUTES.SETTINGS} icon={<IcSettings />} label="Configuración" active={isActive(ROUTES.SETTINGS)}      onClick={closeHub} />
+
+          <SectionLabel>Herramientas</SectionLabel>
+          <HubItem href={ROUTES.MARKETPLACE} icon={<IcMarket />}    label="Marketplace" active={isActive(ROUTES.MARKETPLACE)} onClick={closeHub} />
+          <HubItem href={ROUTES.EQUIPOS}     icon={<IcTeam />}      label="Equipos"     active={isActive(ROUTES.EQUIPOS)}     onClick={closeHub} />
+          <HubItem href={ROUTES.CORREOS}     icon={<IcMail />}      label="Correo"      active={isActive(ROUTES.CORREOS)}     onClick={closeHub} badge={unread.messages > 0 ? unread.messages : undefined} />
+          <HubItem href={ROUTES.RANKING}     icon={<IcRanking />}   label="Ranking"     active={isActive(ROUTES.RANKING)}     onClick={closeHub} />
+          <HubItem href={ROUTES.RECURSOS}    icon={<IcResources />} label="Recursos"    active={isActive(ROUTES.RECURSOS)}    onClick={closeHub} />
+          <HubItem href={ROUTES.EVENTOS}     icon={<IcCalendar />}  label="Eventos"     active={isActive(ROUTES.EVENTOS)}     onClick={closeHub} />
+
+          {isAuthority && (
+            <>
+              <SectionLabel>Administración</SectionLabel>
+              <HubItem href={ROUTES.AVISOS} icon={<IcAvisos />} label="Avisos"      active={isActive(ROUTES.AVISOS)} onClick={closeHub} />
+              {isAdmin && (
+                <HubItem href={ROUTES.ADMIN} icon={<IcAdmin />} label="Panel admin" active={isActive(ROUTES.ADMIN)} onClick={closeHub} />
+              )}
+            </>
+          )}
+
+          <div
+            className="mx-1.5 mt-2 pt-2 border-t border-[var(--border)]"
+            style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+          >
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors duration-100"
+            >
+              <IcLogout />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body,
+  ) : null;
+
+  return (
+    <div className="relative">
+      {/* Trigger button */}
       <button
+        ref={btnRef}
         onClick={toggle}
         aria-label="Centro de herramientas"
         aria-expanded={open}
@@ -188,7 +326,6 @@ export function UserHub() {
             : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
         )}
       >
-        {/* 2×2 grid icon — signals "apps / hub" */}
         <svg className="size-5" viewBox="0 0 24 24" fill="currentColor">
           <rect x="3"  y="3"  width="8" height="8" rx="2" />
           <rect x="13" y="3"  width="8" height="8" rx="2" />
@@ -197,108 +334,7 @@ export function UserHub() {
         </svg>
       </button>
 
-      {/* ── Panel ── */}
-      {open && (
-        <div
-          role="dialog"
-          aria-label="Centro de herramientas"
-          style={{
-            opacity:   visible ? 1 : 0,
-            transform: visible ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.97)',
-            transition: 'opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1)',
-          }}
-          className="absolute right-0 top-[calc(100%+8px)] z-[60] w-72 max-h-[calc(100svh-5rem)] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)]/95 backdrop-blur-xl shadow-2xl shadow-black/12 dark:shadow-black/50 overflow-hidden"
-        >
-          {/* ── User header ── */}
-          <div
-            className="px-4 pt-5 pb-4 shrink-0"
-            style={{
-              background: 'linear-gradient(160deg, var(--brand-muted) 0%, transparent 80%)',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            {/* Avatar + online */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="relative">
-                <Avatar src={user.avatarUrl} name={displayName} size="lg" />
-                <span
-                  aria-hidden
-                  className="absolute bottom-0.5 right-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-[var(--bg-surface)]"
-                />
-              </div>
-              {/* Quick profile link */}
-              <Link
-                href={ROUTES.PROFILE}
-                onClick={closeHub}
-                className="flex items-center gap-1 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--brand)] transition-colors mt-1"
-              >
-                Ver perfil
-                <IcChevron />
-              </Link>
-            </div>
-
-            {/* Name */}
-            <p className="text-sm font-bold text-[var(--text-primary)] leading-tight truncate">
-              {displayName}
-            </p>
-            <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">@{user.username}</p>
-
-            {/* Badges row */}
-            <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
-              <RoleBadge role={user.role} />
-              {user.carrera && (
-                <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-elevated)] border border-[var(--border)] px-2 py-0.5 rounded-full truncate max-w-[140px]">
-                  {user.carrera}
-                </span>
-              )}
-              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                En línea
-              </span>
-            </div>
-          </div>
-
-          {/* ── Scrollable body ── */}
-          <div className="overflow-y-auto flex-1 scrollbar-hide pb-1">
-
-            {/* CUENTA */}
-            <SectionLabel>Cuenta</SectionLabel>
-            <HubItem href={ROUTES.PROFILE}  icon={<IcProfile />}  label="Mi perfil"      active={isActive(ROUTES.PROFILE, true)} onClick={closeHub} />
-            <HubItem href={ROUTES.SETTINGS} icon={<IcSettings />} label="Configuración"  active={isActive(ROUTES.SETTINGS)}      onClick={closeHub} />
-
-            {/* HERRAMIENTAS */}
-            <SectionLabel>Herramientas</SectionLabel>
-            <HubItem href={ROUTES.MARKETPLACE} icon={<IcMarket />}    label="Marketplace" active={isActive(ROUTES.MARKETPLACE)} onClick={closeHub} />
-            <HubItem href={ROUTES.EQUIPOS}     icon={<IcTeam />}      label="Equipos"     active={isActive(ROUTES.EQUIPOS)}     onClick={closeHub} />
-            <HubItem href={ROUTES.CORREOS}  icon={<IcMail />}      label="Correo"    active={isActive(ROUTES.CORREOS)}  onClick={closeHub} badge={unread.messages > 0 ? unread.messages : undefined} />
-            <HubItem href={ROUTES.RANKING}  icon={<IcRanking />}   label="Ranking"   active={isActive(ROUTES.RANKING)}  onClick={closeHub} />
-            <HubItem href={ROUTES.RECURSOS} icon={<IcResources />} label="Recursos"  active={isActive(ROUTES.RECURSOS)} onClick={closeHub} />
-            <HubItem href={ROUTES.EVENTOS}  icon={<IcCalendar />}  label="Eventos"   active={isActive(ROUTES.EVENTOS)}  onClick={closeHub} />
-
-            {/* ADMINISTRACIÓN */}
-            {isAuthority && (
-              <>
-                <SectionLabel>Administración</SectionLabel>
-                <HubItem href={ROUTES.AVISOS} icon={<IcAvisos />} label="Avisos" active={isActive(ROUTES.AVISOS)} onClick={closeHub} />
-                {isAdmin && (
-                  <HubItem href={ROUTES.ADMIN} icon={<IcAdmin />} label="Panel admin" active={isActive(ROUTES.ADMIN)} onClick={closeHub} />
-                )}
-              </>
-            )}
-
-            {/* SESIÓN */}
-            <div className="mx-1.5 mt-2 mb-1 pt-2 border-t border-[var(--border)]">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors duration-100"
-              >
-                <IcLogout />
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {portalContent}
     </div>
   );
 }

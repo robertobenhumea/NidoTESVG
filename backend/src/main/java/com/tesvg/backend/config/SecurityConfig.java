@@ -83,6 +83,7 @@ public class SecurityConfig {
                         "/usuarios/**",
                         "/publicaciones/**",
                         "/interacciones/**",
+                        "/comentarios/**",
                         "/imagenes/subir",
                         "/seguidores/**",
                         "/stories/**",

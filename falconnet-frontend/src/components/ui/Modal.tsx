@@ -57,16 +57,18 @@ function Modal({ open, onClose, title, children, size = 'md', className }: Modal
       onClick={handleClick}
       onCancel={handleCancel}
       className={cn(
-        'rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)]',
+        'rounded-t-2xl sm:rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)]',
         'shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm',
-        'w-full mx-4 p-0',
+        'w-full mx-0 sm:mx-4 p-0',
         'open:flex open:flex-col',
+        'max-h-[90dvh] overflow-y-auto',
+        'sm:self-center self-end',
         sizeClasses[size],
         className,
       )}
     >
       {title && (
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
           <h2 className="text-base font-semibold text-[var(--text-primary)]">{title}</h2>
           <button
             onClick={onClose}
@@ -79,7 +81,7 @@ function Modal({ open, onClose, title, children, size = 'md', className }: Modal
           </button>
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-5 overflow-y-auto">{children}</div>
     </dialog>
   );
 }
