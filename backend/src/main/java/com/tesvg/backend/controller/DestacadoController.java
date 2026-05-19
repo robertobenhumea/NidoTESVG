@@ -46,12 +46,18 @@ public class DestacadoController {
 
     /** Crear nuevo destacado. */
     @PostMapping
-    public ResponseEntity<DestacadoDTO> crear(
+    public ResponseEntity<?> crear(
         @RequestBody CreateDestacadoRequest body,
         HttpServletRequest request
     ) {
-        Usuario authUser = getAuthUser(request);
-        return ResponseEntity.ok(destacadoService.createDestacado(authUser.getId(), body));
+        try {
+            Usuario authUser = getAuthUser(request);
+            return ResponseEntity.ok(destacadoService.createDestacado(authUser.getId(), body));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("mensaje", "Error al crear el destacado: " + e.getMessage()));
+        }
     }
 
     /** Editar destacado existente. */

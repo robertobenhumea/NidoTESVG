@@ -34,6 +34,14 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
     }
   }
 
+  function handlePointerCancel() {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+    didLongPressRef.current = false;
+  }
+
   function handleClick() {
     if (didLongPressRef.current) return;
     if (menuOpen) { setMenuOpen(false); return; }
@@ -57,6 +65,7 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
             role="button"
             tabIndex={0}
             aria-label={`Ver destacado ${highlight.nombre}`}

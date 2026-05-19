@@ -66,8 +66,10 @@ export function HighlightEditor({ highlight, onSave, onClose }: Props) {
         saved = await destacadoService.create(payload);
       }
       onSave(saved);
-    } catch {
-      setError('Error al guardar. Intenta de nuevo.');
+    } catch (err) {
+      console.error('[HighlightEditor] save failed:', err);
+      const msg = err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.';
+      setError(msg);
     } finally {
       setSaving(false);
     }

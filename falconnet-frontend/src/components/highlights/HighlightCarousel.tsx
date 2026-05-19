@@ -39,7 +39,7 @@ export function HighlightCarousel({ usuarioId, isOwner }: Props) {
       const data = isOwner
         ? await destacadoService.getMios()
         : await destacadoService.getByUsuario(usuarioId);
-      setHighlights(data);
+      setHighlights(Array.isArray(data) ? data : []);
     } catch { /* silently fail */ } finally {
       setLoading(false);
     }
