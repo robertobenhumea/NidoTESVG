@@ -100,7 +100,8 @@ public class SecurityConfig {
                         "/recursos/**",
                         "/ranking/**",
                         "/market/**",
-                        "/push/**"
+                        "/push/**",
+                        "/destacados/**"
                 ).authenticated()
 
                 // ── Anything else: 404 (no static files served in API-only mode) ───────

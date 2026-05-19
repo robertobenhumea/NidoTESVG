@@ -98,6 +98,18 @@ export interface User {
   role?: string;
   grupo?: string;
   carrera?: string;
+  semestre?: number;
+  github?: string;
+  portfolio?: string;
+  habilidades?: string[];
+  isOnline?: boolean;
+}
+
+export interface UserProfile extends User {
+  postCount?: number;
+  commentCount?: number;
+  teamCount?: number;
+  createdAt?: string;
 }
 
 export interface AuthTokens {
@@ -382,6 +394,37 @@ export interface SolicitudCompra {
   horario?: string;
   estado: SolicitudEstado;
   createdAt: string;
+}
+
+/* ── Highlights / Historias Destacadas ── */
+
+export interface HighlightStory {
+  id: number;
+  imagenUrl?: string;
+  texto?: string;
+  colorFondo?: string;
+  fecha?: string;
+}
+
+export interface Destacado {
+  id: number;
+  nombre: string;
+  emoji?: string;
+  coverImageUrl?: string;
+  coverColor?: string;
+  orden: number;
+  publico: boolean;
+  historiaCount: number;
+  historias: HighlightStory[];
+}
+
+export interface CreateDestacadoPayload {
+  nombre: string;
+  emoji?: string;
+  coverImageUrl?: string;
+  coverColor?: string;
+  publico: boolean;
+  historiaIds: number[];
 }
 
 /* ── API ── */

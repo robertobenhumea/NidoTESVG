@@ -115,4 +115,13 @@ export const marketplaceService = {
   async actualizarSolicitud(id: number, estado: string): Promise<void> {
     await api.put(`/market/solicitudes/${id}/estado`, { estado });
   },
+
+  async getListingsByUser(userId: number): Promise<MarketplaceListing[]> {
+    const [items, users] = await Promise.all([
+      api.get<BProducto[]>(`/market/productos/vendedor/${userId}`),
+      api.get<BUser[]>('/usuarios'),
+    ]);
+    const vendorMap = new Map(users.map((u) => [u.id, mapBUser(u)]));
+    return items.map((p) => mapProducto(p, vendorMap));
+  },
 };

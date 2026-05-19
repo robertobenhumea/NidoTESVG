@@ -1,91 +1,104 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { REACTIONS } from '@/lib/constants';
 import { commentReactionService } from '@/services/comment-reaction.service';
 import type { ReactionType } from '@/types';
 
-interface CommentReactionButtonProps {
-  commentId: number;
-  initialCount?: number;
-  initialReaction?: ReactionType;
+/* ─── Position helpers ───────────────────────────────────────── */
+
+interface Pos { bottom: number; left: number }
+
+const PICKER_W = 268;
+
+function calcPos(btn: HTMLElement): Pos {
+  const r   = btn.getBoundingClientRect();
+  const gap = 8;
+  const bottom = window.innerHeight - r.top + gap;
+  const left   = Math.max(12, Math.min(
+    r.left + r.width / 2 - PICKER_W / 2,
+    window.innerWidth - PICKER_W - 12,
+  ));
+  return { bottom, left };
 }
 
-function getReaction(type?: ReactionType) {
-  return REACTIONS.find((r) => r.type === type);
-}
+/* ─── Portal picker ──────────────────────────────────────────── */
 
-/** Mini reaction picker that appears above the button */
-function MiniReactionPicker({
-  open,
-  current,
-  onSelect,
-  onClose,
-  closing,
+function ReactionPickerPortal({
+  pos, current, closing, onSelect, onClose, onMouseEnter, onMouseLeave,
 }: {
-  open: boolean;
+  pos: Pos;
   current?: ReactionType;
-  onSelect: (type: ReactionType) => void;
-  onClose: () => void;
   closing: boolean;
+  onSelect: (t: ReactionType) => void;
+  onClose: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
-  if (!open && !closing) return null;
-
-  return (
+  return createPortal(
     <>
-      {/* Invisible backdrop */}
+      {/* Full-screen invisible backdrop — catches taps/clicks outside */}
       <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-        onTouchStart={onClose}
+        className="fixed inset-0 z-[69]"
+        style={{ pointerEvents: closing ? 'none' : 'auto' }}
         aria-hidden
+        onClick={onClose}
+        onTouchStart={(e) => { e.preventDefault(); onClose(); }}
       />
+
+      {/* Picker panel */}
       <div
-        className={cn(
-          'absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-50 pointer-events-auto',
-          'transition-all duration-150',
-          closing
-            ? 'opacity-0 scale-90 pointer-events-none'
-            : 'opacity-100 scale-100',
-        )}
         role="menu"
         aria-label="Elige una reacción"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        style={{
+          position: 'fixed',
+          bottom: pos.bottom,
+          left: pos.left,
+          width: PICKER_W,
+          zIndex: 70,
+          opacity: closing ? 0 : 1,
+          transform: closing
+            ? 'scale(0.88) translateY(6px)'
+            : 'scale(1)    translateY(0)',
+          transition: 'opacity 150ms ease, transform 150ms ease',
+          pointerEvents: closing ? 'none' : 'auto',
+        }}
       >
-        <div className="flex items-center gap-0.5 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl px-1.5 py-1.5 shadow-xl shadow-black/15 dark:shadow-black/50">
-          {REACTIONS.map((r, idx) => {
-            const isActive = current === r.type;
+        <div className="flex items-center gap-0.5 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl px-2 py-2 shadow-2xl shadow-black/20 dark:shadow-black/60">
+          {REACTIONS.map((r, i) => {
+            const active = current === r.type;
             return (
               <button
                 key={r.type}
                 role="menuitem"
                 aria-label={r.label}
-                aria-pressed={isActive}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect(r.type as ReactionType);
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onSelect(r.type as ReactionType);
-                }}
-                style={{ animationDelay: `${idx * 30}ms` }}
+                aria-pressed={active}
+                /* prevent focus-steal so button stays visually stable */
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); onSelect(r.type as ReactionType); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(r.type as ReactionType); }}
+                style={{ animationDelay: `${i * 25}ms` }}
                 className={cn(
-                  'group flex flex-col items-center gap-0.5 rounded-xl px-1.5 py-1',
-                  'transition-transform duration-100 hover:scale-[1.4] focus-visible:outline-2 focus-visible:outline-[var(--brand)]',
+                  'group flex flex-col items-center gap-0.5 rounded-xl px-1.5 py-1 flex-1',
+                  'transition-transform duration-100 active:scale-90',
+                  'hover:scale-[1.35] focus-visible:outline-2 focus-visible:outline-[var(--brand)]',
                   'animate-in zoom-in-75 fade-in',
-                  isActive && 'scale-[1.3]',
+                  active && 'scale-[1.2]',
                 )}
               >
-                <span className="text-[20px] leading-none select-none">{r.emoji}</span>
-                <span
-                  className={cn(
-                    'text-[8px] font-medium leading-none whitespace-nowrap transition-colors',
-                    isActive ? 'text-[var(--brand)]' : 'text-[var(--text-muted)]',
-                    'group-hover:text-[var(--text-secondary)]',
-                  )}
-                >
+                <span className="text-[22px] leading-none select-none" aria-hidden>
+                  {r.emoji}
+                </span>
+                <span className={cn(
+                  'text-[8px] font-medium leading-none whitespace-nowrap transition-colors',
+                  active
+                    ? 'text-[var(--brand)]'
+                    : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+                )}>
                   {r.label}
                 </span>
               </button>
@@ -93,139 +106,158 @@ function MiniReactionPicker({
           })}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
+/* ─── Main component ─────────────────────────────────────────── */
+
 export function CommentReactionButton({
   commentId,
-  initialCount = 0,
+  initialCount   = 0,
   initialReaction,
-}: CommentReactionButtonProps) {
-  const [count, setCount]           = useState(initialCount);
+}: {
+  commentId: number;
+  initialCount?: number;
+  initialReaction?: ReactionType;
+}) {
+  const [count,        setCount]    = useState(initialCount);
   const [userReaction, setReaction] = useState<ReactionType | undefined>(initialReaction);
-  const [pickerOpen, setPicker]     = useState(false);
-  const [closing, setClosing]       = useState(false);
+  const [pickerOpen,   setPicker]   = useState(false);
+  const [closing,      setClosing]  = useState(false);
+  const [pos,          setPos]      = useState<Pos>({ bottom: 0, left: 0 });
+  const [mounted,      setMounted]  = useState(false);
 
-  const holdRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didHold    = useRef(false);
-  // Store optimistic rollback data
-  const prevState  = useRef<{ count: number; reaction: ReactionType | undefined } | null>(null);
+  const btnRef       = useRef<HTMLButtonElement>(null);
+  const holdTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didHold      = useRef(false);
+  const prevSnapshot = useRef<{ count: number; reaction: ReactionType | undefined } | null>(null);
 
-  function clearHold() {
-    if (holdRef.current) { clearTimeout(holdRef.current); holdRef.current = null; }
+  useEffect(() => { setMounted(true); }, []);
+
+  /* Close on scroll anywhere in the page */
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const close = () => startClose();
+    window.addEventListener('scroll', close, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', close, { capture: true });
+  }, [pickerOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function clearHold()  { if (holdTimer.current)  { clearTimeout(holdTimer.current);  holdTimer.current  = null; } }
+  function clearClose() { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; } }
+
+  function startOpen() {
+    if (pickerOpen || closing) return;
+    if (btnRef.current) setPos(calcPos(btnRef.current));
+    setPicker(true);
   }
 
-  function closePicker() {
+  function startClose() {
+    clearClose();
     setClosing(true);
-    setTimeout(() => {
-      setClosing(false);
-      setPicker(false);
-    }, 150);
+    setTimeout(() => { setClosing(false); setPicker(false); }, 150);
   }
 
+  /* Optimistic reaction toggle */
   const applyReaction = useCallback(async (type: ReactionType) => {
-    // Save rollback state
-    prevState.current = { count, reaction: userReaction };
+    prevSnapshot.current = { count, reaction: userReaction };
+    const removing  = userReaction === type;
+    const replacing = !!userReaction && !removing;
 
-    // Optimistic update
-    const wasThis  = userReaction === type;
-    const hadOther = !!userReaction && !wasThis;
-    setReaction(wasThis ? undefined : type);
-    setCount((c) =>
-      wasThis  ? Math.max(0, c - 1) :
-      hadOther ? c :
-                 c + 1,
-    );
+    setReaction(removing ? undefined : type);
+    setCount((c) => removing ? Math.max(0, c - 1) : replacing ? c : c + 1);
 
     try {
       const res = await commentReactionService.toggle(commentId, type);
-      // Sync with server truth
       setCount(res.reactionCount);
-      setReaction(res.accion === 'quitado' ? undefined : res.tipo);
+      setReaction(res.accion === 'quitado' ? undefined : res.tipo as ReactionType);
     } catch {
-      // Rollback
-      if (prevState.current) {
-        setCount(prevState.current.count);
-        setReaction(prevState.current.reaction);
+      if (prevSnapshot.current) {
+        setCount(prevSnapshot.current.count);
+        setReaction(prevSnapshot.current.reaction);
       }
     }
   }, [commentId, count, userReaction]);
 
-  // Touch: long-press to open picker, tap for quick like
-  function onTouchStart(e: React.TouchEvent) {
-    didHold.current = false;
-    holdRef.current = setTimeout(() => {
-      didHold.current = true;
-      holdRef.current = null;
-      setPicker(true);
+  function handleSelect(type: ReactionType) {
+    startClose();          // close picker first (fade-out)
+    applyReaction(type);   // apply immediately (optimistic)
+  }
+
+  /* ── Touch handlers ── */
+  function onTouchStart() {
+    if (pickerOpen) return;
+    didHold.current   = false;
+    holdTimer.current = setTimeout(() => {
+      didHold.current  = true;
+      holdTimer.current = null;
+      startOpen();
     }, 500);
   }
 
+  function onTouchMove() { clearHold(); }
+
   function onTouchEnd(e: React.TouchEvent) {
-    if (holdRef.current) {
+    if (holdTimer.current) {
+      // Quick tap — timer still pending
       clearHold();
-      if (!didHold.current && !pickerOpen) {
-        e.preventDefault();
-        applyReaction('LIKE');
+      if (!pickerOpen) {
+        e.preventDefault(); // kill the 300ms ghost click
+        applyReaction('LIKE' as ReactionType);
       }
     }
+    // If long-press fired, picker is already open — do nothing
   }
 
-  function onTouchMove() {
-    clearHold();
-  }
-
-  // Desktop: hover to open picker after delay, click for quick like
+  /* ── Mouse handlers (desktop) ── */
   function onMouseEnter() {
-    holdRef.current = setTimeout(() => { holdRef.current = null; setPicker(true); }, 400);
+    clearClose();
+    if (!pickerOpen && !closing) {
+      holdTimer.current = setTimeout(() => { holdTimer.current = null; startOpen(); }, 400);
+    }
   }
 
   function onMouseLeave() {
     clearHold();
-    if (pickerOpen) closePicker();
+    if (pickerOpen) {
+      // Short grace period so cursor can reach the picker
+      closeTimer.current = setTimeout(() => startClose(), 120);
+    }
   }
+
+  function onPickerMouseEnter() { clearClose(); }
+  function onPickerMouseLeave() { startClose(); }
 
   function onClick() {
     clearHold();
-    if (!pickerOpen && !closing) applyReaction('LIKE');
+    if (!pickerOpen && !closing) applyReaction('LIKE' as ReactionType);
   }
 
-  function handlePickerSelect(type: ReactionType) {
-    closePicker();
-    applyReaction(type);
-  }
-
-  const rxInfo = getReaction(userReaction);
+  const rxInfo = REACTIONS.find((r) => r.type === userReaction);
 
   return (
     <div
       className="relative inline-flex items-center"
       onMouseLeave={onMouseLeave}
     >
-      <MiniReactionPicker
-        open={pickerOpen}
-        current={userReaction}
-        onSelect={handlePickerSelect}
-        onClose={closePicker}
-        closing={closing}
-      />
-
       <button
+        ref={btnRef}
         onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
         onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         onMouseEnter={onMouseEnter}
         onClick={onClick}
         aria-label={
           userReaction
-            ? `${rxInfo?.label ?? 'Reacción'} (mantén para cambiar)`
-            : 'Me gusta (mantén para más reacciones)'
+            ? `${rxInfo?.label ?? 'Reacción'} — mantén para cambiar`
+            : 'Me gusta — mantén para más reacciones'
         }
         aria-pressed={!!userReaction}
         className={cn(
           'flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[10px] font-medium',
-          'transition-all duration-150 select-none touch-none',
+          'transition-all duration-150 select-none touch-manipulation',
           'focus-visible:outline-2 focus-visible:outline-[var(--brand)]',
           userReaction
             ? 'text-[var(--brand)]'
@@ -233,32 +265,28 @@ export function CommentReactionButton({
         )}
       >
         {userReaction ? (
-          <span
-            className="text-sm leading-none transition-transform duration-200 animate-in zoom-in-75"
-            aria-hidden
-          >
-            {rxInfo?.emoji}
-          </span>
+          <span className="text-sm leading-none" aria-hidden>{rxInfo?.emoji}</span>
         ) : (
-          <svg
-            className="size-3 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            aria-hidden
-          >
+          <svg className="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
             <path d="M7 10v12" strokeLinecap="round" />
             <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
-        {count > 0 && (
-          <span className="tabular-nums">{count}</span>
-        )}
-        {count === 0 && !userReaction && (
-          <span>Me gusta</span>
-        )}
+        {count > 0 && <span className="tabular-nums">{count}</span>}
+        {count === 0 && !userReaction && <span>Me gusta</span>}
       </button>
+
+      {mounted && (pickerOpen || closing) && (
+        <ReactionPickerPortal
+          pos={pos}
+          current={userReaction}
+          closing={closing}
+          onSelect={handleSelect}
+          onClose={startClose}
+          onMouseEnter={onPickerMouseEnter}
+          onMouseLeave={onPickerMouseLeave}
+        />
+      )}
     </div>
   );
 }
