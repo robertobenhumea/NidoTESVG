@@ -2,6 +2,8 @@ package com.tesvg.backend.security;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -15,6 +17,8 @@ import java.io.IOException;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -33,7 +37,12 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String method = request.getMethod();
+        String uri    = request.getRequestURI();
         String header = request.getHeader("Authorization");
+
+        log.debug("[JWT] {} {} — Authorization header: {}", method, uri,
+                header == null ? "ABSENT" : header.startsWith("Bearer ") ? "Bearer ***" : "INVALID_FORMAT");
 
         if (header != null && header.startsWith("Bearer ")) {
 
@@ -45,8 +54,20 @@ public class JwtFilter extends OncePerRequestFilter {
                 request.setAttribute("correo", correo);
 
                 Usuario usuario = usuarioRepository.findByCorreo(correo).orElse(null);
-                if (usuario == null || !usuario.isActivo()
-                        || usuario.getTokenVersion() != tokenVersion) {
+
+                if (usuario == null) {
+                    log.warn("[JWT] {} {} — usuario no encontrado para correo={}", method, uri, correo);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+                if (!usuario.isActivo()) {
+                    log.warn("[JWT] {} {} — usuario inactivo: correo={}", method, uri, correo);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+                if (usuario.getTokenVersion() != tokenVersion) {
+                    log.warn("[JWT] {} {} — token version mismatch: token={} db={} correo={}",
+                            method, uri, tokenVersion, usuario.getTokenVersion(), correo);
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
@@ -60,11 +81,15 @@ public class JwtFilter extends OncePerRequestFilter {
                                 correo, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.debug("[JWT] {} {} — autenticado: correo={} rol={}", method, uri, correo, usuario.getRol());
 
             } catch (Exception e) {
+                log.warn("[JWT] {} {} — token inválido: {}", method, uri, e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
+        } else {
+            log.debug("[JWT] {} {} — sin token, continuando como anónimo", method, uri);
         }
 
         filterChain.doFilter(request, response);

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { destacadoService } from '@/services/destacado.service';
-import { HighlightCard } from './HighlightCard';
+import { HighlightCard, getCoverImage } from './HighlightCard';
 import { HighlightViewer } from './HighlightViewer';
 import { HighlightEditor } from './HighlightEditor';
 import type { Destacado } from '@/types';
@@ -27,11 +27,14 @@ interface Props {
 }
 
 export function HighlightCarousel({ usuarioId, isOwner }: Props) {
-  const [highlights, setHighlights] = useState<Destacado[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [viewerIdx,  setViewerIdx]  = useState<number | null>(null);
-  const [editorHL,   setEditorHL]   = useState<Destacado | null | undefined>(undefined); // undefined = closed, null = create new
-  const [deleteTarget, setDeleteTarget] = useState<Destacado | null>(null);
+  const [highlights,    setHighlights]    = useState<Destacado[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [viewerIdx,     setViewerIdx]     = useState<number | null>(null);
+  const [editorHL,      setEditorHL]      = useState<Destacado | null | undefined>(undefined);
+  const [deleteTarget,  setDeleteTarget]  = useState<Destacado | null>(null);
+  const [reorderMode,   setReorderMode]   = useState(false);
+  const [savingReorder, setSavingReorder] = useState(false);
+  const reorderRef = useRef<Destacado[]>([]);
 
   const loadHighlights = useCallback(async () => {
     setLoading(true);
@@ -69,6 +72,40 @@ export function HighlightCarousel({ usuarioId, isOwner }: Props) {
     });
   }
 
+  function enterReorder() {
+    reorderRef.current = [...highlights];
+    setReorderMode(true);
+  }
+
+  function moveHighlight(idx: number, dir: -1 | 1) {
+    const target = idx + dir;
+    if (target < 0 || target >= highlights.length) return;
+    setHighlights((prev) => {
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  }
+
+  async function saveReorder() {
+    setSavingReorder(true);
+    try {
+      await destacadoService.reorder(highlights.map((h) => h.id));
+      setReorderMode(false);
+    } catch {
+      // restore original order on failure
+      setHighlights(reorderRef.current);
+      setReorderMode(false);
+    } finally {
+      setSavingReorder(false);
+    }
+  }
+
+  function cancelReorder() {
+    setHighlights(reorderRef.current);
+    setReorderMode(false);
+  }
+
   if (loading) {
     return (
       <div className="overflow-x-auto scrollbar-hide py-3 border-b border-[var(--border)]">
@@ -83,11 +120,35 @@ export function HighlightCarousel({ usuarioId, isOwner }: Props) {
   return (
     <>
       <div className="border-b border-[var(--border)]">
+        {/* Reorder toolbar */}
+        {reorderMode && (
+          <div className="flex items-center justify-between px-4 py-2 bg-[var(--brand)]/8 border-b border-[var(--brand)]/20">
+            <span className="text-xs font-semibold text-[var(--brand)]">Reorganizando</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={cancelReorder}
+                disabled={savingReorder}
+                className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveReorder}
+                disabled={savingReorder}
+                className="text-xs font-semibold text-white bg-[var(--brand)] hover:bg-[var(--brand-hover)] px-3 py-1 rounded-full disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {savingReorder && <span className="size-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />}
+                Listo
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 px-4 py-3 snap-x snap-mandatory">
 
-            {/* "New highlight" button — only for owner */}
-            {isOwner && (
+            {/* "New highlight" button — only for owner, hidden in reorder mode */}
+            {isOwner && !reorderMode && (
               <div className="flex flex-col items-center gap-1.5 w-[72px] shrink-0 snap-start">
                 <button
                   onClick={() => setEditorHL(null)}
@@ -107,21 +168,82 @@ export function HighlightCarousel({ usuarioId, isOwner }: Props) {
 
             {/* Highlight cards */}
             {highlights.map((hl, idx) => (
-              <HighlightCard
-                key={hl.id}
-                highlight={hl}
-                onOpen={() => {
-                  if (hl.historias.length === 0) {
-                    // If no stories but owner, open editor
-                    if (isOwner) setEditorHL(hl);
-                  } else {
-                    setViewerIdx(idx);
-                  }
-                }}
-                onEdit={isOwner ? () => setEditorHL(hl) : undefined}
-                onDelete={isOwner ? () => setDeleteTarget(hl) : undefined}
-                isOwner={isOwner}
-              />
+              reorderMode ? (
+                /* Reorder item: arrows + label, no open/edit/delete */
+                <div key={hl.id} className="flex flex-col items-center gap-1.5 w-[72px] shrink-0 snap-start select-none">
+                  <div className="relative size-[68px]">
+                    {/* Dimmed card visual — uses same cover priority as HighlightCard */}
+                    {(() => {
+                      const img = getCoverImage(hl);
+                      return img ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={img}
+                          alt={hl.nombre}
+                          draggable={false}
+                          loading="lazy"
+                          className="size-full rounded-full object-cover border-2 border-[var(--brand)]/50 opacity-70"
+                        />
+                      ) : (
+                        <div
+                          className="size-full rounded-full overflow-hidden border-2 border-[var(--brand)]/40 flex items-center justify-center text-2xl opacity-70"
+                          style={{ background: hl.coverColor ?? 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
+                        >
+                          {hl.emoji ?? (
+                            <svg className="size-7 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Left arrow */}
+                    {idx > 0 && (
+                      <button
+                        onClick={() => moveHighlight(idx, -1)}
+                        aria-label="Mover a la izquierda"
+                        className="absolute -left-3 top-1/2 -translate-y-1/2 size-6 rounded-full bg-[var(--bg-surface)] border border-[var(--border)] shadow flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--brand)] hover:text-white hover:border-[var(--brand)] transition-colors z-10"
+                      >
+                        <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Right arrow */}
+                    {idx < highlights.length - 1 && (
+                      <button
+                        onClick={() => moveHighlight(idx, 1)}
+                        aria-label="Mover a la derecha"
+                        className="absolute -right-3 top-1/2 -translate-y-1/2 size-6 rounded-full bg-[var(--bg-surface)] border border-[var(--border)] shadow flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--brand)] hover:text-white hover:border-[var(--brand)] transition-colors z-10"
+                      >
+                        <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-medium text-[var(--text-primary)] text-center truncate w-full leading-tight">
+                    {hl.nombre}
+                  </p>
+                </div>
+              ) : (
+                <HighlightCard
+                  key={hl.id}
+                  highlight={hl}
+                  onOpen={() => {
+                    if (hl.historias.length === 0) {
+                      if (isOwner) setEditorHL(hl);
+                    } else {
+                      setViewerIdx(idx);
+                    }
+                  }}
+                  onEdit={isOwner ? () => setEditorHL(hl) : undefined}
+                  onDelete={isOwner ? () => setDeleteTarget(hl) : undefined}
+                  isOwner={isOwner}
+                />
+              )
             ))}
 
             {/* Empty state for owner with 0 highlights */}
@@ -134,6 +256,21 @@ export function HighlightCarousel({ usuarioId, isOwner }: Props) {
             )}
           </div>
         </div>
+
+        {/* Reorder trigger — only for owner with 2+ highlights */}
+        {isOwner && highlights.length >= 2 && !reorderMode && (
+          <div className="flex justify-end px-4 pb-2">
+            <button
+              onClick={enterReorder}
+              className="text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--brand)] transition-colors flex items-center gap-1"
+            >
+              <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" />
+              </svg>
+              Reorganizar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Viewer */}

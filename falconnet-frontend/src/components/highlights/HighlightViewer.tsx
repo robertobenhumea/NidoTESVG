@@ -151,6 +151,24 @@ export function HighlightViewer({ highlights, startIndex, onClose }: Props) {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
+  // Preload next story image
+  useEffect(() => {
+    const nextStory = hl?.historias[storyIdx + 1] ?? highlights[hlIdx + 1]?.historias[0];
+    if (nextStory?.imagenUrl) {
+      const img = new Image();
+      img.src = nextStory.imagenUrl;
+    }
+  }, [storyIdx, hlIdx, hl, highlights]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (tapFlashRef.current) clearTimeout(tapFlashRef.current);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
   function flashTap(side: 'left' | 'right') {
     if (tapFlashRef.current) clearTimeout(tapFlashRef.current);
     setTapFlash(side);

@@ -6,7 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarModal } from '@/components/ui/AvatarModal';
 import { PostCard } from '@/components/feed/PostCard';
+import { ReclutamientoFeedCard } from '@/components/feed/ReclutamientoFeedCard';
+import { MarketplaceCard } from '@/components/marketplace/MarketplaceCard';
+import { MediaGrid } from '@/components/profile/MediaGrid';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { ImageCropEditor } from '@/components/profile/ImageCropEditor';
 import { userService } from '@/services/user.service';
 import { postService } from '@/services/post.service';
 import { marketplaceService } from '@/services/marketplace.service';
@@ -112,75 +116,6 @@ function ProfileTabBar({
   );
 }
 
-/* ── Marketplace mini-card ──────────────────────────────────────── */
-
-function MarketplaceCard({ item }: { item: MarketplaceListing }) {
-  return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
-      {item.imageUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={item.imageUrl} alt={item.title} className="w-full h-36 object-cover" />
-      ) : (
-        <div className="w-full h-36 bg-[var(--bg-elevated)] flex items-center justify-center">
-          <span className="text-3xl select-none">🛍️</span>
-        </div>
-      )}
-      <div className="p-3">
-        <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2">{item.title}</p>
-        <p className="text-base font-bold text-[var(--brand)] mt-1">${item.price.toLocaleString('es-MX')}</p>
-        <span className={`inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full font-medium ${
-          item.status === 'DISPONIBLE'
-            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-            : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
-        }`}>
-          {item.status === 'DISPONIBLE' ? 'Disponible' : item.status === 'VENDIDO' ? 'Vendido' : 'Pausado'}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Equipo mini-card ───────────────────────────────────────────── */
-
-function EquipoCard({ item }: { item: ReclutamientoFeedItem }) {
-  return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl p-4 flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug line-clamp-2">
-          {item.nombreProyecto}
-        </p>
-        <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
-          item.estado === 'ABIERTO'
-            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-            : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
-        }`}>
-          {item.estado === 'ABIERTO' ? 'Abierto' : item.estado === 'COMPLETO' ? 'Completo' : 'Cerrado'}
-        </span>
-      </div>
-      {item.descripcion && (
-        <p className="text-xs text-[var(--text-muted)] line-clamp-2">{item.descripcion}</p>
-      )}
-      {item.habilidades.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {item.habilidades.slice(0, 4).map((h) => (
-            <span key={h} className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)]">
-              {h}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mt-auto pt-1">
-        <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        {item.integrantesFaltantes} lugar{item.integrantesFaltantes !== 1 ? 'es' : ''} disponible{item.integrantesFaltantes !== 1 ? 's' : ''}
-      </div>
-    </div>
-  );
-}
-
 /* ── Main ProfileView ────────────────────────────────────────────── */
 
 export function ProfileView({ userId: propUserId }: { userId?: number }) {
@@ -197,11 +132,13 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const [activeTab, setActiveTab]     = useState<ProfileTab>('publicaciones');
   const [loading, setLoading]         = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
-  const [coverUploading, setCoverUploading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [cropTarget, setCropTarget]   = useState<{ file: File; mode: 'avatar' | 'cover' } | null>(null);
   const [editOpen, setEditOpen]       = useState(false);
   const [avatarOpen, setAvatarOpen]   = useState(false);
   const [error, setError]             = useState('');
   const coverInputRef                 = useRef<HTMLInputElement>(null);
+  const avatarInputRef                = useRef<HTMLInputElement>(null);
   const { updateUser }                = useAuth();
 
   const targetId     = queryId ? Number(queryId) : currentUser?.id;
@@ -223,7 +160,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
           marketplaceService.getListingsByUser(targetId).catch(() => [] as MarketplaceListing[]),
           isOwnProfile
             ? equipoService.getMios().catch(() => [] as ReclutamientoFeedItem[])
-            : Promise.resolve([] as ReclutamientoFeedItem[]),
+            : equipoService.getActivos().then((all) => all.filter((e) => e.usuarioId === targetId)).catch(() => [] as ReclutamientoFeedItem[]),
         ]);
       setProfileUser(user);
       setPosts(userPosts);
@@ -244,19 +181,40 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !isOwnProfile) return;
     if (!file.type.startsWith('image/')) return;
-    if (file.size > 10 * 1024 * 1024) return;
     e.target.value = '';
-    setCoverUploading(true);
+    setCropTarget({ file, mode: 'cover' });
+  }
+
+  function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !isOwnProfile) return;
+    if (!file.type.startsWith('image/')) return;
+    e.target.value = '';
+    setCropTarget({ file, mode: 'avatar' });
+  }
+
+  async function handleCropSave(blob: Blob) {
+    if (!cropTarget) return;
+    const { mode } = cropTarget;
+    setCropTarget(null);
+    setPhotoUploading(true);
     try {
-      const updated = await userService.uploadAndSetCover(file);
-      setProfileUser((prev) => prev ? { ...prev, coverUrl: updated.coverUrl } : prev);
-      updateUser({ coverUrl: updated.coverUrl });
+      const uploadFile = new File([blob], mode === 'avatar' ? 'avatar.jpg' : 'cover.jpg', { type: 'image/jpeg' });
+      if (mode === 'avatar') {
+        const updated = await userService.uploadAndSetAvatar(uploadFile);
+        setProfileUser((prev) => prev ? { ...prev, avatarUrl: updated.avatarUrl } : prev);
+        updateUser({ avatarUrl: updated.avatarUrl });
+      } else {
+        const updated = await userService.uploadAndSetCover(uploadFile);
+        setProfileUser((prev) => prev ? { ...prev, coverUrl: updated.coverUrl } : prev);
+        updateUser({ coverUrl: updated.coverUrl });
+      }
     } catch { /* ignore */ } finally {
-      setCoverUploading(false);
+      setPhotoUploading(false);
     }
   }
 
@@ -294,7 +252,6 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
   }
 
   const displayName = profileUser.displayName ?? profileUser.username;
-  const mediaPosts  = posts.filter((p) => p.imageUrl);
 
   return (
     <>
@@ -320,7 +277,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
             <>
               <button
                 onClick={() => coverInputRef.current?.click()}
-                disabled={coverUploading}
+                disabled={photoUploading}
                 aria-label="Cambiar foto de portada"
                 className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/50 text-white text-xs font-medium backdrop-blur-sm hover:bg-black/70 transition-colors disabled:opacity-50"
               >
@@ -328,14 +285,14 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
                   <circle cx="12" cy="13" r="4" />
                 </svg>
-                {coverUploading ? 'Subiendo…' : 'Cambiar portada'}
+                {photoUploading ? 'Subiendo…' : 'Cambiar portada'}
               </button>
               <input
                 ref={coverInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handleCoverUpload}
+                onChange={handleCoverFileChange}
               />
             </>
           )}
@@ -348,9 +305,10 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
           <div className="flex items-end justify-between -mt-12 sm:-mt-16 mb-3">
             {/* Tappable avatar */}
             <button
-              onClick={() => setAvatarOpen(true)}
-              aria-label={`Ver foto de ${displayName}`}
-              className="relative shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-[var(--brand)] group"
+              onClick={() => isOwnProfile ? avatarInputRef.current?.click() : setAvatarOpen(true)}
+              aria-label={isOwnProfile ? 'Cambiar foto de perfil' : `Ver foto de ${displayName}`}
+              disabled={photoUploading}
+              className="relative shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-[var(--brand)] group disabled:opacity-70"
             >
               {/* Wrapper controla el tamaño real — evita el mismatch con size="xl" (80px) */}
               <div className="size-24 sm:size-32 rounded-full overflow-hidden ring-4 ring-[var(--bg-surface)]">
@@ -361,10 +319,32 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
                   className="w-full h-full [&>div]:!w-full [&>div]:!h-full"
                 />
               </div>
-              {profileUser.isOnline && (
+              {profileUser.isOnline && !isOwnProfile && (
                 <span className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 size-4 sm:size-5 rounded-full bg-green-500 border-2 border-[var(--bg-surface)]" />
               )}
+              {/* Camera overlay for own profile */}
+              {isOwnProfile && (
+                <span
+                  aria-hidden
+                  className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 size-7 sm:size-8 rounded-full bg-[var(--bg-surface)] border-2 border-[var(--bg-surface)] flex items-center justify-center shadow-md group-hover:bg-[var(--bg-elevated)] transition-colors"
+                >
+                  <svg className="size-3.5 sm:size-4 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </span>
+              )}
             </button>
+            {/* Hidden avatar file input */}
+            {isOwnProfile && (
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+            )}
 
             {/* Action button */}
             <div className="flex gap-2 mb-1 shrink-0">
@@ -498,29 +478,14 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
             </div>
           )}
 
-          {/* Multimedia */}
+          {/* Multimedia — Instagram-style 3-col grid with lightbox */}
           {activeTab === 'multimedia' && (
-            <div>
-              {mediaPosts.length === 0 ? (
-                <EmptyState icon="🖼️" text="Sin fotos o videos aún" />
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {mediaPosts.map((post) => (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      key={post.id}
-                      src={post.imageUrl}
-                      alt=""
-                      className="w-full aspect-square object-cover rounded-xl bg-[var(--bg-elevated)]"
-                      loading="lazy"
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="-mx-3">
+              <MediaGrid posts={posts} currentUserId={currentUser?.id} />
             </div>
           )}
 
-          {/* Equipos */}
+          {/* Equipos — full ReclutamientoFeedCard (same as feed) */}
           {activeTab === 'equipos' && (
             <div>
               {equipos.length === 0 ? (
@@ -528,14 +493,14 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
               ) : (
                 <div className="space-y-3">
                   {equipos.map((eq) => (
-                    <EquipoCard key={eq.id} item={eq} />
+                    <ReclutamientoFeedCard key={eq.id} item={eq} currentUserId={currentUser?.id} />
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Marketplace */}
+          {/* Marketplace — full MarketplaceCard (same as marketplace page) */}
           {activeTab === 'marketplace' && (
             <div>
               {listings.length === 0 ? (
@@ -543,7 +508,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {listings.map((item) => (
-                    <MarketplaceCard key={item.id} item={item} />
+                    <MarketplaceCard key={item.id} listing={item} />
                   ))}
                 </div>
               )}
@@ -553,13 +518,25 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
         </div>
       </div>
 
-      {/* Avatar fullscreen modal */}
-      <AvatarModal
-        src={profileUser.avatarUrl}
-        name={displayName}
-        open={avatarOpen}
-        onClose={() => setAvatarOpen(false)}
-      />
+      {/* Avatar fullscreen modal — only for other people's profiles */}
+      {!isOwnProfile && (
+        <AvatarModal
+          src={profileUser.avatarUrl}
+          name={displayName}
+          open={avatarOpen}
+          onClose={() => setAvatarOpen(false)}
+        />
+      )}
+
+      {/* Photo crop editor — avatar or cover */}
+      {cropTarget && (
+        <ImageCropEditor
+          file={cropTarget.file}
+          mode={cropTarget.mode}
+          onSave={handleCropSave}
+          onClose={() => setCropTarget(null)}
+        />
+      )}
 
       {/* Edit profile modal — only on own profile */}
       {isOwnProfile && profileUser && (

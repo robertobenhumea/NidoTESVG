@@ -64,9 +64,17 @@ public class DestacadoService {
         return list.stream().map(this::mapDestacado).collect(Collectors.toList());
     }
 
+    private static final int MAX_DESTACADOS_PER_USER = 9;
+    private static final int MAX_HISTORIAS_PER_DESTACADO = 30;
+
     public DestacadoDTO createDestacado(Long usuarioId, CreateDestacadoRequest req) {
         if (req.getNombre() == null || req.getNombre().isBlank()) {
             throw new IllegalArgumentException("El nombre es obligatorio");
+        }
+
+        long count = destacadoRepository.countByUsuarioId(usuarioId);
+        if (count >= MAX_DESTACADOS_PER_USER) {
+            throw new IllegalArgumentException("Límite alcanzado: máximo " + MAX_DESTACADOS_PER_USER + " destacados por usuario");
         }
 
         Usuario usuario = usuarioRepository.findById(usuarioId)
@@ -80,7 +88,6 @@ public class DestacadoService {
         d.setCoverColor(req.getCoverColor());
         d.setPublico(req.isPublico());
 
-        long count = destacadoRepository.countByUsuarioId(usuarioId);
         d.setOrden((int) count);
 
         if (req.getHistoriaIds() != null && !req.getHistoriaIds().isEmpty()) {
@@ -115,6 +122,9 @@ public class DestacadoService {
                 .map(hid -> storyRepository.findById(hid).orElse(null))
                 .filter(s -> s != null && s.getUsuarioId().equals(usuarioId))
                 .collect(Collectors.toList());
+            if (historias.size() > MAX_HISTORIAS_PER_DESTACADO) {
+                throw new IllegalArgumentException("Límite alcanzado: máximo " + MAX_HISTORIAS_PER_DESTACADO + " historias por destacado");
+            }
             d.setHistorias(historias);
         }
 
@@ -149,6 +159,9 @@ public class DestacadoService {
 
         boolean alreadyIn = d.getHistorias().stream().anyMatch(s -> s.getId().equals(historiaId));
         if (!alreadyIn) {
+            if (d.getHistorias().size() >= MAX_HISTORIAS_PER_DESTACADO) {
+                throw new IllegalArgumentException("Límite alcanzado: máximo " + MAX_HISTORIAS_PER_DESTACADO + " historias por destacado");
+            }
             d.getHistorias().add(story);
             destacadoRepository.save(d);
         }

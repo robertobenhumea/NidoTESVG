@@ -5,6 +5,12 @@ import type { Destacado } from '@/types';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, #1d4ed8, #3b82f6)';
 
+// Derive the best cover image from a highlight: manual override → first story image → null
+export function getCoverImage(highlight: Destacado): string | null {
+  if (highlight.coverImageUrl) return highlight.coverImageUrl;
+  return highlight.historias.find((h) => h.imagenUrl)?.imagenUrl ?? null;
+}
+
 interface Props {
   highlight: Destacado;
   onOpen: () => void;
@@ -14,20 +20,31 @@ interface Props {
 }
 
 export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [imgLoaded,  setImgLoaded]  = useState(false);
+  const [imgError,   setImgError]   = useState(false);
+  const [pressed,    setPressed]    = useState(false);
+
+  const longPressRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPressRef = useRef(false);
+
+  const coverImage = getCoverImage(highlight);
+  const showImage  = Boolean(coverImage) && !imgError;
+  const coverBg    = highlight.coverColor ?? undefined;
 
   function handlePointerDown() {
     didLongPressRef.current = false;
+    setPressed(true);
     if (!isOwner) return;
     longPressRef.current = setTimeout(() => {
       didLongPressRef.current = true;
       setMenuOpen(true);
+      setPressed(false);
     }, 500);
   }
 
   function handlePointerUp() {
+    setPressed(false);
     if (longPressRef.current) {
       clearTimeout(longPressRef.current);
       longPressRef.current = null;
@@ -35,6 +52,7 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
   }
 
   function handlePointerCancel() {
+    setPressed(false);
     if (longPressRef.current) {
       clearTimeout(longPressRef.current);
       longPressRef.current = null;
@@ -48,19 +66,23 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
     onOpen();
   }
 
-  const coverBg = highlight.coverColor ?? undefined;
-  const hasImage = Boolean(highlight.coverImageUrl);
-
   return (
-    <div className="flex flex-col items-center gap-1.5 w-[72px] shrink-0 snap-start select-none">
+    <div
+      className="flex flex-col items-center gap-1.5 w-[72px] shrink-0 snap-start select-none"
+      style={{
+        transform: pressed ? 'scale(0.93)' : 'scale(1)',
+        transition: 'transform 0.15s ease',
+      }}
+    >
       <div className="relative">
-        {/* Ring */}
+        {/* Gradient ring — 2.5 px gap between ring and image */}
         <div
           className="size-[68px] rounded-full p-[2.5px]"
-          style={{ background: 'var(--brand, #2563eb)' }}
+          style={{ background: BRAND_GRADIENT }}
         >
+          {/* Inner circle — interactive zone */}
           <div
-            className="w-full h-full rounded-full overflow-hidden relative cursor-pointer"
+            className="w-full h-full rounded-full overflow-hidden relative cursor-pointer bg-[var(--bg-elevated)]"
             onClick={handleClick}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
@@ -71,15 +93,31 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
             aria-label={`Ver destacado ${highlight.nombre}`}
             onKeyDown={(e) => e.key === 'Enter' && handleClick()}
           >
-            {hasImage ? (
+            {/* Skeleton — shown while image is loading */}
+            {showImage && !imgLoaded && (
+              <div className="absolute inset-0 rounded-full bg-[var(--bg-elevated)] animate-pulse" />
+            )}
+
+            {/* Cover image (lazy, with smooth fade-in) */}
+            {showImage && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={highlight.coverImageUrl}
+                src={coverImage!}
                 alt={highlight.nombre}
-                className="w-full h-full object-cover"
                 draggable={false}
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => { setImgError(true); setImgLoaded(false); }}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  opacity: imgLoaded ? 1 : 0,
+                  transition: 'opacity 0.3s ease',
+                }}
               />
-            ) : (
+            )}
+
+            {/* Fallback: emoji or gradient icon (shown when no image or image failed) */}
+            {!showImage && (
               <div
                 className="w-full h-full flex items-center justify-center text-2xl"
                 style={{ background: coverBg ?? BRAND_GRADIENT }}
@@ -93,17 +131,25 @@ export function HighlightCard({ highlight, onOpen, onEdit, onDelete, isOwner }: 
                 )}
               </div>
             )}
+
+            {/* Subtle dark vignette over image so the ring pops */}
+            {showImage && imgLoaded && (
+              <div
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle at 60% 60%, transparent 55%, rgba(0,0,0,0.25) 100%)' }}
+              />
+            )}
           </div>
         </div>
 
-        {/* Historia count badge */}
+        {/* Story count badge */}
         {highlight.historiaCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--brand)] text-white text-[10px] font-bold flex items-center justify-center leading-none border border-[var(--bg-surface)] tabular-nums">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--brand)] text-white text-[10px] font-bold flex items-center justify-center leading-none border-2 border-[var(--bg-surface)] tabular-nums">
             {highlight.historiaCount > 9 ? '9+' : highlight.historiaCount}
           </span>
         )}
 
-        {/* 3-dot menu button for owner */}
+        {/* 3-dot menu — owner only */}
         {isOwner && (
           <button
             onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
