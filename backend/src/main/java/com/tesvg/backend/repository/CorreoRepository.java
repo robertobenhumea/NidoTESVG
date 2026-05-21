@@ -55,6 +55,16 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query("""
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
+        WHERE d.receptorId = :receptorId AND UPPER(c.categoria) = UPPER(:categoria)
+        AND d.enPapelera = false AND d.archivado = false
+        AND c.esBorrador = false
+        ORDER BY c.fecha DESC
+        """)
+    List<Correo> findByCategoria(@Param("receptorId") Long receptorId, @Param("categoria") String categoria);
+
+    @Query("""
+        SELECT c FROM Correo c
+        JOIN CorreoDestinatario d ON d.correoId = c.id
         WHERE d.receptorId = :receptorId AND d.enPapelera = true
         ORDER BY d.fechaPapelera DESC
         """)

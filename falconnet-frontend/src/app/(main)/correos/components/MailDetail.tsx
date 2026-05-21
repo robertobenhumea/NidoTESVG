@@ -2,13 +2,67 @@
 
 import { Avatar } from '@/components/ui/Avatar';
 import { timeAgo } from '@/lib/utils';
-import type { CorreoItem, Tab } from './types';
+import type { CorreoAdjuntoItem, CorreoItem, Tab, UsuarioInstitucional } from './types';
 
 function resolveUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
   const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function IdentityBlock({ user, fallbackName }: { user?: UsuarioInstitucional; fallbackName: string }) {
+  const name = user?.nombre ?? fallbackName;
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{name}</p>
+        {user?.verificadoInstitucional && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            VERIFICADO
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+        {user?.carrera ?? 'Instituto Tecnológico'}
+        {user?.semestre ? ` · ${user.semestre}` : ''}
+        {user?.username ? ` · @${user.username}` : ''}
+      </p>
+      <p className="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">
+        {user?.rol ?? 'ESTUDIANTE'} · {user?.departamento ?? user?.facultad ?? 'Instituto Tecnológico'}
+      </p>
+    </div>
+  );
+}
+
+function AttachmentCard({ adjunto }: { adjunto: CorreoAdjuntoItem }) {
+  const isImage = adjunto.tipoArchivo?.startsWith('image/');
+  const url = resolveUrl(adjunto.archivoUrl);
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-2 hover:border-[var(--border-strong)] transition-colors"
+    >
+      {isImage ? (
+        <img src={url} alt="" className="size-12 rounded-lg object-cover bg-[var(--bg-surface)]" />
+      ) : (
+        <span className="size-12 rounded-lg bg-[var(--brand-muted)] text-[var(--brand)] flex items-center justify-center text-xs font-bold">
+          {adjunto.nombreArchivo.split('.').pop()?.slice(0, 3).toUpperCase() ?? 'FILE'}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{adjunto.nombreArchivo}</p>
+        <p className="text-[11px] text-[var(--text-muted)]">
+          {adjunto.tipoArchivo ?? 'Archivo'} · {adjunto.tamanio ? `${(adjunto.tamanio / (1024 * 1024)).toFixed(1)} MB` : 'Listo'}
+        </p>
+      </div>
+      <span className="text-[11px] text-[var(--brand)] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+        Abrir
+      </span>
+    </a>
+  );
 }
 
 interface MailDetailProps {
@@ -55,6 +109,7 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
   const displayName = isInbox
     ? (msg.emisorNombre ?? `Usuario #${msg.emisorId}`)
     : (msg.destinatarioNombres?.join(', ') ?? '—');
+  const identity = isInbox ? msg.emisor : msg.destinatarios?.[0];
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-surface)] animate-fade-in">
@@ -113,8 +168,8 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
               size="md"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{displayName}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              <IdentityBlock user={identity} fallbackName={displayName} />
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
                 {isInbox ? 'Para mí' : `Para: ${displayName}`}
               </p>
             </div>
@@ -139,6 +194,17 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
           <div className="text-sm text-[var(--text-secondary)] leading-[1.8] whitespace-pre-wrap break-words">
             {msg.cuerpo ?? '(Sin contenido)'}
           </div>
+
+          {msg.adjuntos && msg.adjuntos.length > 0 && (
+            <div className="mt-8">
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+                Adjuntos
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {msg.adjuntos.map(adjunto => <AttachmentCard key={adjunto.id} adjunto={adjunto} />)}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

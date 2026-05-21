@@ -37,6 +37,9 @@ public class CorreoController {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
+    @Value("${app.mail.attachment.max-size-bytes:26214400}")
+    private long maxAttachmentSizeBytes;
+
     // ── BANDEJA DE ENTRADA ──
     @GetMapping("/entrada")
     public ResponseEntity<?> bandeja(HttpServletRequest request) {
@@ -85,6 +88,14 @@ public class CorreoController {
         return ResponseEntity.ok(enriquecer(correos, yo.getId()));
     }
 
+    // ── CATEGORÍAS UNIVERSITARIAS ──
+    @GetMapping("/categoria/{categoria}")
+    public ResponseEntity<?> porCategoria(@PathVariable String categoria, HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        List<Correo> correos = correoRepository.findByCategoria(yo.getId(), normalizarCategoria(categoria));
+        return ResponseEntity.ok(enriquecer(correos, yo.getId()));
+    }
+
     // ── PAPELERA ──
     @GetMapping("/papelera")
     public ResponseEntity<?> papelera(HttpServletRequest request) {
@@ -126,6 +137,23 @@ public class CorreoController {
         return ResponseEntity.ok(Map.of("entrada", entrada, "enviados", enviados));
     }
 
+    // ── BÚSQUEDA AVANZADA ──
+    @GetMapping("/buscar-avanzado")
+    public ResponseEntity<?> buscarAvanzado(@RequestParam(required = false) String q,
+                                            @RequestParam(required = false) String categoria,
+                                            @RequestParam(required = false) Boolean tieneAdjuntos,
+                                            HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        String like = "%" + (q == null ? "" : q.toLowerCase()) + "%";
+        List<Map<String, Object>> resultado = enriquecer(correoRepository.buscarEntrada(yo.getId(), like), yo.getId())
+                .stream()
+                .filter(m -> categoria == null || categoria.isBlank()
+                        || normalizarCategoria(categoria).equalsIgnoreCase(String.valueOf(m.get("categoria"))))
+                .filter(m -> tieneAdjuntos == null || tieneAdjuntos.equals(Boolean.TRUE.equals(m.get("tieneAdjuntos"))))
+                .toList();
+        return ResponseEntity.ok(resultado);
+    }
+
     // ── VER CORREO (marca leído) ──
     @GetMapping("/{id}")
     public ResponseEntity<?> ver(@PathVariable Long id, HttpServletRequest request) {
@@ -149,10 +177,7 @@ public class CorreoController {
         resultado.put("destinatarios", destinatarios.stream().map(d -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("receptorId", d.getReceptorId());
-            usuarioRepository.findById(d.getReceptorId()).ifPresent(u -> {
-                m.put("nombre", u.getUsername());
-                m.put("fotoPerfil", u.getFotoPerfil());
-            });
+            usuarioRepository.findById(d.getReceptorId()).ifPresent(u -> m.put("usuario", usuarioInstitucional(u)));
             m.put("leido", d.getLeido());
             m.put("fechaLectura", d.getFechaLectura());
             m.put("esFavorito", d.getEsFavorito());
@@ -165,6 +190,7 @@ public class CorreoController {
             resultado.put("emisorNombre", e.getUsername());
             resultado.put("emisorFoto", e.getFotoPerfil());
             resultado.put("emisorRol", e.getRol());
+            resultado.put("emisor", usuarioInstitucional(e));
         });
 
         dest.ifPresent(d -> {
@@ -245,6 +271,8 @@ public class CorreoController {
         correo.setFecha(LocalDateTime.now());
         correo.setEsComunicado(false);
         correo.setEsBorrador(false);
+        correo.setCategoria(normalizarCategoria((String) body.getOrDefault("categoria", "GENERAL")));
+        correo.setTipo(normalizarTipo((String) body.getOrDefault("tipo", "PERSONAL")));
         correo.setReferenciaId(referenciaId);
         correoRepository.save(correo);
 
@@ -309,6 +337,8 @@ public class CorreoController {
         correo.setFecha(LocalDateTime.now());
         correo.setEsComunicado(false);
         correo.setEsBorrador(true);
+        correo.setCategoria(normalizarCategoria((String) body.getOrDefault("categoria", "GENERAL")));
+        correo.setTipo(normalizarTipo((String) body.getOrDefault("tipo", "PERSONAL")));
         correoRepository.save(correo);
 
         return ResponseEntity.ok(Map.of("id", correo.getId(), "mensaje", "Borrador guardado"));
@@ -346,6 +376,8 @@ public class CorreoController {
         correo.setEsBorrador(true);
         correo.setProgramadoPara(programadoPara);
         correo.setEsComunicado(false);
+        correo.setCategoria(normalizarCategoria((String) body.getOrDefault("categoria", "GENERAL")));
+        correo.setTipo(normalizarTipo((String) body.getOrDefault("tipo", "PERSONAL")));
         correoRepository.save(correo);
 
         for (Long rid : receptorIds) {
@@ -371,6 +403,12 @@ public class CorreoController {
 
         if (!correo.getEmisorId().equals(yo.getId())) {
             return ResponseEntity.status(403).build();
+        }
+        if (!archivoPermitido(archivo)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Tipo de archivo no permitido"));
+        }
+        if (archivo.getSize() > maxAttachmentSizeBytes) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El archivo excede el tamaño máximo permitido"));
         }
 
         try {
@@ -427,6 +465,8 @@ public class CorreoController {
         correo.setFecha(LocalDateTime.now());
         correo.setEsComunicado(true);
         correo.setEsBorrador(false);
+        correo.setCategoria("INSTITUCIONAL");
+        correo.setTipo("INSTITUCIONAL");
         correoRepository.save(correo);
 
         List<Usuario> todos = usuarioRepository.findAll();
@@ -568,6 +608,7 @@ public class CorreoController {
             usuarioRepository.findById(c.getEmisorId()).ifPresent(e -> {
                 m.put("emisorNombre", e.getUsername());
                 m.put("emisorFoto", e.getFotoPerfil());
+                m.put("emisor", usuarioInstitucional(e));
             });
             destRepository.findByCorreoIdAndReceptorId(c.getId(), receptorId).ifPresent(d -> {
                 m.put("leido", d.getLeido());
@@ -586,14 +627,20 @@ public class CorreoController {
             usuarioRepository.findById(c.getEmisorId()).ifPresent(e -> {
                 m.put("emisorNombre", e.getUsername());
                 m.put("emisorFoto", e.getFotoPerfil());
+                m.put("emisor", usuarioInstitucional(e));
             });
             List<CorreoDestinatario> dests = destRepository.findByCorreoId(c.getId());
             List<String> nombres = dests.stream()
                     .map(d -> usuarioRepository.findById(d.getReceptorId())
                             .map(Usuario::getUsername).orElse("?"))
                     .toList();
+            List<Map<String, Object>> destinatarios = dests.stream()
+                    .map(d -> usuarioRepository.findById(d.getReceptorId()).map(this::usuarioInstitucional).orElse(null))
+                    .filter(Objects::nonNull)
+                    .toList();
             boolean todosLeidos = !dests.isEmpty() && dests.stream().allMatch(CorreoDestinatario::getLeido);
             m.put("destinatarioNombres", nombres);
+            m.put("destinatarios", destinatarios);
             m.put("leido", todosLeidos);
             return m;
         }).toList();
@@ -611,7 +658,11 @@ public class CorreoController {
         m.put("esBorrador", c.getEsBorrador());
         m.put("programadoPara", c.getProgramadoPara());
         m.put("tieneAdjuntos", c.getTieneAdjuntos());
+        m.put("adjuntos", adjuntoRepository.findByCorreoId(c.getId()).stream().map(this::adjuntoToMap).toList());
+        m.put("adjuntosCount", adjuntoRepository.findByCorreoId(c.getId()).size());
         m.put("referenciaId", c.getReferenciaId());
+        m.put("categoria", c.getCategoria() != null ? c.getCategoria() : "GENERAL");
+        m.put("tipo", c.getTipo() != null ? c.getTipo() : "PERSONAL");
         m.put("prioridad", Boolean.TRUE.equals(c.getEsComunicado()) ? "ALTA" : "NORMAL");
         return m;
     }
@@ -650,6 +701,61 @@ public class CorreoController {
                     .ifPresent(u -> messagingTemplate.convertAndSendToUser(
                             u.getCorreo(), "/queue/correos", payload));
         }
+    }
+
+    private Map<String, Object> adjuntoToMap(CorreoAdjunto a) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", a.getId());
+        m.put("nombreArchivo", a.getNombreArchivo());
+        m.put("archivoUrl", a.getArchivoUrl());
+        m.put("tipoArchivo", a.getTipoArchivo());
+        m.put("tamanio", a.getTamanio());
+        m.put("fecha", a.getFecha());
+        return m;
+    }
+
+    private Map<String, Object> usuarioInstitucional(Usuario u) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        String nombre = u.getUsername() != null && !u.getUsername().isBlank()
+                ? u.getUsername() : u.getCorreo().split("@")[0];
+        m.put("id", u.getId());
+        m.put("nombre", nombre);
+        m.put("username", nombre);
+        m.put("correo", u.getCorreo());
+        m.put("fotoPerfil", u.getFotoPerfil());
+        m.put("carrera", u.getCarrera());
+        m.put("semestre", u.getGrupo());
+        m.put("grupo", u.getGrupo());
+        m.put("rol", u.getRol());
+        m.put("departamento", u.getCarrera() != null && !u.getCarrera().isBlank()
+                ? u.getCarrera() : "Instituto Tecnológico");
+        m.put("facultad", "Instituto Tecnológico");
+        m.put("verificadoInstitucional", u.getCorreo() != null && u.getCorreo().toLowerCase().endsWith("@tesvg.edu.mx"));
+        return m;
+    }
+
+    private String normalizarCategoria(String categoria) {
+        if (categoria == null || categoria.isBlank()) return "GENERAL";
+        String c = categoria.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        Set<String> permitidas = Set.of("GENERAL", "ACADEMICO", "EQUIPOS", "MARKETPLACE", "EVENTOS", "INSTITUCIONAL", "IMPORTANTE");
+        return permitidas.contains(c) ? c : "GENERAL";
+    }
+
+    private String normalizarTipo(String tipo) {
+        if (tipo == null || tipo.isBlank()) return "PERSONAL";
+        String t = tipo.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+        Set<String> permitidos = Set.of("PERSONAL", "ACADEMICO", "INSTITUCIONAL", "DOCENTE", "EQUIPO", "CLUB", "SISTEMA", "MARKETPLACE", "EVENTO");
+        return permitidos.contains(t) ? t : "PERSONAL";
+    }
+
+    private boolean archivoPermitido(MultipartFile archivo) {
+        if (archivo == null || archivo.isEmpty()) return false;
+        String ext = obtenerExtension(archivo.getOriginalFilename());
+        Set<String> permitidas = Set.of(
+                "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+                "png", "jpg", "jpeg", "gif", "webp", "zip", "mp4", "mov", "webm"
+        );
+        return permitidas.contains(ext);
     }
 
     private String obtenerExtension(String nombreOriginal) {

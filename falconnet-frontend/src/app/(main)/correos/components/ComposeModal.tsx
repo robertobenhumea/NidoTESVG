@@ -3,7 +3,20 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { api } from '@/services/api';
+import { STORAGE_KEYS } from '@/lib/utils';
 import type { BUser } from './types';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const MAX_ATTACHMENTS = 6;
+const CATEGORY_OPTIONS = [
+  { value: 'GENERAL', label: 'General' },
+  { value: 'ACADEMICO', label: 'Académico' },
+  { value: 'EQUIPOS', label: 'Equipos' },
+  { value: 'MARKETPLACE', label: 'Marketplace' },
+  { value: 'EVENTOS', label: 'Eventos' },
+  { value: 'INSTITUCIONAL', label: 'Institucional' },
+  { value: 'IMPORTANTE', label: 'Importante' },
+];
 
 function resolveUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
@@ -25,6 +38,9 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
   const [selectedTo, setSelectedTo] = useState<BUser[]>(initialTo ?? []);
   const [asunto, setAsunto]         = useState(initialSubject ?? '');
   const [cuerpo, setCuerpo]         = useState('');
+  const [categoria, setCategoria]   = useState('GENERAL');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [progress, setProgress]     = useState<Record<string, number>>({});
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
   const [sent, setSent]             = useState(false);
@@ -33,6 +49,35 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
 
   function userLabel(user: BUser): string {
     return user.username || user.correo?.split('@')[0] || `Usuario #${user.id}`;
+  }
+
+  function formatSize(size: number): string {
+    if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function addFiles(fileList: FileList | null) {
+    if (!fileList) return;
+    const next = Array.from(fileList).slice(0, MAX_ATTACHMENTS - attachments.length);
+    setAttachments(prev => [...prev, ...next]);
+  }
+
+  function uploadAttachment(correoId: number, file: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('archivo', file);
+      xhr.open('POST', `${BASE_URL}/correos/${correoId}/adjunto`);
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        setProgress(prev => ({ ...prev, [file.name]: Math.round((event.loaded / event.total) * 100) }));
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error('upload failed'));
+      xhr.onerror = () => reject(new Error('upload failed'));
+      xhr.send(form);
+    });
   }
 
   useEffect(() => {
@@ -66,11 +111,16 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
     setLoading(true);
     setError('');
     try {
-      await api.post('/correos/enviar', {
+      const response = await api.post<{ id: number }>('/correos/enviar', {
         asunto:      asunto.trim(),
         cuerpo:      cuerpo.trim(),
         receptorIds: selectedTo.map(u => u.id),
+        categoria,
+        tipo: categoria === 'ACADEMICO' ? 'ACADEMICO' : categoria === 'INSTITUCIONAL' ? 'INSTITUCIONAL' : 'PERSONAL',
       });
+      for (const file of attachments) {
+        await uploadAttachment(response.id, file);
+      }
       setSent(true);
       setTimeout(onSent, 900);
     } catch {
@@ -197,6 +247,20 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
                 </div>
               </div>
 
+              {/* Categoría */}
+              <div className="px-4 py-3 border-b border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-[var(--text-muted)] shrink-0 w-16 select-none">Categoría</span>
+                  <select
+                    value={categoria}
+                    onChange={e => setCategoria(e.target.value)}
+                    className="flex-1 text-sm bg-transparent text-[var(--text-primary)] focus:outline-none"
+                  >
+                    {CATEGORY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
               {/* Cuerpo */}
               <div className="px-4 pt-3 pb-2">
                 <textarea
@@ -211,6 +275,58 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
                 <p className="text-[10px] text-[var(--text-muted)] text-right mt-1 tabular-nums">
                   {cuerpo.length} / 5000
                 </p>
+              </div>
+
+              {/* Adjuntos */}
+              <div
+                className="mx-4 mb-4 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-elevated)]/70 px-3 py-3"
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--text-primary)]">Archivos</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">PDF, Office, imágenes, ZIP y video ligero</p>
+                  </div>
+                  <label className="h-8 px-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center cursor-pointer">
+                    Adjuntar
+                    <input
+                      type="file"
+                      multiple
+                      className="sr-only"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.zip,.mp4,.mov,.webm"
+                      onChange={e => { addFiles(e.target.files); e.currentTarget.value = ''; }}
+                    />
+                  </label>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {attachments.map(file => (
+                      <div key={`${file.name}-${file.size}`} className="flex items-center gap-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] px-2 py-2">
+                        <span className="size-8 rounded-lg bg-[var(--brand-muted)] text-[var(--brand)] flex items-center justify-center text-xs font-bold shrink-0">
+                          {file.name.split('.').pop()?.slice(0, 3).toUpperCase() ?? 'FILE'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-[var(--text-primary)] truncate">{file.name}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{formatSize(file.size)}</p>
+                          {progress[file.name] != null && (
+                            <div className="mt-1 h-1 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                              <div className="h-full bg-[var(--brand)]" style={{ width: `${progress[file.name]}%` }} />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAttachments(prev => prev.filter(f => f !== file))}
+                          className="size-7 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"
+                          aria-label="Quitar archivo"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -37,6 +37,12 @@ public class Correo {
     @Column(name = "tiene_adjuntos", nullable = false)
     private Boolean tieneAdjuntos = false;
 
+    @Column(nullable = false, length = 40, columnDefinition = "varchar(40) default 'GENERAL'")
+    private String categoria = "GENERAL";
+
+    @Column(nullable = false, length = 40, columnDefinition = "varchar(40) default 'PERSONAL'")
+    private String tipo = "PERSONAL";
+
     @Column(name = "referencia_id")
     private Long referenciaId;
 
@@ -60,6 +66,10 @@ public class Correo {
     public void setProgramadoPara(LocalDateTime programadoPara) { this.programadoPara = programadoPara; }
     public Boolean getTieneAdjuntos() { return tieneAdjuntos; }
     public void setTieneAdjuntos(Boolean tieneAdjuntos) { this.tieneAdjuntos = tieneAdjuntos; }
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
     public Long getReferenciaId() { return referenciaId; }
     public void setReferenciaId(Long referenciaId) { this.referenciaId = referenciaId; }
 }

@@ -42,6 +42,69 @@ function MailSkeleton() {
    Empty states
 ──────────────────────────────────────────────── */
 const EMPTY_CONFIG: Record<Tab, { title: string; sub: string; icon: React.ReactNode }> = {
+  general: {
+    title: 'Sin correo general',
+    sub: 'Los mensajes generales aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h16v16H4z" /><path d="m22 6-10 7L2 6" />
+      </svg>
+    ),
+  },
+  academico: {
+    title: 'Sin correo académico',
+    sub: 'Clases, tareas y docentes aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3 2 8l10 5 10-5-10-5z" /><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5" />
+      </svg>
+    ),
+  },
+  equipos: {
+    title: 'Sin correo de equipos',
+    sub: 'Solicitudes y coordinación de equipos aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      </svg>
+    ),
+  },
+  marketplace: {
+    title: 'Sin correo de marketplace',
+    sub: 'Compras, ventas y acuerdos aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" />
+      </svg>
+    ),
+  },
+  eventos: {
+    title: 'Sin correo de eventos',
+    sub: 'Invitaciones y avisos de eventos aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+      </svg>
+    ),
+  },
+  institucional: {
+    title: 'Sin avisos institucionales',
+    sub: 'Comunicados oficiales aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18" /><path d="M5 21V8l7-5 7 5v13" /><path d="M9 21v-6h6v6" />
+      </svg>
+    ),
+  },
+  importante: {
+    title: 'Sin mensajes importantes',
+    sub: 'Los correos prioritarios aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      </svg>
+    ),
+  },
   entrada: {
     title: 'Bandeja vacía',
     sub:   'Los mensajes nuevos aparecerán aquí',
@@ -140,8 +203,9 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
   const isUnread = !msg.leido && isInbox;
 
   const displayName = isInbox
-    ? (msg.emisorNombre ?? `#${msg.emisorId}`)
-    : (msg.destinatarioNombres?.join(', ') ?? '…');
+    ? (msg.emisor?.nombre ?? msg.emisorNombre ?? `#${msg.emisorId}`)
+    : (msg.destinatarios?.map(u => u.nombre).join(', ') ?? msg.destinatarioNombres?.join(', ') ?? '…');
+  const identity = isInbox ? msg.emisor : msg.destinatarios?.[0];
 
   const preview = (msg.cuerpo ?? '').replace(/\n+/g, ' ').trim();
 
@@ -230,6 +294,11 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
                 {timeAgo(msg.fecha)}
               </time>
             </div>
+            <p className="text-[11px] text-[var(--text-muted)] truncate mb-0.5">
+              {identity?.carrera ?? identity?.departamento ?? 'Instituto Tecnológico'}
+              {identity?.semestre ? ` · ${identity.semestre}` : ''}
+              {identity?.verificadoInstitucional ? ' · Verificado' : ''}
+            </p>
               <p className={cn(
                 'text-xs truncate',
                 isUnread ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-muted)]',
@@ -312,6 +381,41 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' |
    Sidebar navigation (shared desktop + drawer)
 ──────────────────────────────────────────────── */
 const TAB_ICONS: Record<Tab, React.ReactNode> = {
+  general: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v16H4z" /><path d="m22 6-10 7L2 6" />
+    </svg>
+  ),
+  academico: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 2 8l10 5 10-5-10-5z" /><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5" />
+    </svg>
+  ),
+  equipos: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+    </svg>
+  ),
+  marketplace: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" />
+    </svg>
+  ),
+  eventos: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  ),
+  institucional: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18" /><path d="M5 21V8l7-5 7 5v13" />
+    </svg>
+  ),
+  importante: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+    </svg>
+  ),
   entrada: (
     <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
@@ -347,6 +451,13 @@ const TAB_ICONS: Record<Tab, React.ReactNode> = {
 };
 
 const TAB_LABELS: Record<Tab, string> = {
+  general: 'General',
+  academico: 'Académico',
+  equipos: 'Equipos',
+  marketplace: 'Marketplace',
+  eventos: 'Eventos',
+  institucional: 'Institucional',
+  importante: 'Importante',
   entrada:   'Entrada',
   enviados:  'Enviados',
   favoritos: 'Favoritos',
@@ -361,7 +472,7 @@ function SidebarNav({
   tab: Tab; unreadCount: number;
   onSwitchTab: (t: Tab) => void; onCompose: () => void;
 }) {
-  const tabs: Tab[] = ['entrada', 'no-leidos', 'enviados', 'favoritos', 'archivados', 'papelera'];
+  const tabs: Tab[] = ['general', 'academico', 'equipos', 'marketplace', 'eventos', 'institucional', 'importante', 'no-leidos', 'archivados', 'enviados', 'favoritos', 'papelera'];
   return (
     <>
       <div className="p-4 pb-3">
@@ -449,7 +560,7 @@ function DetailPlaceholder({ onCompose }: { onCompose: () => void }) {
 interface ReplyContext { to: BUser[]; subject: string; }
 
 export default function CorreosPage() {
-  const [tab, setTab]               = useState<Tab>('entrada');
+  const [tab, setTab]               = useState<Tab>('general');
   const [items, setItems]           = useState<CorreoItem[]>([]);
   const [selected, setSelected]     = useState<CorreoItem | null>(null);
   const [loading, setLoading]       = useState(true);
@@ -470,6 +581,13 @@ export default function CorreosPage() {
     setSelected(null);
     try {
       const paths: Record<Tab, string> = {
+        general: '/correos/categoria/GENERAL',
+        academico: '/correos/categoria/ACADEMICO',
+        equipos: '/correos/categoria/EQUIPOS',
+        marketplace: '/correos/categoria/MARKETPLACE',
+        eventos: '/correos/categoria/EVENTOS',
+        institucional: '/correos/categoria/INSTITUCIONAL',
+        importante: '/correos/categoria/IMPORTANTE',
         entrada: '/correos/entrada',
         enviados: '/correos/enviados',
         favoritos: '/correos/favoritos',
