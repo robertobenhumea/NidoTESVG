@@ -133,7 +133,10 @@ export function UserHub() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Portal needs document — only available client-side
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(id);
+  }, []);
 
   /* ── Open / close with animation ── */
   const openHub = useCallback(() => {
@@ -277,7 +280,7 @@ export function UserHub() {
           <SectionLabel>Herramientas</SectionLabel>
           <HubItem href={ROUTES.MARKETPLACE} icon={<IcMarket />}    label="Marketplace" active={isActive(ROUTES.MARKETPLACE)} onClick={closeHub} />
           <HubItem href={ROUTES.EQUIPOS}     icon={<IcTeam />}      label="Equipos"     active={isActive(ROUTES.EQUIPOS)}     onClick={closeHub} />
-          <HubItem href={ROUTES.CORREOS}     icon={<IcMail />}      label="Correo"      active={isActive(ROUTES.CORREOS)}     onClick={closeHub} badge={unread.messages > 0 ? unread.messages : undefined} />
+          <HubItem href={ROUTES.CORREOS}     icon={<IcMail />}      label="Correo"      active={isActive(ROUTES.CORREOS)}     onClick={closeHub} badge={unread.mail > 0 ? unread.mail : undefined} />
           <HubItem href={ROUTES.RANKING}     icon={<IcRanking />}   label="Ranking"     active={isActive(ROUTES.RANKING)}     onClick={closeHub} />
           <HubItem href={ROUTES.RECURSOS}    icon={<IcResources />} label="Recursos"    active={isActive(ROUTES.RECURSOS)}    onClick={closeHub} />
           <HubItem href={ROUTES.EVENTOS}     icon={<IcCalendar />}  label="Eventos"     active={isActive(ROUTES.EVENTOS)}     onClick={closeHub} />
