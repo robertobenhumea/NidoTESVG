@@ -117,7 +117,7 @@ export function Navbar() {
           <NavBtn href={ROUTES.HOME}          icon={<IcHome />}   label="Inicio"         active={pathname === '/'} />
           <NavBtn href={ROUTES.MARKETPLACE}   icon={<IcStore />}  label="Marketplace"    active={pathname.startsWith('/marketplace')} />
           <NavBtn href={ROUTES.GROUPS}        icon={<IcGroups />} label="Comunidades"    active={pathname.startsWith('/groups')} />
-          <NavBtn href={ROUTES.MESSAGES}      icon={<IcChat />}   label="Mensajes"       active={pathname.startsWith('/messages')}      badge={unread.messages} />
+          <NavBtn href={ROUTES.CORREOS}       icon={<IcChat />}   label="Mail"           active={pathname.startsWith('/mail') || pathname.startsWith('/correos')} badge={unread.messages} />
           <NavBtn href={ROUTES.NOTIFICATIONS} icon={<IcBell />}   label="Notificaciones" active={pathname.startsWith('/notifications')} badge={unread.notifications} />
         </nav>
 

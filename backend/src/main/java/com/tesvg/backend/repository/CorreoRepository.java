@@ -19,7 +19,7 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query("""
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.enPapelera = false
+        WHERE d.receptorId = :receptorId AND d.enPapelera = false AND d.archivado = false
         AND c.esBorrador = false
         AND (c.programadoPara IS NULL OR c.programadoPara <= CURRENT_TIMESTAMP)
         ORDER BY c.fecha DESC
@@ -33,6 +33,24 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
         ORDER BY c.fecha DESC
         """)
     List<Correo> findFavoritos(@Param("receptorId") Long receptorId);
+
+    @Query("""
+        SELECT c FROM Correo c
+        JOIN CorreoDestinatario d ON d.correoId = c.id
+        WHERE d.receptorId = :receptorId AND d.leido = false AND d.enPapelera = false
+        AND c.esBorrador = false
+        ORDER BY c.fecha DESC
+        """)
+    List<Correo> findNoLeidos(@Param("receptorId") Long receptorId);
+
+    @Query("""
+        SELECT c FROM Correo c
+        JOIN CorreoDestinatario d ON d.correoId = c.id
+        WHERE d.receptorId = :receptorId AND d.archivado = true AND d.enPapelera = false
+        AND c.esBorrador = false
+        ORDER BY c.fecha DESC
+        """)
+    List<Correo> findArchivados(@Param("receptorId") Long receptorId);
 
     @Query("""
         SELECT c FROM Correo c

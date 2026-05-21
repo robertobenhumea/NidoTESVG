@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/correos")
@@ -27,6 +29,10 @@ public class CorreoController {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private HtmlSanitizerService htmlSanitizerService;
     @Autowired private CorreoAccessService correoAccessService;
+    @Autowired(required = false) private SimpMessagingTemplate messagingTemplate;
+
+    private final Map<Long, Deque<LocalDateTime>> envioRateLimit = new ConcurrentHashMap<>();
+    private static final int MAX_ENVIOS_POR_MINUTO = 20;
 
     @Value("${app.upload.dir}")
     private String uploadDir;
@@ -60,6 +66,22 @@ public class CorreoController {
     public ResponseEntity<?> favoritos(HttpServletRequest request) {
         Usuario yo = getUsuario(request);
         List<Correo> correos = correoRepository.findFavoritos(yo.getId());
+        return ResponseEntity.ok(enriquecer(correos, yo.getId()));
+    }
+
+    // ── NO LEÍDOS ──
+    @GetMapping("/no-leidos/lista")
+    public ResponseEntity<?> listaNoLeidos(HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        List<Correo> correos = correoRepository.findNoLeidos(yo.getId());
+        return ResponseEntity.ok(enriquecer(correos, yo.getId()));
+    }
+
+    // ── ARCHIVADOS ──
+    @GetMapping("/archivados")
+    public ResponseEntity<?> archivados(HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        List<Correo> correos = correoRepository.findArchivados(yo.getId());
         return ResponseEntity.ok(enriquecer(correos, yo.getId()));
     }
 
@@ -135,6 +157,7 @@ public class CorreoController {
             m.put("fechaLectura", d.getFechaLectura());
             m.put("esFavorito", d.getEsFavorito());
             m.put("etiqueta", d.getEtiqueta());
+            m.put("archivado", d.getArchivado());
             return m;
         }).toList());
 
@@ -148,6 +171,7 @@ public class CorreoController {
             resultado.put("esFavorito", d.getEsFavorito());
             resultado.put("etiqueta", d.getEtiqueta());
             resultado.put("enPapelera", d.getEnPapelera());
+            resultado.put("archivado", d.getArchivado());
         });
 
         List<Map<String, Object>> adjuntos = adjuntoRepository.findByCorreoId(id).stream()
@@ -182,6 +206,9 @@ public class CorreoController {
     @PostMapping("/enviar")
     public ResponseEntity<?> enviar(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         Usuario yo = getUsuario(request);
+        if (!permitirEnvio(yo.getId())) {
+            return ResponseEntity.status(429).body(Map.of("error", "Demasiados mensajes. Intenta de nuevo en un minuto."));
+        }
 
         String asunto = (String) body.get("asunto");
         String cuerpo = (String) body.get("cuerpo");
@@ -190,10 +217,17 @@ public class CorreoController {
         if (asunto == null || asunto.isBlank() || cuerpo == null || cuerpo.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Asunto y cuerpo son obligatorios"));
         }
+        if (asunto.length() > 255 || cuerpo.length() > 5000) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El asunto o mensaje excede el tamaño permitido"));
+        }
 
         @SuppressWarnings("unchecked")
         List<Long> receptorIds = ((List<Object>) body.getOrDefault("receptorIds", List.of()))
-                .stream().map(o -> Long.valueOf(o.toString())).toList();
+                .stream()
+                .map(o -> Long.valueOf(o.toString()))
+                .filter(id -> !id.equals(yo.getId()))
+                .distinct()
+                .toList();
 
         if (receptorIds.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Debe haber al menos un destinatario"));
@@ -214,14 +248,22 @@ public class CorreoController {
         correo.setReferenciaId(referenciaId);
         correoRepository.save(correo);
 
+        List<Long> entregados = new ArrayList<>();
         for (Long rid : receptorIds) {
-            if (usuarioRepository.existsById(rid)) {
+            Optional<Usuario> receptor = usuarioRepository.findById(rid);
+            if (receptor.isPresent() && receptor.get().isActivo()) {
                 CorreoDestinatario d = new CorreoDestinatario();
                 d.setCorreoId(correo.getId());
                 d.setReceptorId(rid);
                 d.setNotificarLectura(notificarLectura);
                 destRepository.save(d);
+                entregados.add(rid);
             }
+        }
+
+        if (entregados.isEmpty()) {
+            correoRepository.deleteById(correo.getId());
+            return ResponseEntity.badRequest().body(Map.of("error", "No se encontraron destinatarios válidos"));
         }
 
         /* Eliminar borrador si se indicó */
@@ -237,6 +279,7 @@ public class CorreoController {
             });
         }
 
+        notificarNuevoCorreo(correo, yo, entregados);
         return ResponseEntity.ok(Map.of("id", correo.getId(), "mensaje", "Correo enviado"));
     }
 
@@ -410,12 +453,31 @@ public class CorreoController {
     // ── FAVORITO ──
     @PutMapping("/{id}/favorito")
     public ResponseEntity<?> toggleFavorito(@PathVariable Long id,
-                                             @RequestBody Map<String, Object> body,
+                                             @RequestBody(required = false) Map<String, Object> body,
                                              HttpServletRequest request) {
         Usuario yo = getUsuario(request);
-        boolean valor = Boolean.TRUE.equals(body.get("favorito"));
+        Optional<CorreoDestinatario> dest = destRepository.findByCorreoIdAndReceptorId(id, yo.getId());
+        if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
+        boolean valor = body != null && body.containsKey("favorito")
+                ? Boolean.TRUE.equals(body.get("favorito"))
+                : !Boolean.TRUE.equals(dest.get().getEsFavorito());
         destRepository.setFavorito(id, yo.getId(), valor);
         return ResponseEntity.ok(Map.of("ok", true, "favorito", valor));
+    }
+
+    // ── ARCHIVAR ──
+    @PutMapping("/{id}/archivar")
+    public ResponseEntity<?> archivar(@PathVariable Long id,
+                                      @RequestBody(required = false) Map<String, Object> body,
+                                      HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        Optional<CorreoDestinatario> dest = destRepository.findByCorreoIdAndReceptorId(id, yo.getId());
+        if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
+        boolean valor = body != null && body.containsKey("archivado")
+                ? Boolean.TRUE.equals(body.get("archivado"))
+                : !Boolean.TRUE.equals(dest.get().getArchivado());
+        destRepository.setArchivado(id, yo.getId(), valor);
+        return ResponseEntity.ok(Map.of("ok", true, "archivado", valor));
     }
 
     // ── PAPELERA ──
@@ -512,6 +574,7 @@ public class CorreoController {
                 m.put("esFavorito", d.getEsFavorito());
                 m.put("etiqueta", d.getEtiqueta());
                 m.put("enPapelera", d.getEnPapelera());
+                m.put("archivado", d.getArchivado());
             });
             return m;
         }).toList();
@@ -549,11 +612,44 @@ public class CorreoController {
         m.put("programadoPara", c.getProgramadoPara());
         m.put("tieneAdjuntos", c.getTieneAdjuntos());
         m.put("referenciaId", c.getReferenciaId());
+        m.put("prioridad", Boolean.TRUE.equals(c.getEsComunicado()) ? "ALTA" : "NORMAL");
         return m;
     }
 
     private Usuario getUsuario(HttpServletRequest request) {
         return correoAccessService.getUsuario(request);
+    }
+
+    private boolean permitirEnvio(Long usuarioId) {
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ventana = ahora.minusMinutes(1);
+        Deque<LocalDateTime> eventos = envioRateLimit.computeIfAbsent(usuarioId, ignored -> new ArrayDeque<>());
+        synchronized (eventos) {
+            while (!eventos.isEmpty() && eventos.peekFirst().isBefore(ventana)) {
+                eventos.removeFirst();
+            }
+            if (eventos.size() >= MAX_ENVIOS_POR_MINUTO) return false;
+            eventos.addLast(ahora);
+            return true;
+        }
+    }
+
+    private void notificarNuevoCorreo(Correo correo, Usuario emisor, List<Long> receptorIds) {
+        if (messagingTemplate == null) return;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("event", "mail:new");
+        payload.put("id", correo.getId());
+        payload.put("asunto", correo.getAsunto());
+        payload.put("preview", correo.getCuerpo());
+        payload.put("fecha", correo.getFecha());
+        payload.put("emisorId", emisor.getId());
+        payload.put("emisorNombre", emisor.getUsername());
+        payload.put("emisorFoto", emisor.getFotoPerfil());
+        for (Long receptorId : receptorIds) {
+            usuarioRepository.findById(receptorId)
+                    .ifPresent(u -> messagingTemplate.convertAndSendToUser(
+                            u.getCorreo(), "/queue/correos", payload));
+        }
     }
 
     private String obtenerExtension(String nombreOriginal) {

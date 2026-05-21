@@ -53,7 +53,7 @@ export const ROUTES = {
   SEARCH:        '/search',
   AVISOS:        '/avisos',
   RANKING:       '/ranking',
-  CORREOS:       '/correos',
+  CORREOS:       '/mail',
   RECURSOS:      '/recursos',
   EVENTOS:       '/eventos',
   EQUIPOS:       '/equipos',

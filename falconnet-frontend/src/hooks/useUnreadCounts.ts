@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { chatService } from '@/services/chat.service';
+import { api } from '@/services/api';
 import { notificationService } from '@/services/notification.service';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -20,7 +20,7 @@ export function useUnreadCounts(): UnreadCounts {
     if (!user) return;
     try {
       const [messages, notifications] = await Promise.all([
-        chatService.getUnreadCount(),
+        api.get<{ count: number }>('/correos/no-leidos').then(r => r.count),
         notificationService.getUnreadCount(),
       ]);
       setCounts({ messages, notifications });
@@ -30,9 +30,12 @@ export function useUnreadCounts(): UnreadCounts {
   }, [user]);
 
   useEffect(() => {
-    fetch();
+    const initial = window.setTimeout(() => { void fetch(); }, 0);
     const id = setInterval(fetch, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    return () => {
+      window.clearTimeout(initial);
+      clearInterval(id);
+    };
   }, [fetch]);
 
   return counts;

@@ -32,6 +32,9 @@ public class CorreoDestinatario {
     @Column(name = "en_papelera", nullable = false)
     private Boolean enPapelera = false;
 
+    @Column(name = "archivado", nullable = false, columnDefinition = "boolean default false")
+    private Boolean archivado = false;
+
     @Column(name = "fecha_papelera")
     private LocalDateTime fechaPapelera;
 
@@ -57,6 +60,8 @@ public class CorreoDestinatario {
     public void setEtiqueta(String etiqueta) { this.etiqueta = etiqueta; }
     public Boolean getEnPapelera() { return enPapelera; }
     public void setEnPapelera(Boolean enPapelera) { this.enPapelera = enPapelera; }
+    public Boolean getArchivado() { return archivado; }
+    public void setArchivado(Boolean archivado) { this.archivado = archivado; }
     public LocalDateTime getFechaPapelera() { return fechaPapelera; }
     public void setFechaPapelera(LocalDateTime fechaPapelera) { this.fechaPapelera = fechaPapelera; }
     public LocalDateTime getLeidoEn() { return leidoEn; }

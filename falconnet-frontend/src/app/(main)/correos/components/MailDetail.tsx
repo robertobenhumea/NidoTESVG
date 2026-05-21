@@ -50,7 +50,8 @@ function formatFullDate(iso: string): string {
 }
 
 export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: MailDetailProps) {
-  const isInbox     = tab === 'entrada';
+  const isInbox     = tab !== 'enviados';
+  const isTrash     = tab === 'papelera';
   const displayName = isInbox
     ? (msg.emisorNombre ?? `Usuario #${msg.emisorId}`)
     : (msg.destinatarioNombres?.join(', ') ?? '—');
@@ -80,7 +81,7 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
           <StarIcon filled={msg.esFavorito} />
         </button>
 
-        {isInbox && (
+        {isInbox && !isTrash && (
           <button
             onClick={() => onTrash(msg.id)}
             aria-label="Mover a papelera"
@@ -144,7 +145,7 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
 
       {/* Reply bar */}
       <div className="border-t border-[var(--border)] px-4 sm:px-5 py-3 flex items-center gap-2 shrink-0">
-        {isInbox && (
+        {isInbox && !isTrash && (
           <button
             onClick={onReply}
             className="flex items-center gap-2 h-9 px-4 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:border-[var(--border-strong)] transition-colors"
@@ -155,16 +156,6 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply }: 
             Responder
           </button>
         )}
-        <button
-          disabled
-          title="Próximamente"
-          className="flex items-center gap-2 h-9 px-4 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-muted)] opacity-40 cursor-not-allowed"
-        >
-          <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 17 20 12 15 7" /><path d="M4 18v-2a4 4 0 0 1 4-4h12" />
-          </svg>
-          Reenviar
-        </button>
       </div>
     </div>
   );

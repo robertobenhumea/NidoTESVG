@@ -31,8 +31,12 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
   const textareaRef                 = useRef<HTMLTextAreaElement>(null);
   const searchRef                   = useRef<HTMLInputElement>(null);
 
+  function userLabel(user: BUser): string {
+    return user.username || user.correo?.split('@')[0] || `Usuario #${user.id}`;
+  }
+
   useEffect(() => {
-    api.get<BUser[]>('/usuarios').then(setUsers).catch(() => {});
+    api.get<BUser[]>('/usuarios').then(data => setUsers(data.filter(u => u.activo !== false))).catch(() => {});
     const focusTarget = initialTo?.length ? textareaRef : searchRef;
     setTimeout(() => focusTarget.current?.focus(), 150);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,7 +52,7 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
   const filteredUsers = toSearch.trim().length > 0
     ? users
         .filter(u =>
-          u.username.toLowerCase().includes(toSearch.toLowerCase()) &&
+          `${u.username ?? ''} ${u.correo ?? ''}`.toLowerCase().includes(toSearch.toLowerCase()) &&
           !selectedTo.find(s => s.id === u.id)
         )
         .slice(0, 5)
@@ -137,13 +141,13 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
                         key={u.id}
                         className="inline-flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-full bg-[var(--brand-muted)] text-[var(--brand-text)] text-xs font-medium max-w-[180px]"
                       >
-                        <Avatar src={resolveUrl(u.fotoPerfil)} name={u.username} size="xs" />
-                        <span className="truncate">{u.username}</span>
+                        <Avatar src={resolveUrl(u.fotoPerfil)} name={userLabel(u)} size="xs" />
+                        <span className="truncate">{userLabel(u)}</span>
                         <button
                           type="button"
                           onClick={() => setSelectedTo(p => p.filter(x => x.id !== u.id))}
                           className="ml-0.5 size-3.5 flex items-center justify-center rounded-full hover:bg-[var(--brand)] hover:text-white transition-colors shrink-0"
-                          aria-label={`Quitar ${u.username}`}
+                          aria-label={`Quitar ${userLabel(u)}`}
                         >
                           <svg className="size-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
                             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -171,8 +175,8 @@ export function ComposeModal({ onClose, onSent, initialTo, initialSubject }: Com
                         onClick={() => { setSelectedTo(p => [...p, u]); setToSearch(''); searchRef.current?.focus(); }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-[var(--bg-hover)] text-left transition-colors ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}
                       >
-                        <Avatar src={resolveUrl(u.fotoPerfil)} name={u.username} size="xs" />
-                        <span className="text-sm text-[var(--text-primary)]">{u.username}</span>
+                        <Avatar src={resolveUrl(u.fotoPerfil)} name={userLabel(u)} size="xs" />
+                        <span className="text-sm text-[var(--text-primary)]">{userLabel(u)}</span>
                       </button>
                     ))}
                   </div>

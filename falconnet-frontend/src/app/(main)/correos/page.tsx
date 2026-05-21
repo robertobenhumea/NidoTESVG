@@ -71,6 +71,33 @@ const EMPTY_CONFIG: Record<Tab, { title: string; sub: string; icon: React.ReactN
       </svg>
     ),
   },
+  archivados: {
+    title: 'Sin archivados',
+    sub:   'Los mensajes archivados quedarán guardados aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
+      </svg>
+    ),
+  },
+  'no-leidos': {
+    title: 'Todo leído',
+    sub:   'Los mensajes pendientes aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 7 13.5 15.5a2.1 2.1 0 0 1-3 0L2 7" /><rect x="2" y="5" width="20" height="14" rx="2" />
+      </svg>
+    ),
+  },
+  papelera: {
+    title: 'Papelera vacía',
+    sub:   'Los mensajes eliminados aparecerán aquí',
+    icon: (
+      <svg className="size-10 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+        <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" />
+      </svg>
+    ),
+  },
 };
 
 function EmptyState({ tab }: { tab: Tab }) {
@@ -98,17 +125,19 @@ interface MailItemProps {
   onClick:    () => void;
   onFavorite: (id: number) => void;
   onTrash:    (id: number) => void;
+  onArchive:  (id: number) => void;
+  onRestore:  (id: number) => void;
 }
 
-function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash }: MailItemProps) {
+function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchive, onRestore }: MailItemProps) {
   const [dragX, setDragX]       = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX                  = useRef(0);
   const startY                  = useRef(0);
   const axisLock                = useRef<'x' | 'y' | null>(null);
 
-  const isInbox  = tab === 'entrada';
-  const isUnread = !msg.leido && tab === 'entrada';
+  const isInbox  = tab !== 'enviados';
+  const isUnread = !msg.leido && isInbox;
 
   const displayName = isInbox
     ? (msg.emisorNombre ?? `#${msg.emisorId}`)
@@ -135,7 +164,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash }: MailIt
   }
 
   function onTouchEnd() {
-    if (dragging && dragX < -52 && isInbox) {
+    if (dragging && dragX < -52 && isInbox && tab !== 'papelera') {
       onTrash(msg.id);
     }
     setDragX(0);
@@ -146,7 +175,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash }: MailIt
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Swipe reveal — trash */}
-      {isInbox && dragX < -8 && (
+      {isInbox && tab !== 'papelera' && dragX < -8 && (
         <div
           className="absolute inset-y-0 right-0 flex items-center justify-end px-5 rounded-xl bg-red-500"
           style={{ width: Math.abs(dragX) + 16 }}
@@ -201,15 +230,18 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash }: MailIt
                 {timeAgo(msg.fecha)}
               </time>
             </div>
-            <p className={cn(
-              'text-xs truncate',
-              isUnread ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-muted)]',
-            )}>
-              {msg.asunto}
-            </p>
+              <p className={cn(
+                'text-xs truncate',
+                isUnread ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-muted)]',
+              )}>
+                {msg.prioridad === 'ALTA' && <span className="text-amber-500 mr-1">Alta</span>}
+                {msg.asunto}
+              </p>
             {preview && (
-              <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5 leading-snug">
-                {preview}
+              <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5 leading-snug flex items-center gap-1">
+                {msg.tieneAdjuntos && <span aria-label="Tiene adjuntos">📎</span>}
+                {msg.etiqueta && <span className="text-[var(--brand)]">#{msg.etiqueta}</span>}
+                <span className="truncate">{preview}</span>
               </p>
             )}
           </div>
@@ -230,6 +262,27 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash }: MailIt
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </button>
+          {tab === 'papelera' ? (
+            <button
+              onClick={e => { e.stopPropagation(); onRestore(msg.id); }}
+              aria-label="Restaurar"
+              className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
+            >
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+              </svg>
+            </button>
+          ) : isInbox && (
+            <button
+              onClick={e => { e.stopPropagation(); onArchive(msg.id); }}
+              aria-label={msg.archivado ? 'Desarchivar' : 'Archivar'}
+              className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
+            >
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
+              </svg>
+            </button>
+          )}
         </div>
       </button>
     </div>
@@ -276,12 +329,30 @@ const TAB_ICONS: Record<Tab, React.ReactNode> = {
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   ),
+  archivados: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
+    </svg>
+  ),
+  'no-leidos': (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 7 13.5 15.5a2.1 2.1 0 0 1-3 0L2 7" /><rect x="2" y="5" width="20" height="14" rx="2" />
+    </svg>
+  ),
+  papelera: (
+    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" />
+    </svg>
+  ),
 };
 
 const TAB_LABELS: Record<Tab, string> = {
   entrada:   'Entrada',
   enviados:  'Enviados',
   favoritos: 'Favoritos',
+  archivados: 'Archivados',
+  'no-leidos': 'No leídos',
+  papelera: 'Papelera',
 };
 
 function SidebarNav({
@@ -290,7 +361,7 @@ function SidebarNav({
   tab: Tab; unreadCount: number;
   onSwitchTab: (t: Tab) => void; onCompose: () => void;
 }) {
-  const tabs: Tab[] = ['entrada', 'enviados', 'favoritos'];
+  const tabs: Tab[] = ['entrada', 'no-leidos', 'enviados', 'favoritos', 'archivados', 'papelera'];
   return (
     <>
       <div className="p-4 pb-3">
@@ -398,7 +469,15 @@ export default function CorreosPage() {
     setLoading(true);
     setSelected(null);
     try {
-      const path = tab === 'entrada' ? '/correos/entrada' : tab === 'enviados' ? '/correos/enviados' : '/correos/favoritos';
+      const paths: Record<Tab, string> = {
+        entrada: '/correos/entrada',
+        enviados: '/correos/enviados',
+        favoritos: '/correos/favoritos',
+        archivados: '/correos/archivados',
+        'no-leidos': '/correos/no-leidos/lista',
+        papelera: '/correos/papelera',
+      };
+      const path = paths[tab];
       setItems(await api.get<CorreoItem[]>(path));
     } catch {
       setItems([]);
@@ -407,11 +486,15 @@ export default function CorreosPage() {
     }
   }, [tab]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const id = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(id);
+  }, [load]);
 
   /* ── Actions ── */
   async function handleFavorite(id: number) {
-    await api.put(`/correos/${id}/favorito`).catch(() => {});
+    const current = items.find(m => m.id === id)?.esFavorito ?? selected?.esFavorito ?? false;
+    await api.put(`/correos/${id}/favorito`, { favorito: !current }).catch(() => {});
     setItems(prev => {
       const wasFav = prev.find(m => m.id === id)?.esFavorito;
       showToast(wasFav ? 'Quitado de favoritos' : '⭐ Marcado como favorito');
@@ -429,16 +512,34 @@ export default function CorreosPage() {
     showToast('Movido a papelera');
   }
 
+  async function handleArchive(id: number) {
+    const current = items.find(m => m.id === id)?.archivado ?? selected?.archivado ?? false;
+    await api.put(`/correos/${id}/archivar`, { archivado: !current }).catch(() => {});
+    setItems(prev => {
+      const updated = prev.map(m => m.id === id ? { ...m, archivado: !current } : m);
+      return tab === 'entrada' || tab === 'archivados' ? updated.filter(m => m.id !== id) : updated;
+    });
+    setSelected(s => s?.id === id ? null : s);
+    showToast(current ? 'Mensaje desarchivado' : 'Mensaje archivado');
+  }
+
+  async function handleRestore(id: number) {
+    await api.put(`/correos/${id}/restaurar`).catch(() => {});
+    setItems(prev => prev.filter(m => m.id !== id));
+    setSelected(s => s?.id === id ? null : s);
+    showToast('Mensaje restaurado');
+  }
+
   function openMessage(msg: CorreoItem) {
     setSelected(msg);
-    if (tab === 'entrada' && !msg.leido) {
+    if (tab !== 'enviados' && !msg.leido) {
       api.put(`/correos/${msg.id}/leer`).catch(() => {});
       setItems(p => p.map(m => m.id === msg.id ? { ...m, leido: true } : m));
     }
   }
 
   function handleReply() {
-    if (!selected || tab !== 'entrada') return;
+    if (!selected || tab === 'enviados' || tab === 'papelera') return;
     setReplyCtx({
       to: [{
         id:         selected.emisorId,
@@ -464,10 +565,13 @@ export default function CorreosPage() {
 
   /* ── Keyboard shortcuts — use ref to avoid stale closures ── */
   const handlersRef = useRef({ handleFavorite, handleTrash, handleReply });
-  handlersRef.current = { handleFavorite, handleTrash, handleReply };
 
   const stateRef = useRef({ selected, tab, compose, drawer });
-  stateRef.current = { selected, tab, compose, drawer };
+
+  useEffect(() => {
+    handlersRef.current = { handleFavorite, handleTrash, handleReply };
+    stateRef.current = { selected, tab, compose, drawer };
+  });
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -493,7 +597,6 @@ export default function CorreosPage() {
     }
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   /* ── Filtered items ── */
@@ -710,6 +813,8 @@ export default function CorreosPage() {
                     onClick={() => openMessage(msg)}
                     onFavorite={handleFavorite}
                     onTrash={handleTrash}
+                    onArchive={handleArchive}
+                    onRestore={handleRestore}
                   />
                 ))}
               </div>

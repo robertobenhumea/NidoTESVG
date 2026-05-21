@@ -86,8 +86,8 @@ export function MobileNav() {
       create: true,
     },
     {
-      href: '/messages',
-      label: 'Mensajes',
+      href: '/mail',
+      label: 'Mail',
       icon: (a) => <IconChat filled={a} />,
       badge: unread.messages,
     },
