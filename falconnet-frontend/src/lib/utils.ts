@@ -5,12 +5,14 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 
 /** Relative time string in Spanish ("hace 3m", "hace 2h", etc.) */
 export function timeAgo(isoDate: string): string {
-  const diffSec = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
   if (diffSec < 60)     return 'ahora';
   if (diffSec < 3600)   return `hace ${Math.floor(diffSec / 60)}m`;
   if (diffSec < 86400)  return `hace ${Math.floor(diffSec / 3600)}h`;
   if (diffSec < 604800) return `hace ${Math.floor(diffSec / 86400)}d`;
-  return new Date(isoDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
 
 /** Truncate a string, appending "…" if cut. */
@@ -44,13 +46,77 @@ export const STORAGE_KEYS = {
   THEME: 'fn_theme',
 } as const;
 
+export function getStoredAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
+    ?? localStorage.getItem('token')
+    ?? localStorage.getItem('falconnet_token');
+  if (token && !localStorage.getItem(STORAGE_KEYS.TOKEN)) {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+  }
+  return token;
+}
+
+export function getApiBaseUrl(): string {
+  const configured = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+  if (typeof window === 'undefined') return configured;
+
+  try {
+    const url = new URL(configured);
+    const isLocalApiHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    const isRemoteFrontend = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isLocalApiHost && isRemoteFrontend) {
+      url.hostname = window.location.hostname;
+      return url.toString().replace(/\/$/, '');
+    }
+  } catch {
+    return configured;
+  }
+
+  return configured;
+}
+
+export function getWsBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_WS_URL
+    ?? `${getApiBaseUrl().replace(/^http/, 'ws')}/ws`;
+  if (typeof window === 'undefined') return configured.replace(/\/$/, '');
+
+  try {
+    const url = new URL(configured);
+    const isLocalWsHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    const isRemoteFrontend = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isLocalWsHost && isRemoteFrontend) {
+      url.hostname = window.location.hostname;
+      return url.toString().replace(/\/$/, '');
+    }
+  } catch {
+    return configured.replace(/\/$/, '');
+  }
+
+  return configured.replace(/\/$/, '');
+}
+
 export function resolveUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    if (typeof window === 'undefined') return path;
+    try {
+      const url = new URL(path);
+      const isLocalFileHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      const isRemoteFrontend = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      if (isLocalFileHost && isRemoteFrontend) {
+        const apiUrl = new URL(getApiBaseUrl());
+        url.protocol = apiUrl.protocol;
+        url.hostname = apiUrl.hostname;
+        url.port = apiUrl.port;
+        return url.toString();
+      }
+    } catch {
+      return path;
+    }
     return path;
   }
-  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 /** Cache aviso image URLs in localStorage so images survive page refreshes.

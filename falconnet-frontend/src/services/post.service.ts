@@ -6,7 +6,7 @@ function resolveUrl(path?: string | null): string | undefined {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 import type { Post, User, BPublicacion, BFeedPage, BUser, ReactionType } from '@/types';
-import { mapBUser } from '@/types';
+import { mapBUser } from '@/lib/userMapper';
 
 function buildUserMap(users: BUser[]): Map<number, User> {
   return new Map(users.map((u) => [u.id, mapBUser(u)]));

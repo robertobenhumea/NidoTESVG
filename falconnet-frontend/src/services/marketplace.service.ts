@@ -4,7 +4,7 @@ import type {
   BProducto, BProductoPage, BUser, MarketplaceListing, ProductoCategoria,
   BSolicitudCompra, SolicitudCompra,
 } from '@/types';
-import { mapBUser } from '@/types';
+import { mapBUser } from '@/lib/userMapper';
 
 function mapProducto(b: BProducto, vendorMap: Map<number, ReturnType<typeof mapBUser>>): MarketplaceListing {
   const vendor = vendorMap.get(b.vendedorId);

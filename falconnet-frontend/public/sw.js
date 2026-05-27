@@ -1,22 +1,48 @@
-/* FalconNet Service Worker — nuclear self-destruct v2 */
-self.addEventListener('install', () => self.skipWaiting());
+const CACHE_NAME = 'falconnet-shell-v2';
+const APP_SHELL = [
+  '/manifest.json',
+  '/icons/icon.svg',
+  '/icons/icon-maskable.svg',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL).catch(() => undefined))
+      .then(() => self.skipWaiting())
+  );
+});
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    (async () => {
-      // 1. Take control of all open tabs immediately
-      await self.clients.claim();
-
-      // 2. Wipe every cache
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-
-      // 3. Tell every tab to hard-reload BEFORE unregistering
-      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      clients.forEach((c) => c.navigate(c.url));
-
-      // 4. Unregister self so no future fetches are intercepted
-      await self.registration.unregister();
-    })()
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/')) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        return response;
+      }))
+    );
+  }
 });

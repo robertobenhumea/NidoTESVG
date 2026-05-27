@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'http',
-        hostname: '192.168.0.16',
+        hostname: '**',
         port: '8080',
         pathname: '/**',
       },
@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
   },
 
   /* ── Local network dev access ── */
-  allowedDevOrigins: ['192.168.0.16'],
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '172.16.*.*'],
 
   /* ── Bundle optimization ── */
   experimental: {

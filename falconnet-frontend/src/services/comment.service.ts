@@ -1,6 +1,6 @@
 import { api } from './api';
 import type { Comment, BComentario, BUser, User } from '@/types';
-import { mapBUser } from '@/types';
+import { mapBUser } from '@/lib/userMapper';
 
 function toComment(b: BComentario, userMap: Map<number, User>): Comment {
   return {

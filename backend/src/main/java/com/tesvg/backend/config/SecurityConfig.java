@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .collect(Collectors.toList());
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(origins);
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
@@ -74,7 +74,9 @@ public class SecurityConfig {
                         "/usuarios/registro",
                         "/ws/**"
                 ).permitAll()
-                .requestMatchers("/imagenes/adjuntos/**").authenticated()
+                .requestMatchers("/imagenes/adjuntos/**").permitAll()
+                .requestMatchers("/imagenes/mensajes/**").authenticated()
+                .requestMatchers("/imagenes/grupos-chat/**").authenticated()
                 .requestMatchers("/imagenes/**").permitAll()
 
                 // ── Role-restricted endpoints ──────────────────────────────────────────

@@ -45,6 +45,7 @@ export interface BComentario {
   usuarioId: number;
   publicacionId: number;
   contenido: string;
+  createdAt?: string;
   fecha: string;
 }
 
@@ -62,6 +63,38 @@ export interface BFollowStatus {
 export interface BFollowToggle {
   accion: 'siguiendo' | 'dejado de seguir';
   seguidores: number;
+}
+
+export interface RawSocialUser {
+  id: number;
+  username: string;
+  fotoPerfil?: string | null;
+  fotoPortada?: string | null;
+  bio?: string | null;
+  carrera?: string | null;
+  grupo?: string | null;
+  intereses?: string | null;
+  siguiendo: boolean;
+  mutuals: number;
+  totalSeguidores: number;
+  score?: number;
+  interesesComunes?: string[];
+}
+
+export interface SocialUser {
+  id: number;
+  username: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+  bio?: string;
+  carrera?: string;
+  grupo?: string;
+  intereses?: string;
+  siguiendo: boolean;
+  mutuals: number;
+  followerCount: number;
+  score?: number;
+  interesesComunes?: string[];
 }
 
 export function mapBUser(b: BUser): User {
@@ -245,31 +278,54 @@ export interface ReclutamientoFeedItem {
 
 /* ── Messages ── */
 
+export type MsgTipo = 'TEXT' | 'IMAGE' | 'DOCUMENT';
+export type LegacyMsgTipo = MsgTipo | 'TEXTO' | 'IMAGEN' | 'ARCHIVO' | 'VIDEO';
+
 export interface BMensaje {
   id: number;
   emisorId: number;
   receptorId: number;
   contenido: string;
+  createdAt?: string;
   fecha: string;
   leido: boolean;
+  messageType?: LegacyMsgTipo;
+  tipo?: LegacyMsgTipo;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  archivoUrl?: string | null;
+  nombreArchivo?: string | null;
+  eliminado?: boolean;
+  referenciaId?: number | null;
+  referencia?: { id: number; contenido: string; tipo: LegacyMsgTipo; emisorId: number; emisorNombre: string };
 }
 
 export interface BConversacion {
   partnerId: number;
   partnerNombre: string;
-  partnerFoto?: string;
+  partnerFoto?: string | null;
+  partnerCarrera?: string | null;
+  partnerRol?: string | null;
   ultimoMensaje?: string;
+  ultimoTipo?: LegacyMsgTipo;
   fecha?: string;
   noLeidos: number;
+  esMio?: boolean;
 }
 
 export interface Conversation {
   partnerId: number;
   partnerName: string;
   partnerAvatar?: string;
+  partnerCarrera?: string;
+  partnerRol?: string;
   lastMessage?: string;
+  lastTipo?: MsgTipo;
   updatedAt?: string;
   unreadCount: number;
+  isMine?: boolean;
 }
 
 export interface Message {
@@ -279,6 +335,16 @@ export interface Message {
   content: string;
   createdAt: string;
   read: boolean;
+  tipo: MsgTipo;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  archivoUrl?: string | null;
+  nombreArchivo?: string | null;
+  eliminado?: boolean;
+  referenciaId?: number | null;
+  referencia?: { id: number; content: string; tipo: MsgTipo; senderId: number; senderName: string };
 }
 
 /* ── Notifications ── */
@@ -586,4 +652,161 @@ export interface SearchResult {
   users: SearchUser[];
   groups: SearchGroup[];
   posts: SearchPost[];
+}
+
+/* ── Chat Groups ── */
+
+export type ChatGrupoTipo = 'PUBLICO' | 'PRIVADO' | 'INVITE';
+export type ChatGrupoRol  = 'OWNER' | 'ADMIN' | 'MODERADOR' | 'MIEMBRO';
+
+export interface BChatGrupo {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  foto?: string | null;
+  tipo: ChatGrupoTipo;
+  creadorId: number;
+  rol: ChatGrupoRol;
+  noLeidos: number;
+  fechaCreacion: string;
+  ultimoMensaje?: string | null;
+  ultimoTipo?: MsgTipo | null;
+  ultimaFecha?: string | null;
+  ultimoEmisor?: string | null;
+}
+
+export interface BChatGrupoMiembro {
+  usuarioId: number;
+  rol: ChatGrupoRol;
+  fechaUnion: string;
+  silenciado: boolean;
+  nombre: string;
+  foto?: string | null;
+  carrera?: string | null;
+}
+
+export interface BChatGrupoDetalle extends BChatGrupo {
+  miRol: ChatGrupoRol;
+  miembros: BChatGrupoMiembro[];
+  admins?: BChatGrupoMiembro[];
+}
+
+export interface BChatGrupoMensaje {
+  id: number;
+  grupoId: number;
+  emisorId: number;
+  contenido: string;
+  messageType?: LegacyMsgTipo;
+  tipo: LegacyMsgTipo;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  archivoUrl?: string | null;
+  nombreArchivo?: string | null;
+  eliminado: boolean;
+  esSistema: boolean;
+  referenciaId?: number | null;
+  referencia?: { id: number; contenido: string; tipo: LegacyMsgTipo; emisorId: number; emisorNombre: string };
+  replyPreview?: {
+    id: number;
+    senderId: number;
+    senderName: string;
+    content?: string;
+    contenido: string;
+    tipo: LegacyMsgTipo;
+    eliminado: boolean;
+  } | null;
+  editado?: boolean;
+  actualizadoEn?: string | null;
+  reenviado?: boolean;
+  mensajeOriginalId?: number | null;
+  reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
+  myReaction?: string | null;
+  createdAt?: string;
+  fecha: string;
+  emisorNombre?: string;
+  emisorFoto?: string | null;
+}
+
+export interface ChatGroup {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  foto?: string;
+  tipo: ChatGrupoTipo;
+  creadorId: number;
+  miRol: ChatGrupoRol;
+  noLeidos: number;
+  fechaCreacion: string;
+  lastMessage?: string;
+  lastTipo?: MsgTipo;
+  lastDate?: string;
+  lastSender?: string;
+}
+
+export interface ChatGroupMember {
+  usuarioId: number;
+  rol: ChatGrupoRol;
+  nombre: string;
+  foto?: string;
+  carrera?: string;
+  silenciado: boolean;
+  fechaUnion: string;
+}
+
+export interface GroupMessage {
+  id: number;
+  grupoId: number;
+  senderId: number;
+  content: string;
+  tipo: MsgTipo;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  archivoUrl?: string | null;
+  nombreArchivo?: string | null;
+  eliminado: boolean;
+  esSistema: boolean;
+  createdAt: string;
+  senderName?: string;
+  senderAvatar?: string;
+  referenciaId?: number | null;
+  referencia?: { id: number; content: string; tipo: MsgTipo; senderId: number; senderName: string };
+  replyPreview?: {
+    id: number;
+    senderId: number;
+    senderName: string;
+    content: string;
+    tipo: MsgTipo;
+    eliminado: boolean;
+  } | null;
+  editado?: boolean;
+  actualizadoEn?: string | null;
+  reenviado?: boolean;
+  mensajeOriginalId?: number | null;
+  reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
+  myReaction?: string | null;
+}
+
+export interface GroupAttachment {
+  id: number;
+  mensajeId?: number | null;
+  usuarioId: number;
+  usuarioNombre?: string;
+  url: string;
+  nombreArchivo?: string | null;
+  tipoArchivo?: string | null;
+  tipo: MsgTipo;
+  tamanio?: number | null;
+  fechaCreacion: string;
+}
+
+export interface GroupSharedLink {
+  mensajeId: number;
+  contenido: string;
+  fecha: string;
+  emisorId: number;
+  emisorNombre?: string;
 }

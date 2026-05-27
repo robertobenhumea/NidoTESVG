@@ -1,7 +1,7 @@
 import { api } from './api';
 import { STORAGE_KEYS } from '@/lib/utils';
+import { mapBUser } from '@/lib/userMapper';
 import type { LoginRequest, RegisterRequest, User, BUser, AuthTokens } from '@/types';
-import { mapBUser } from '@/types';
 
 interface LoginResponse {
   token: string;

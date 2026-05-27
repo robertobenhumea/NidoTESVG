@@ -1,7 +1,6 @@
-import { STORAGE_KEYS } from '@/lib/utils';
+import { STORAGE_KEYS, getApiBaseUrl, getStoredAuthToken } from '@/lib/utils';
 import type { ApiError } from '@/types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 const DEFAULT_TIMEOUT = 15_000;
 
 export class FetchError extends Error {
@@ -23,7 +22,7 @@ export class FetchError extends Error {
 
 function getAuthHeader(): Record<string, string> {
   if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = getStoredAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -42,9 +41,9 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  options: RequestInit & { timeout?: number } = {},
+  options: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean } = {},
 ): Promise<T> {
-  const { timeout = DEFAULT_TIMEOUT, ...rest } = options;
+  const { timeout = DEFAULT_TIMEOUT, suppressAuthExpiry = false, ...rest } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -56,7 +55,7 @@ async function request<T>(
   };
 
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await fetch(`${getApiBaseUrl()}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -70,7 +69,7 @@ async function request<T>(
       let errorData: ApiError | undefined;
       try { errorData = await res.json(); } catch { /* non-JSON body */ }
 
-      if (res.status === 401) dispatchAuthExpired();
+      if (res.status === 401 && !suppressAuthExpiry) dispatchAuthExpired();
 
       throw new FetchError(
         res.status,
@@ -95,18 +94,18 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string, opts?: RequestInit & { timeout?: number }) =>
+  get: <T>(path: string, opts?: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean }) =>
     request<T>('GET', path, undefined, opts),
 
-  post: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number }) =>
+  post: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean }) =>
     request<T>('POST', path, body, opts),
 
-  put: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number }) =>
+  put: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean }) =>
     request<T>('PUT', path, body, opts),
 
-  patch: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number }) =>
+  patch: <T>(path: string, body?: unknown, opts?: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean }) =>
     request<T>('PATCH', path, body, opts),
 
-  delete: <T>(path: string, opts?: RequestInit & { timeout?: number }) =>
+  delete: <T>(path: string, opts?: RequestInit & { timeout?: number; suppressAuthExpiry?: boolean }) =>
     request<T>('DELETE', path, undefined, opts),
 };
