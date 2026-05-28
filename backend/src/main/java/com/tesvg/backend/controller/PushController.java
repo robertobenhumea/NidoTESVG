@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import java.util.Map;
 
 @RestController
@@ -30,6 +32,14 @@ public class PushController {
         return ResponseEntity.ok(Map.of("publicKey", vapidPublicKey));
     }
 
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> status(HttpServletRequest request) {
+        Long usuarioId = resolveUsuarioId(request);
+        if (usuarioId == null) return ResponseEntity.status(401).build();
+        List<com.tesvg.backend.model.PushSubscription> subs = pushService.getSubscriptions(usuarioId);
+        return ResponseEntity.ok(Map.of("subscribed", !subs.isEmpty(), "count", subs.size()));
+    }
+
     @PostMapping("/subscribe")
     public ResponseEntity<Void> subscribe(@RequestBody Map<String, Object> body,
                                           HttpServletRequest request) {
@@ -41,7 +51,8 @@ public class PushController {
         Map<String, String> keys = (Map<String, String>) body.get("keys");
         if (endpoint == null || keys == null) return ResponseEntity.badRequest().build();
 
-        pushService.subscribe(usuarioId, endpoint, keys.get("p256dh"), keys.get("auth"));
+        String userAgent = request.getHeader("User-Agent");
+        pushService.subscribe(usuarioId, endpoint, keys.get("p256dh"), keys.get("auth"), userAgent);
         return ResponseEntity.ok().build();
     }
 

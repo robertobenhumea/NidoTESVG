@@ -9,6 +9,7 @@ import { mailTimeAgo } from './components/mailDate';
 import { ComposeModal } from './components/ComposeModal';
 import { MailDetail }   from './components/MailDetail';
 import type { CorreoItem, CorreoPageResponse, Tab, FilterType, BUser } from './components/types';
+import { getMailPushStatus, enableMailPush, type PushPermission } from '@/lib/mailPush';
 
 const VALID_TABS = new Set<Tab>([
   'general','academico','equipos','marketplace','eventos',
@@ -602,6 +603,61 @@ function DetailPlaceholder({ onCompose }: { onCompose: () => void }) {
 }
 
 /* ────────────────────────────────────────────────
+   Mail Push Notification Banner
+──────────────────────────────────────────────── */
+const PUSH_BANNER_DISMISSED_KEY = 'falconnet_mail_push_banner_dismissed';
+
+function MailPushBanner({
+  permission,
+  onEnable,
+  onDismiss,
+}: {
+  permission: PushPermission;
+  onEnable: () => void;
+  onDismiss: () => void;
+}) {
+  if (permission === 'denied') {
+    return (
+      <div className="mx-3 mb-2 px-3 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] flex items-start gap-2.5 shrink-0">
+        <svg className="size-4 text-[var(--text-muted)] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-[var(--text-secondary)]">Notificaciones bloqueadas</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">Actívalas en la configuración del navegador para recibir avisos de correo.</p>
+        </div>
+        <button onClick={onDismiss} className="size-5 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5">
+          <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-3 mb-2 px-3 py-2.5 rounded-xl bg-[var(--brand)]/8 border border-[var(--brand)]/20 flex items-center gap-2.5 shrink-0">
+      <svg className="size-4 text-[var(--brand)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      <p className="text-xs text-[var(--text-secondary)] flex-1 min-w-0">
+        Activa las <span className="font-semibold text-[var(--text-primary)]">notificaciones de correo</span> para recibir avisos aunque no estés aquí.
+      </p>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={onEnable}
+          className="h-7 px-3 rounded-lg bg-[var(--brand)] text-white text-[11px] font-semibold hover:bg-[var(--brand-hover)] transition-colors"
+        >
+          Activar
+        </button>
+        <button onClick={onDismiss} className="size-6 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--brand)]/10 transition-colors">
+          <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────
    Page
 ──────────────────────────────────────────────── */
 type ComposeMode = 'compose' | 'reply' | 'replyAll' | 'forward';
@@ -664,6 +720,46 @@ export default function CorreosPage() {
   // Phase 4: multi-select
   const [selectMode, setSelectMode]   = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Push notification banner
+  const [pushPermission, setPushPermission]     = useState<PushPermission | null>(null);
+  const [pushBannerVisible, setPushBannerVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('PushManager' in window)) return;
+    const dismissed = localStorage.getItem(PUSH_BANNER_DISMISSED_KEY);
+    if (dismissed) return;
+    getMailPushStatus().then(({ permission, subscribed }) => {
+      if (!subscribed && permission !== 'denied') {
+        setPushPermission(permission);
+        setPushBannerVisible(true);
+      } else if (permission === 'denied') {
+        setPushPermission('denied');
+        setPushBannerVisible(true);
+      }
+    });
+  }, []);
+
+  async function handleEnablePush() {
+    const ok = await enableMailPush();
+    if (ok) {
+      setPushBannerVisible(false);
+      showToast('Notificaciones de correo activadas', 'success');
+    } else {
+      const { permission } = await getMailPushStatus();
+      setPushPermission(permission);
+      if (permission === 'denied') {
+        // keep banner visible to show instructions
+      } else {
+        setPushBannerVisible(false);
+      }
+    }
+  }
+
+  function handleDismissPushBanner() {
+    localStorage.setItem(PUSH_BANNER_DISMISSED_KEY, '1');
+    setPushBannerVisible(false);
+  }
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
@@ -1456,6 +1552,15 @@ export default function CorreosPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Push notification banner */}
+          {pushBannerVisible && pushPermission !== null && (
+            <MailPushBanner
+              permission={pushPermission}
+              onEnable={() => { void handleEnablePush(); }}
+              onDismiss={handleDismissPushBanner}
+            />
           )}
 
           {/* Filter chips */}

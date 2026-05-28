@@ -1,4 +1,5 @@
 import type { Conversation, Message } from '@/types';
+import { STORAGE_KEYS } from '@/lib/utils';
 
 const MESSAGES_PREFIX = 'fn_chat_messages:';
 const CONVERSATIONS_KEY = 'fn_chat_conversations';
@@ -17,30 +18,55 @@ function safeParse<T>(value: string | null, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
+function currentUserSuffix(): string {
+  if (typeof window === 'undefined') return 'anonymous';
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+  const user = safeParse<{ id?: number | string } | null>(storedUser, null);
+  return user?.id != null ? String(user.id) : 'anonymous';
+}
+
+function conversationsKey(): string {
+  return `${CONVERSATIONS_KEY}:${currentUserSuffix()}`;
+}
+
+function messagesKey(partnerId: number): string {
+  return `${MESSAGES_PREFIX}${currentUserSuffix()}:${partnerId}`;
+}
+
+function queueKey(): string {
+  return `${QUEUE_KEY}:${currentUserSuffix()}`;
+}
+
 export const chatOffline = {
   getMessages(partnerId: number): Message[] {
     if (typeof window === 'undefined') return [];
-    return safeParse<Message[]>(localStorage.getItem(`${MESSAGES_PREFIX}${partnerId}`), []);
+    return safeParse<Message[]>(localStorage.getItem(messagesKey(partnerId)), []);
   },
 
   setMessages(partnerId: number, messages: Message[]): void {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(`${MESSAGES_PREFIX}${partnerId}`, JSON.stringify(messages.slice(-120)));
+    localStorage.setItem(messagesKey(partnerId), JSON.stringify(messages.slice(-120)));
   },
 
   getConversations(): Conversation[] {
     if (typeof window === 'undefined') return [];
-    return safeParse<Conversation[]>(localStorage.getItem(CONVERSATIONS_KEY), []);
+    return safeParse<Conversation[]>(localStorage.getItem(conversationsKey()), []);
   },
 
   setConversations(conversations: Conversation[]): void {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations.slice(0, 80)));
+    localStorage.setItem(conversationsKey(), JSON.stringify(conversations.slice(0, 80)));
+  },
+
+  clearConversations(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(conversationsKey());
+    localStorage.removeItem(CONVERSATIONS_KEY);
   },
 
   getQueue(): QueuedDM[] {
     if (typeof window === 'undefined') return [];
-    return safeParse<QueuedDM[]>(localStorage.getItem(QUEUE_KEY), []);
+    return safeParse<QueuedDM[]>(localStorage.getItem(queueKey()), []);
   },
 
   enqueue(item: Omit<QueuedDM, 'id' | 'createdAt'>): QueuedDM {
@@ -50,12 +76,12 @@ export const chatOffline = {
       createdAt: new Date().toISOString(),
     };
     const next = [...this.getQueue(), queued].slice(-50);
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(next));
+    localStorage.setItem(queueKey(), JSON.stringify(next));
     return queued;
   },
 
   remove(id: string): void {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(this.getQueue().filter(item => item.id !== id)));
+    localStorage.setItem(queueKey(), JSON.stringify(this.getQueue().filter(item => item.id !== id)));
   },
 };

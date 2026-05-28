@@ -1,5 +1,6 @@
 import { api } from '@/services/api';
 import { STORAGE_KEYS, getApiBaseUrl, getStoredAuthToken, resolveUrl as resolveBackendUrl } from '@/lib/utils';
+import { emitChatDebug } from '@/services/chat.service';
 import type {
   BChatGrupo, BChatGrupoMensaje, BChatGrupoDetalle,
   ChatGroup, GroupMessage, ChatGroupMember,
@@ -10,6 +11,54 @@ const OPTS = { suppressAuthExpiry: true } as const;
 
 function resolveUrl(path?: string | null): string | undefined {
   return resolveBackendUrl(path);
+}
+
+function chatListLog(message: string, extra?: unknown) {
+  if (process.env.NODE_ENV !== 'production' && /error|falló|fallo|rechaz/i.test(message)) {
+    console.warn(`[chat-list] ${message}`, extra ?? '');
+  }
+}
+
+function authDebugInfo() {
+  if (typeof window === 'undefined') return { hasToken: false, user: null };
+  const token = getStoredAuthToken();
+  const rawUser = localStorage.getItem(STORAGE_KEYS.USER);
+  let user: unknown = null;
+  try { user = rawUser ? JSON.parse(rawUser) : null; } catch { user = 'invalid-json'; }
+  return {
+    hasToken: Boolean(token),
+    tokenLength: token?.length ?? 0,
+    user,
+  };
+}
+
+function extractList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const wrapped = raw as { content?: unknown; data?: unknown; items?: unknown; results?: unknown; grupos?: unknown };
+    for (const value of [wrapped.content, wrapped.data, wrapped.items, wrapped.results, wrapped.grupos]) {
+      if (Array.isArray(value)) return value as T[];
+    }
+  }
+  return [];
+}
+
+function responseType(raw: unknown): string {
+  if (Array.isArray(raw)) return 'array';
+  if (!raw || typeof raw !== 'object') return typeof raw;
+  const wrapped = raw as { content?: unknown; data?: unknown; items?: unknown; results?: unknown; grupos?: unknown };
+  for (const key of ['content', 'data', 'items', 'results', 'grupos'] as const) {
+    if (Array.isArray(wrapped[key])) return key;
+  }
+  return `object:${Object.keys(raw).slice(0, 8).join(',')}`;
+}
+
+function rawPreview(raw: unknown): unknown {
+  const list = extractList<unknown>(raw);
+  if (list.length > 0) return list.slice(0, 2);
+  if (Array.isArray(raw)) return raw.slice(0, 2);
+  if (raw && typeof raw === 'object') return Object.fromEntries(Object.entries(raw).slice(0, 8));
+  return raw;
 }
 
 function normalizeMessageType(type?: LegacyMsgTipo | null): MsgTipo {
@@ -109,8 +158,36 @@ export function mapGroupMessage(b: BChatGrupoMensaje | GroupMessage): GroupMessa
 
 export const groupChatService = {
   async getGroups(): Promise<ChatGroup[]> {
-    const data = await api.get<BChatGrupo[]>('/grupos/chat', OPTS);
-    return data.map(mapGroup);
+    const endpoint = '/grupos/chat';
+    const apiUrl = getApiBaseUrl();
+    const token = getStoredAuthToken();
+    const auth = authDebugInfo();
+    const url = `${apiUrl}${endpoint}?_=${Date.now()}`;
+    chatListLog('solicitando grupos de chat', { endpoint, apiUrl, source: 'backend', auth });
+    emitChatDebug({ kind: 'groups', label: 'solicitando grupos', apiUrl, endpoint, url, source: 'backend', status: 'not-called', hasToken: auth.hasToken, tokenLength: auth.tokenLength, user: auth.user });
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: 'no-store',
+    });
+    let raw: unknown = null;
+    try { raw = await res.json(); } catch { raw = null; }
+    if (!res.ok) {
+      emitChatDebug({ kind: 'groups', label: 'grupos falló HTTP', apiUrl, endpoint, url, status: res.status, ok: res.ok, responseType: responseType(raw), rawPreview: rawPreview(raw), source: 'error', hasToken: Boolean(token), tokenLength: token?.length ?? 0, user: auth.user });
+      const errorData = raw as { error?: string; message?: string } | null;
+      throw new Error(errorData?.error ?? errorData?.message ?? `HTTP ${res.status}`);
+    }
+    const data = extractList<BChatGrupo>(raw);
+    chatListLog('respuesta cruda grupos', { endpoint, source: 'backend', count: data.length, data });
+    const groups = data.map(mapGroup);
+    emitChatDebug({ kind: 'groups', label: 'grupos recibidos', apiUrl, endpoint, url, status: res.status, ok: res.ok, responseType: responseType(raw), rawCount: data.length, mappedCount: groups.length, filteredCount: groups.length, source: 'backend', hasToken: Boolean(token), tokenLength: token?.length ?? 0, user: auth.user, rawPreview: rawPreview(raw) });
+    chatListLog('grupos mapeados', { endpoint, source: 'backend', rawCount: data.length, mappedCount: groups.length });
+    return groups;
   },
 
   async getUnreadCount(): Promise<number> {

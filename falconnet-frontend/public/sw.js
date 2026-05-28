@@ -1,11 +1,10 @@
-const CACHE_NAME = 'falconnet-shell-v4';
-const RUNTIME_CACHE = 'falconnet-runtime-v4';
+const CACHE_NAME = 'falconnet-shell-v5';
+const RUNTIME_CACHE = 'falconnet-runtime-v5';
 const APP_SHELL = [
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-maskable.svg',
   '/offline.html',
-  '/messages',
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,28 +57,38 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { title: 'FalconNet', body: event.data?.text() }; }
+  const type = data.type || 'general';
+  const isMail = type === 'mail';
   const title = data.title || 'FalconNet';
+  const url = data.url || (isMail ? '/correos?tab=entrada' : '/messages');
+  const tag = data.tag || (isMail ? 'falconnet-mail' : 'falconnet-chat');
   const options = {
-    body: data.body || 'Nuevo mensaje',
+    body: data.body || (isMail ? 'Nuevo correo institucional' : 'Nuevo mensaje'),
     icon: '/icons/icon.svg',
     badge: '/icons/icon-maskable.svg',
-    data: { url: data.url || '/messages' },
-    tag: data.url || 'falconnet-chat',
-    renotify: false,
+    data: { url, correoId: data.correoId || null, type },
+    tag,
+    renotify: isMail,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = event.notification.data?.url || '/messages';
+  const notifData = event.notification.data || {};
+  const correoId = notifData.correoId;
+  let target = notifData.url || '/messages';
+  if (notifData.type === 'mail') {
+    target = correoId
+      ? `/correos?tab=entrada&correoId=${correoId}`
+      : '/correos?tab=entrada';
+  }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ('focus' in client) {
-          client.navigate(target);
-          return client.focus();
-        }
+      const falconClient = clients.find((c) => new URL(c.url).pathname.startsWith('/'));
+      if (falconClient && 'focus' in falconClient) {
+        falconClient.navigate(target);
+        return falconClient.focus();
       }
       return self.clients.openWindow(target);
     })

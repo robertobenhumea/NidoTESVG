@@ -1,11 +1,23 @@
 'use client';
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Mic, Pause, Play, Send, Square, Trash2, X } from 'lucide-react';
+import { Download, Mic, Paperclip, Pause, Play, Send, Square, Trash2, X } from 'lucide-react';
 import { getStoredAuthToken, resolveUrl } from '@/lib/utils';
 
 const MAX_VOICE_SECONDS = 5 * 60;
 const AUDIO_ACCEPT = 'audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.webm,.ogg,.mp3,.m4a,.mp4,.wav';
+const AUDIO_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+const AUDIO_EXTENSIONS = ['webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav'];
+
+type AudioRuntimeInfo = {
+  browser: 'safari-ios' | 'safari' | 'chrome-android' | 'desktop' | 'unknown';
+  isPwa: boolean;
+  isSecureContext: boolean;
+  isLocalhost: boolean;
+  isLanIp: boolean;
+  protocol: string;
+  hostname: string;
+};
 
 function authHeader(): HeadersInit {
   if (typeof window === 'undefined') return {};
@@ -20,10 +32,74 @@ function formatDuration(seconds?: number | null): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+function getAudioRuntimeInfo(): AudioRuntimeInfo {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      browser: 'unknown',
+      isPwa: false,
+      isSecureContext: false,
+      isLocalhost: false,
+      isLanIp: false,
+      protocol: '',
+      hostname: '',
+    };
+  }
+  const ua = navigator.userAgent;
+  const platform = navigator.platform || '';
+  const maxTouchPoints = navigator.maxTouchPoints || 0;
+  const isAndroid = /Android/i.test(ua);
+  const isChrome = /Chrome|CriOS/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua) || (platform === 'MacIntel' && maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const hostname = window.location.hostname;
+  const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
+  const isLanIp = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+  const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
+  const isPwa = window.matchMedia('(display-mode: standalone)').matches || standaloneNavigator.standalone === true;
+
+  return {
+    browser: isIOS && isSafari ? 'safari-ios' : isSafari ? 'safari' : isAndroid && isChrome ? 'chrome-android' : 'desktop',
+    isPwa,
+    isSecureContext: window.isSecureContext,
+    isLocalhost,
+    isLanIp,
+    protocol: window.location.protocol,
+    hostname,
+  };
+}
+
+function logAudioDiagnostic(message: string, extra?: unknown) {
+  if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined' && window.localStorage.getItem('fn_chat_audio_debug') === '1') {
+    console.warn(`[chat-audio] ${message}`, extra ?? '');
+  }
+}
+
+function getUnsupportedReason(info = getAudioRuntimeInfo()): string | null {
+  if (typeof navigator === 'undefined') return 'El navegador no soporta grabación.';
+  if (!info.isSecureContext && !info.isLocalhost) {
+    if (info.isLanIp) return 'La grabación requiere HTTPS en móvil. En algunos celulares el micrófono requiere HTTPS o PWA compatible.';
+    return 'La grabación requiere HTTPS en móvil.';
+  }
+  if (!navigator.mediaDevices?.getUserMedia) return 'Tu navegador no soporta acceso al micrófono.';
+  if (typeof MediaRecorder === 'undefined') return 'Tu navegador no soporta grabación.';
+  return null;
+}
+
+function microphoneErrorMessage(err: unknown, info = getAudioRuntimeInfo()): string {
+  if (!info.isSecureContext && !info.isLocalhost) return info.isLanIp ? 'La grabación requiere HTTPS en móvil. En algunos celulares el micrófono requiere HTTPS o PWA compatible.' : 'La grabación requiere HTTPS en móvil.';
+  if (!(err instanceof DOMException)) return 'No se pudo acceder al micrófono.';
+  if (err.name === 'NotAllowedError') return 'Debes permitir acceso al micrófono para grabar audio.';
+  if (err.name === 'SecurityError') return 'La grabación requiere HTTPS en móvil.';
+  if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') return 'No se encontró un micrófono disponible.';
+  if (err.name === 'NotReadableError' || err.name === 'TrackStartError') return 'El micrófono está ocupado o no se puede iniciar.';
+  if (err.name === 'AbortError') return 'La grabación se interrumpió. Intenta de nuevo.';
+  if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') return 'El micrófono no cumple los requisitos de grabación.';
+  return 'No se pudo acceder al micrófono.';
+}
+
 function preferredMimeType(): string {
   if (typeof MediaRecorder === 'undefined') return '';
-  const options = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'];
-  return options.find(type => MediaRecorder.isTypeSupported(type)) ?? '';
+  return AUDIO_MIME_TYPES.find(type => MediaRecorder.isTypeSupported(type)) ?? '';
 }
 
 function extensionFromMime(mimeType: string): string {
@@ -32,6 +108,12 @@ function extensionFromMime(mimeType: string): string {
   if (mimeType.includes('mpeg')) return 'mp3';
   if (mimeType.includes('wav')) return 'wav';
   return 'webm';
+}
+
+function isAudioFile(file: File): boolean {
+  if (file.type.startsWith('audio/')) return true;
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return AUDIO_EXTENSIONS.includes(ext);
 }
 
 async function fetchObjectUrl(url: string): Promise<string> {
@@ -52,24 +134,27 @@ export function VoicePlayer({
   isOwn?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [audioState, setAudioState] = useState<{ sourceUrl: string; objectUrl: string | null; error: string }>({
+    sourceUrl: url,
+    objectUrl: null,
+    error: '',
+  });
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(durationSeconds ?? 0);
-  const [error, setError] = useState('');
+  const objectUrl = audioState.sourceUrl === url ? audioState.objectUrl : null;
+  const error = audioState.sourceUrl === url ? audioState.error : '';
 
   useEffect(() => {
     let cancelled = false;
     let localUrl: string | null = null;
-    setError('');
-    setObjectUrl(null);
     void fetchObjectUrl(url)
       .then(nextUrl => {
         localUrl = nextUrl;
-        if (!cancelled) setObjectUrl(nextUrl);
+        if (!cancelled) setAudioState({ sourceUrl: url, objectUrl: nextUrl, error: '' });
       })
       .catch(() => {
-        if (!cancelled) setError('No se pudo cargar el audio');
+        if (!cancelled) setAudioState({ sourceUrl: url, objectUrl: null, error: 'No se pudo cargar el audio' });
       });
     return () => {
       cancelled = true;
@@ -154,7 +239,7 @@ export function VoiceRecorder({
   const chunksRef = useRef<BlobPart[]>([]);
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
-  const [supported, setSupported] = useState(false);
+  const recordingErrorRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -167,10 +252,24 @@ export function VoiceRecorder({
   const canSend = useMemo(() => previewFile && !sending && !disabled, [previewFile, sending, disabled]);
 
   useEffect(() => {
-    setSupported(typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia) && typeof MediaRecorder !== 'undefined');
+    const runtimeInfo = getAudioRuntimeInfo();
+    const unsupportedReason = getUnsupportedReason(runtimeInfo);
+    if (unsupportedReason) {
+      logAudioDiagnostic(unsupportedReason, runtimeInfo);
+    } else {
+      logAudioDiagnostic('grabación disponible', {
+        ...runtimeInfo,
+        mimeType: preferredMimeType() || 'MediaRecorder default',
+      });
+    }
     return () => {
       stopTracks();
       if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
@@ -178,6 +277,11 @@ export function VoiceRecorder({
   function stopTracks() {
     streamRef.current?.getTracks().forEach(track => track.stop());
     streamRef.current = null;
+  }
+
+  function clearTimer() {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = null;
   }
 
   function resetPreview() {
@@ -189,9 +293,12 @@ export function VoiceRecorder({
   }
 
   async function startRecording() {
-    if (!supported || disabled || recording) {
-      if (!supported) {
-        setError('Tu navegador no permite grabar audio. Adjunta un archivo.');
+    const runtimeInfo = getAudioRuntimeInfo();
+    const unsupportedReason = getUnsupportedReason(runtimeInfo);
+    if (unsupportedReason || disabled || recording) {
+      if (unsupportedReason) {
+        logAudioDiagnostic(unsupportedReason, runtimeInfo);
+        setError(`${unsupportedReason} Puedes adjuntar un audio.`);
         audioInputRef.current?.click();
       }
       return;
@@ -199,18 +306,40 @@ export function VoiceRecorder({
     try {
       resetPreview();
       chunksRef.current = [];
+      recordingErrorRef.current = false;
+      logAudioDiagnostic('solicitando permiso de micrófono', runtimeInfo);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      if (!stream.getAudioTracks().length) {
+        logAudioDiagnostic('stream sin pistas de audio', runtimeInfo);
+        throw new DOMException('No audio track', 'NotFoundError');
+      }
       const mimeType = preferredMimeType();
+      logAudioDiagnostic('iniciando MediaRecorder', { mimeType: mimeType || 'MediaRecorder default' });
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       recorderRef.current = recorder;
       startedAtRef.current = Date.now();
       recorder.ondataavailable = event => {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
+      recorder.onerror = event => {
+        recordingErrorRef.current = true;
+        logAudioDiagnostic('MediaRecorder error', event);
+        setError('No se pudo grabar audio en este navegador. Puedes adjuntar un audio.');
+        stopRecording();
+      };
       recorder.onstop = () => {
+        if (recordingErrorRef.current) {
+          stopTracks();
+          return;
+        }
         const duration = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
         const type = recorder.mimeType || mimeType || 'audio/webm';
+        if (chunksRef.current.length === 0) {
+          setError('No se capturó audio. Revisa el permiso del micrófono o adjunta un audio.');
+          stopTracks();
+          return;
+        }
         const blob = new Blob(chunksRef.current, { type });
         const ext = extensionFromMime(type);
         const file = new File([blob], `nota-voz-${Date.now()}.${ext}`, { type });
@@ -219,7 +348,7 @@ export function VoiceRecorder({
         setPreviewUrl(URL.createObjectURL(blob));
         stopTracks();
       };
-      recorder.start();
+      recorder.start(1000);
       setRecording(true);
       setSeconds(0);
       timerRef.current = window.setInterval(() => {
@@ -227,17 +356,31 @@ export function VoiceRecorder({
         setSeconds(elapsed);
         if (elapsed >= MAX_VOICE_SECONDS) stopRecording();
       }, 500);
-    } catch {
-      setError('No se pudo acceder al micrófono.');
+    } catch (err) {
+      const runtimeInfo = getAudioRuntimeInfo();
+      const message = microphoneErrorMessage(err, runtimeInfo);
+      logAudioDiagnostic(message, { error: err, runtimeInfo });
+      setError(message);
+      clearTimer();
+      setRecording(false);
+      recorderRef.current = null;
       stopTracks();
     }
   }
 
   function stopRecording() {
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    timerRef.current = null;
+    clearTimer();
     const recorder = recorderRef.current;
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.requestData();
+      } catch {
+        // Some mobile browsers throw when data is not ready yet.
+      }
+      recorder.stop();
+    } else {
+      stopTracks();
+    }
     recorderRef.current = null;
     setRecording(false);
   }
@@ -258,7 +401,7 @@ export function VoiceRecorder({
   function onManualAudio(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('audio/')) {
+    if (!isAudioFile(file)) {
       setError('Selecciona un archivo de audio válido.');
       e.target.value = '';
       return;
@@ -297,9 +440,14 @@ export function VoiceRecorder({
       )}
       {recording && <span className="text-[11px] font-semibold tabular-nums text-red-500">{formatDuration(seconds)}</span>}
       {error && (
-        <button type="button" onClick={() => setError('')} className="flex max-w-[120px] items-center gap-1 truncate text-[10px] text-red-500" title={error}>
-          <span className="truncate">{error}</span><X className="size-3" />
-        </button>
+        <>
+          <button type="button" onClick={() => audioInputRef.current?.click()} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]" aria-label="Adjuntar audio" title="Adjuntar audio">
+            <Paperclip className="size-4" />
+          </button>
+          <button type="button" onClick={() => setError('')} className="flex max-w-[150px] items-center gap-1 truncate text-[10px] text-red-500" title={error}>
+            <span className="truncate">{error}</span><X className="size-3" />
+          </button>
+        </>
       )}
       <input ref={audioInputRef} type="file" accept={AUDIO_ACCEPT} className="hidden" onChange={onManualAudio} />
     </div>

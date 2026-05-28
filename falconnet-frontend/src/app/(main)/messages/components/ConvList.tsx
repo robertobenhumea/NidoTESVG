@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Users, X } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { timeAgo } from '@/lib/utils';
+import { chatOffline } from '@/lib/chatOffline';
 import { chatService } from '@/services/chat.service';
 import { groupChatService } from '@/services/groupChat.service';
 import { searchService } from '@/services/search.service';
@@ -16,6 +17,12 @@ function safeTimeAgo(value?: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return timeAgo(value);
+}
+
+function chatListLog(message: string, extra?: unknown) {
+  if (process.env.NODE_ENV !== 'production' && /error|falló|fallo|rechaz/i.test(message)) {
+    console.warn(`[chat-list] ${message}`, extra ?? '');
+  }
 }
 
 function ConvSkeleton() {
@@ -252,33 +259,106 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
   const [convs, setConvs]     = useState<Conversation[]>([]);
   const [groups, setGroups]   = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
   const [query, setQuery]     = useState('');
   const [tab, setTab]         = useState<'chats' | 'groups'>(activeGroupId ? 'groups' : 'chats');
   const [creating, setCreating] = useState(false);
+  const stateRef = useRef({ convCount: 0, groupCount: 0, query: '' });
+  const lastBackendDmCountRef = useRef(0);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    stateRef.current = { convCount: convs.length, groupCount: groups.length, query };
+  }, [convs.length, groups.length, query]);
+
+  const applyDmState = useCallback((params: {
+    next: Conversation[];
+    source: 'backend' | 'cache' | 'localStorage' | 'state';
+    reason: string;
+    backendCount?: number;
+  }) => {
+    const { next, source, reason, backendCount = next.length } = params;
+    setConvs(prev => {
+      const previousCount = prev.length;
+      const nextCount = next.length;
+      const isBackendValid = source === 'backend' && backendCount > 0 && nextCount > 0;
+      const shouldBlockEmpty = source !== 'backend' && nextCount === 0 && (previousCount > 0 || lastBackendDmCountRef.current > 0);
+
+      if (shouldBlockEmpty) {
+        const label = `setDM from ${source} ${previousCount} -> ${nextCount} BLOQUEADO`;
+        chatListLog(label, { reason, lastBackendDmCount: lastBackendDmCountRef.current });
+        return prev;
+      }
+
+      if (isBackendValid) lastBackendDmCountRef.current = nextCount;
+      const label = `setDM from ${source} ${previousCount} -> ${nextCount}`;
+      chatListLog(label, { reason, backendCount, lastBackendDmCount: lastBackendDmCountRef.current });
+      return next;
+    });
+  }, []);
+
+  const loadDM = useCallback(async () => {
+    const cached = chatOffline.getConversations();
+    const currentState = stateRef.current;
+    if (cached.length > 0 && currentState.convCount === 0) {
+      applyDmState({
+        next: cached,
+        source: 'localStorage',
+        reason: 'initial-cache-fallback',
+        backendCount: 0,
+      });
+    }
     try {
-      const [data, groupData] = await Promise.all([
-        chatService.getConversations(),
-        groupChatService.getGroups(),
-      ]);
-      setConvs(data);
-      setGroups(groupData);
-    } catch {
-      // silent
+      const result = await chatService.getConversationsResult();
+      applyDmState({
+        next: result.conversations,
+        source: result.source,
+        reason: result.reason,
+        backendCount: result.backendCount,
+      });
+      setError('');
+    } catch (err) {
+      chatListLog('error cargando DM en ConvList', { source: 'backend/cache', error: err });
+      setError(prev => prev || 'No se pudieron cargar las conversaciones DM.');
+    } finally {
+      setLoading(false);
+    }
+  }, [applyDmState]);
+
+  const loadGroups = useCallback(async () => {
+    try {
+      const nextGroups = await groupChatService.getGroups();
+      setGroups(prev => {
+        if (nextGroups.length === 0 && prev.length > 0) {
+          chatListLog('grupos devolvió []: se conserva estado actual', { source: 'state', previousCount: prev.length });
+          return prev;
+        }
+        chatListLog('grupos recibidos por ConvList', { source: 'backend', count: nextGroups.length });
+        return nextGroups;
+      });
+    } catch (err) {
+      chatListLog('error cargando grupos en ConvList', { source: 'backend', error: err });
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const firstLoad = window.setTimeout(() => { void load(); }, 0);
-    const id = setInterval(load, 15_000);
+    const firstLoad = window.setTimeout(() => { void loadDM(); }, 0);
+    const id = setInterval(loadDM, 15_000);
     return () => {
       window.clearTimeout(firstLoad);
       clearInterval(id);
     };
-  }, [load]);
+  }, [loadDM]);
+
+  useEffect(() => {
+    const firstLoad = window.setTimeout(() => { void loadGroups(); }, 0);
+    const id = setInterval(loadGroups, 15_000);
+    return () => {
+      window.clearTimeout(firstLoad);
+      clearInterval(id);
+    };
+  }, [loadGroups]);
 
   useEffect(() => {
     if (!activeGroupId) return;
@@ -286,22 +366,61 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
     return () => window.clearTimeout(id);
   }, [activeGroupId]);
 
-  const filtered = query.trim()
-    ? convs.filter(c => c.partnerName.toLowerCase().includes(query.toLowerCase()))
-    : convs;
-  const filteredGroups = query.trim()
-    ? groups.filter(g => g.nombre.toLowerCase().includes(query.toLowerCase()) || (g.descripcion ?? '').toLowerCase().includes(query.toLowerCase()))
-    : groups;
+  useEffect(() => {
+    if (!activePartnerId && activeGroupId) return;
+    const id = window.setTimeout(() => setTab('chats'), 0);
+    return () => window.clearTimeout(id);
+  }, [activeGroupId, activePartnerId]);
+
+  const queryText = query.trim().toLowerCase();
+  const visibleDM = useMemo(
+    () => queryText
+      ? convs.filter(c => c.partnerName.toLowerCase().includes(queryText))
+      : convs,
+    [convs, queryText],
+  );
+  const visibleGroups = useMemo(
+    () => queryText
+      ? groups.filter(g => g.nombre.toLowerCase().includes(queryText) || (g.descripcion ?? '').toLowerCase().includes(queryText))
+      : groups,
+    [groups, queryText],
+  );
+  const isGroupsTab = tab === 'groups';
+  const renderListCount = isGroupsTab ? visibleGroups.length : visibleDM.length;
+  const shouldShowEmpty = !loading && renderListCount === 0;
+
+  useEffect(() => {
+    chatListLog('conteo visible', {
+      tab,
+      query: queryText,
+      dmTotal: convs.length,
+      dmFiltered: visibleDM.length,
+      groupTotal: groups.length,
+      groupFiltered: visibleGroups.length,
+      source: 'state/filter',
+    });
+  }, [convs.length, groups.length, queryText, tab, visibleDM.length, visibleGroups.length]);
+
+  async function refreshSafely(clearCache = false) {
+    if (clearCache) {
+      chatListLog('limpiando cache local de conversaciones DM por solicitud del usuario', { source: 'localStorage' });
+      chatOffline.clearConversations();
+    }
+    setLoading(true);
+    await Promise.allSettled([loadDM(), loadGroups()]);
+  }
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex h-full min-h-0 flex-col ${className}`}>
       {/* Header */}
       <div className="px-4 pt-4 pb-3 shrink-0">
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-[var(--text-primary)]">Mensajes</h1>
-          <button onClick={() => setCreating(true)} className="grid size-8 place-items-center rounded-full bg-[var(--brand)] text-white shadow-sm" aria-label="Crear grupo">
-            <Plus className="size-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCreating(true)} className="grid size-8 place-items-center rounded-full bg-[var(--brand)] text-white shadow-sm" aria-label="Crear grupo">
+              <Plus className="size-4" />
+            </button>
+          </div>
         </div>
         <div className="mb-3 grid grid-cols-2 rounded-xl bg-[var(--bg-elevated)] p-1">
           <button onClick={() => setTab('chats')} className={`h-8 rounded-lg text-xs font-bold transition ${tab === 'chats' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm' : 'text-[var(--text-muted)]'}`}>Chats</button>
@@ -312,7 +431,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder={tab === 'groups' ? 'Buscar grupos...' : 'Buscar conversaciones...'}
+            placeholder={isGroupsTab ? 'Buscar grupos...' : 'Buscar conversaciones...'}
             className="w-full h-9 pl-8 pr-3 rounded-xl bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] border border-transparent focus:border-[var(--border-focus)] focus:outline-none transition-colors"
           />
         </div>
@@ -320,32 +439,46 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
 
       <div className="h-px bg-[var(--border)] shrink-0" />
 
+      {error && (
+        <div className="border-b border-[var(--border)] px-4 py-2 text-xs text-red-500">
+          <p>{error}</p>
+          <div className="mt-2 flex gap-2">
+            <button type="button" onClick={() => void refreshSafely()} className="rounded-lg bg-[var(--bg-elevated)] px-2 py-1 font-semibold text-[var(--text-primary)]">
+              Reintentar
+            </button>
+            <button type="button" onClick={() => void refreshSafely(true)} className="rounded-lg bg-[var(--bg-elevated)] px-2 py-1 font-semibold text-[var(--text-primary)]">
+              Limpiar cache de chat
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* List */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <ConvSkeleton key={i} />)
-        ) : tab === 'groups' ? (
-          filteredGroups.length === 0 ? (
+        ) : isGroupsTab ? (
+          shouldShowEmpty ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
               <Users className="mb-3 size-12 text-[var(--text-muted)] opacity-40" />
-              <p className="text-sm font-medium text-[var(--text-secondary)]">{query.trim() ? 'Sin resultados' : 'Sin grupos'}</p>
+              <p className="text-sm font-medium text-[var(--text-secondary)]">{queryText ? 'Sin resultados' : 'Sin grupos'}</p>
               <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">Crea un grupo para clases, equipos o proyectos.</p>
             </div>
-          ) : filteredGroups.map(g => <GroupRow key={g.id} group={g} active={g.id === activeGroupId} />)
-        ) : filtered.length === 0 ? (
+          ) : visibleGroups.map(g => <GroupRow key={g.id} group={g} active={g.id === activeGroupId} />)
+        ) : shouldShowEmpty ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <svg className="size-12 text-[var(--text-muted)] mb-3 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
             <p className="text-sm font-medium text-[var(--text-secondary)]">
-              {query.trim() ? 'Sin resultados' : 'Sin conversaciones'}
+              {queryText ? 'Sin resultados' : 'Sin conversaciones'}
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-              {query.trim() ? 'Intenta con otro nombre' : 'Visita el perfil de alguien para iniciar un chat'}
+              {queryText ? 'Intenta con otro nombre' : 'Visita el perfil de alguien para iniciar un chat'}
             </p>
           </div>
         ) : (
-          filtered.map(c => (
+          visibleDM.map(c => (
             <ConvRow
               key={c.partnerId}
               conv={c}
@@ -355,7 +488,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
           ))
         )}
       </div>
-      {creating && <CreateGroupModal onClose={() => setCreating(false)} onCreated={load} />}
+      {creating && <CreateGroupModal onClose={() => setCreating(false)} onCreated={() => { void loadGroups(); }} />}
     </div>
   );
 }

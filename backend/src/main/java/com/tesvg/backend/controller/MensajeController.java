@@ -135,6 +135,8 @@ public class MensajeController {
         m.setLeido(false);
         m.setEliminado(false);
         mensajeRepository.save(m);
+        unarchiveConversation(emisor.getId(), receptorId);
+        unarchiveConversation(receptorId, emisor.getId());
         redisCacheService.delete("chat:dm:unread:" + receptorId);
 
         MessageDTO dto = toDTO(m, emisor, emisor.getId(), receptorId);
@@ -209,6 +211,8 @@ public class MensajeController {
         m.setLeido(false);
         m.setEliminado(false);
         mensajeRepository.save(m);
+        unarchiveConversation(emisor.getId(), receptorId);
+        unarchiveConversation(receptorId, emisor.getId());
         redisCacheService.delete("chat:dm:unread:" + receptorId);
 
         MessageDTO dto = toDTO(m, emisor, emisor.getId(), receptorId);
@@ -298,13 +302,20 @@ public class MensajeController {
     public ResponseEntity<?> conversaciones(HttpServletRequest request) {
         Usuario yo = getUsuario(request);
         List<Mensaje> todos = mensajeRepository.findAllByUsuario(yo.getId());
+        if (todos.isEmpty()) return ResponseEntity.ok(List.of());
+
+        Set<Long> hiddenIds = hiddenRepository.findByUsuarioIdAndMessageIdIn(
+                        yo.getId(),
+                        todos.stream().map(Mensaje::getId).toList()
+                )
+                .stream()
+                .map(DMMessageHidden::getMessageId)
+                .collect(Collectors.toSet());
 
         Map<Long, Mensaje> ultimoPorPartner = new LinkedHashMap<>();
         for (Mensaje m : todos) {
-            if (hiddenRepository.existsByMessageIdAndUsuarioId(m.getId(), yo.getId())) continue;
+            if (hiddenIds.contains(m.getId())) continue;
             Long partnerId = m.getEmisorId().equals(yo.getId()) ? m.getReceptorId() : m.getEmisorId();
-            DMConversationPreference pref = preferenceRepository.findByUsuarioIdAndPartnerId(yo.getId(), partnerId).orElse(null);
-            if (pref != null && Boolean.TRUE.equals(pref.getArchived())) continue;
             ultimoPorPartner.putIfAbsent(partnerId, m);
         }
 
@@ -320,12 +331,12 @@ public class MensajeController {
             long noLeidos = mensajeRepository.countByReceptorIdAndEmisorIdAndLeidoFalse(yo.getId(), partnerId);
 
             boolean deleted = Boolean.TRUE.equals(ultimo.getEliminado());
-        String previewType = normalizarTipo(ultimo.getTipo());
-        String preview = deleted ? "Mensaje eliminado"
-                : "TEXT".equals(previewType) ? ultimo.getContenido()
-                : "IMAGE".equals(previewType) ? "Imagen"
-                : "AUDIO".equals(previewType) ? "Audio"
-                : "Documento: " + (ultimo.getNombreArchivo() != null ? ultimo.getNombreArchivo() : "Archivo");
+            String previewType = normalizarTipo(ultimo.getTipo());
+            String preview = deleted ? "Mensaje eliminado"
+                    : "TEXT".equals(previewType) ? ultimo.getContenido()
+                    : "IMAGE".equals(previewType) ? "Imagen"
+                    : "AUDIO".equals(previewType) ? "Audio"
+                    : "Documento: " + (ultimo.getNombreArchivo() != null ? ultimo.getNombreArchivo() : "Archivo");
 
             Map<String, Object> conv = new LinkedHashMap<>();
             conv.put("partnerId", partner.getId());
@@ -580,6 +591,8 @@ public class MensajeController {
         copy.setReenviado(true);
         copy.setMensajeOriginalId(original.getId());
         mensajeRepository.save(copy);
+        unarchiveConversation(yo.getId(), destinatarioId);
+        unarchiveConversation(destinatarioId, yo.getId());
 
         MessageDTO dto = toDTO(copy, yo, yo.getId(), destinatarioId);
         publishDMEvent("DM_MESSAGE_CREATED", conversationId(yo.getId(), destinatarioId), copy.getId(), yo.getId(), destinatarioId, dto);
@@ -842,6 +855,14 @@ public class MensajeController {
             pref.setUpdatedAt(LocalDateTime.now());
             return pref;
         });
+    }
+
+    private void unarchiveConversation(Long usuarioId, Long partnerId) {
+        DMConversationPreference pref = getPreference(usuarioId, partnerId);
+        if (!Boolean.TRUE.equals(pref.getArchived())) return;
+        pref.setArchived(false);
+        pref.setUpdatedAt(LocalDateTime.now());
+        preferenceRepository.save(pref);
     }
 
     private List<MessageReactionDTO> buildReactions(Long messageId, Long currentUserId) {

@@ -6,6 +6,7 @@ import com.tesvg.backend.model.Usuario.Rol;
 import com.tesvg.backend.repository.*;
 import com.tesvg.backend.service.CorreoAccessService;
 import com.tesvg.backend.service.HtmlSanitizerService;
+import com.tesvg.backend.service.WebPushService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -84,6 +85,7 @@ public class CorreoController {
     @Autowired private HtmlSanitizerService       htmlSanitizerService;
     @Autowired private CorreoAccessService        correoAccessService;
     @Autowired(required = false) private SimpMessagingTemplate messagingTemplate;
+    @Autowired(required = false) private WebPushService        webPushService;
 
     private final Map<Long, Deque<LocalDateTime>> envioRateLimit = new ConcurrentHashMap<>();
 
@@ -1447,20 +1449,33 @@ public class CorreoController {
     }
 
     private void notificarNuevoCorreo(Correo correo, Usuario emisor, List<Long> receptorIds) {
-        if (messagingTemplate == null) return;
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("event",        "mail:new");
-        payload.put("id",           correo.getId());
-        payload.put("asunto",       correo.getAsunto());
-        payload.put("preview",      correo.getCuerpo());
-        payload.put("fecha",        correo.getFecha());
-        payload.put("emisorId",     emisor.getId());
-        payload.put("emisorNombre", emisor.getUsername());
-        payload.put("emisorFoto",   emisor.getFotoPerfil());
-        for (Long receptorId : receptorIds) {
-            usuarioRepository.findById(receptorId)
-                    .ifPresent(u -> messagingTemplate.convertAndSendToUser(
-                            u.getCorreo(), "/queue/correos", payload));
+        // WebSocket (STOMP) notification
+        if (messagingTemplate != null) {
+            Map<String, Object> wsPayload = new LinkedHashMap<>();
+            wsPayload.put("event",        "mail:new");
+            wsPayload.put("id",           correo.getId());
+            wsPayload.put("asunto",       correo.getAsunto());
+            wsPayload.put("preview",      correo.getCuerpo());
+            wsPayload.put("fecha",        correo.getFecha());
+            wsPayload.put("emisorId",     emisor.getId());
+            wsPayload.put("emisorNombre", emisor.getUsername());
+            wsPayload.put("emisorFoto",   emisor.getFotoPerfil());
+            for (Long receptorId : receptorIds) {
+                usuarioRepository.findById(receptorId)
+                        .ifPresent(u -> messagingTemplate.convertAndSendToUser(
+                                u.getCorreo(), "/queue/correos", wsPayload));
+            }
+        }
+        // Push notifications
+        if (webPushService != null && !correo.getEsBorrador()) {
+            for (Long receptorId : receptorIds) {
+                try {
+                    webPushService.sendMailNotification(receptorId, correo.getId(),
+                            emisor.getUsername(), correo.getAsunto());
+                } catch (Exception e) {
+                    log.warn("Push notification failed for user {}: {}", receptorId, e.getMessage());
+                }
+            }
         }
     }
 

@@ -46,7 +46,7 @@ public class WebPushService {
         pushService = new PushService(vapidPublicKey, vapidPrivateKey, vapidSubject);
     }
 
-    public void subscribe(Long usuarioId, String endpoint, String p256dh, String auth) {
+    public void subscribe(Long usuarioId, String endpoint, String p256dh, String auth, String userAgent) {
         repo.findByUsuarioIdAndEndpoint(usuarioId, endpoint).ifPresentOrElse(
             existing -> {},
             () -> {
@@ -55,6 +55,11 @@ public class WebPushService {
                 sub.setEndpoint(endpoint);
                 sub.setP256dh(p256dh);
                 sub.setAuth(auth);
+                if (userAgent != null && userAgent.length() > 512) {
+                    sub.setUserAgent(userAgent.substring(0, 512));
+                } else {
+                    sub.setUserAgent(userAgent);
+                }
                 repo.save(sub);
             }
         );
@@ -65,12 +70,27 @@ public class WebPushService {
         repo.deleteByUsuarioIdAndEndpoint(usuarioId, endpoint);
     }
 
+    public List<PushSubscription> getSubscriptions(Long usuarioId) {
+        return repo.findByUsuarioId(usuarioId);
+    }
+
     public void sendToUser(Long usuarioId, String title, String body, String url) {
+        String payload = buildPayload(title, body, url);
+        sendPayloadToUser(usuarioId, payload);
+    }
+
+    public void sendMailNotification(Long receptorId, Long correoId, String emisorNombre, String asunto) {
+        String safeAsunto = asunto != null ? asunto : "Sin asunto";
+        if (safeAsunto.length() > 60) safeAsunto = safeAsunto.substring(0, 57) + "…";
+        String safeNombre = (emisorNombre != null && !emisorNombre.isBlank()) ? emisorNombre : "FalconNet";
+        String body = safeNombre + ": " + safeAsunto;
+        String payload = buildMailPayload("Nuevo correo institucional", body, "/correos?tab=entrada", correoId);
+        sendPayloadToUser(receptorId, payload);
+    }
+
+    private void sendPayloadToUser(Long usuarioId, String payload) {
         List<PushSubscription> subs = repo.findByUsuarioId(usuarioId);
         if (subs.isEmpty()) return;
-
-        String payload = buildPayload(title, body, url);
-
         for (PushSubscription sub : subs) {
             try {
                 Keys keys = new Keys(sub.getP256dh(), sub.getAuth());
@@ -91,6 +111,15 @@ public class WebPushService {
         String safeBody  = body.replace("\"", "\\\"");
         String safeUrl   = url.replace("\"", "\\\"");
         return "{\"title\":\"" + safeTitle + "\",\"body\":\"" + safeBody + "\",\"url\":\"" + safeUrl + "\"}";
+    }
+
+    private String buildMailPayload(String title, String body, String url, Long correoId) {
+        String safeTitle = title.replace("\"", "\\\"");
+        String safeBody  = body.replace("\"", "\\\"");
+        String safeUrl   = url.replace("\"", "\\\"");
+        return "{\"type\":\"mail\",\"title\":\"" + safeTitle + "\",\"body\":\"" + safeBody
+             + "\",\"url\":\"" + safeUrl + "\",\"correoId\":" + correoId
+             + ",\"tag\":\"mail-" + correoId + "\"}";
     }
 
     private boolean isExpiredEndpoint(Exception e) {

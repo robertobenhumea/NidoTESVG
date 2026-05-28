@@ -7,11 +7,11 @@ import { ConvList } from './components/ConvList';
 export default function MessagesPage() {
   return (
     <div
-      className="flex overflow-hidden"
+      className="flex min-h-0 overflow-hidden"
       style={{ height: 'calc(100dvh - var(--nav-h) - var(--safe-top))' }}
     >
       {/* Left panel — always visible */}
-      <aside className="w-full md:w-80 lg:w-[340px] xl:w-[360px] shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)] flex flex-col">
+      <aside className="flex min-h-0 w-full shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-surface)] md:w-80 lg:w-[340px] xl:w-[360px]">
         <ConvList />
       </aside>
 

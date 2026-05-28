@@ -1,16 +1,151 @@
 import { api } from '@/services/api';
 import { isoOrEmpty } from '@/lib/chatDates';
 import { chatOffline } from '@/lib/chatOffline';
-import { getStoredAuthToken } from '@/lib/utils';
+import { STORAGE_KEYS, getApiBaseUrl, getStoredAuthToken, resolveUrl as resolveBackendUrl } from '@/lib/utils';
 import type { BMensaje, BConversacion, Message, Conversation, LegacyMsgTipo, MsgTipo } from '@/types';
 
 const OPTS = { suppressAuthExpiry: true } as const;
+const DM_DEBUG_EVENT = 'chat:dm-debug';
+
+export type ChatListDebugSnapshot = {
+  kind: 'dm' | 'groups' | 'convlist';
+  label: string;
+  apiUrl?: string;
+  locationOrigin?: string;
+  locationHost?: string;
+  endpoint?: string;
+  url?: string;
+  hasToken?: boolean;
+  tokenLength?: number;
+  user?: unknown;
+  status?: number | 'not-called';
+  ok?: boolean;
+  responseType?: string;
+  rawCount?: number;
+  mappedCount?: number;
+  filteredCount?: number;
+  filteredOut?: number;
+  source?: 'backend' | 'cache' | 'localStorage' | 'state' | 'filter' | 'error';
+  selectedTab?: string;
+  searchActive?: boolean;
+  searchText?: string;
+  dmStateCount?: number;
+  dmVisibleCount?: number;
+  previousDmCount?: number;
+  nextDmCount?: number;
+  groupStateCount?: number;
+  groupVisibleCount?: number;
+  reason?: string;
+  blocked?: boolean;
+  rawPreview?: unknown;
+  error?: unknown;
+  timestamp: string;
+};
+
+export type ChatConversationsResult = {
+  conversations: Conversation[];
+  source: 'backend' | 'cache';
+  backendCount: number;
+  reason: string;
+};
+
+export function emitChatDebug(snapshot: Omit<ChatListDebugSnapshot, 'timestamp'>) {
+  const payload: ChatListDebugSnapshot = { ...snapshot, timestamp: new Date().toISOString() };
+  if (typeof window === 'undefined') return;
+  if (window.localStorage.getItem('fn_chat_debug') !== '1') return;
+  const target = window as Window & { __fnChatDebug?: ChatListDebugSnapshot[] };
+  target.__fnChatDebug = [payload, ...(target.__fnChatDebug ?? [])].slice(0, 20);
+  window.dispatchEvent(new CustomEvent(DM_DEBUG_EVENT, { detail: payload }));
+}
+
+export function subscribeChatDebug(listener: (snapshot: ChatListDebugSnapshot) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const handler = (event: Event) => listener((event as CustomEvent<ChatListDebugSnapshot>).detail);
+  window.addEventListener(DM_DEBUG_EVENT, handler);
+  return () => window.removeEventListener(DM_DEBUG_EVENT, handler);
+}
+
+export function getChatDebugHistory(): ChatListDebugSnapshot[] {
+  if (typeof window === 'undefined') return [];
+  return ((window as Window & { __fnChatDebug?: ChatListDebugSnapshot[] }).__fnChatDebug ?? []);
+}
+
+function browserLocationInfo(): Pick<ChatListDebugSnapshot, 'locationOrigin' | 'locationHost'> {
+  if (typeof window === 'undefined') return {};
+  return {
+    locationOrigin: window.location.origin,
+    locationHost: window.location.host,
+  };
+}
 
 function resolveUrl(path?: string | null): string | undefined {
-  if (!path) return undefined;
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
-  const base = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  return resolveBackendUrl(path);
+}
+
+function chatListLog(message: string, extra?: unknown) {
+  if (process.env.NODE_ENV !== 'production' && /error|falló|fallo|rechaz/i.test(message)) {
+    console.warn(`[chat-list] ${message}`, extra ?? '');
+  }
+}
+
+function authDebugInfo() {
+  if (typeof window === 'undefined') return { hasToken: false, user: null };
+  const token = getStoredAuthToken();
+  const rawUser = localStorage.getItem(STORAGE_KEYS.USER);
+  let user: unknown = null;
+  try { user = rawUser ? JSON.parse(rawUser) : null; } catch { user = 'invalid-json'; }
+  return {
+    hasToken: Boolean(token),
+    tokenLength: token?.length ?? 0,
+    user,
+  };
+}
+
+function extractList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const wrapped = raw as {
+      content?: unknown;
+      data?: unknown;
+      items?: unknown;
+      results?: unknown;
+      conversaciones?: unknown;
+    };
+    for (const value of [wrapped.content, wrapped.data, wrapped.items, wrapped.results, wrapped.conversaciones]) {
+      if (Array.isArray(value)) return value as T[];
+    }
+  }
+  return [];
+}
+
+function responseType(raw: unknown): string {
+  if (Array.isArray(raw)) return 'array';
+  if (!raw || typeof raw !== 'object') return typeof raw;
+  const wrapped = raw as {
+    content?: unknown;
+    data?: unknown;
+    items?: unknown;
+    results?: unknown;
+    conversaciones?: unknown;
+  };
+  for (const key of ['content', 'data', 'items', 'results', 'conversaciones'] as const) {
+    if (Array.isArray(wrapped[key])) return key;
+  }
+  return `object:${Object.keys(raw).slice(0, 8).join(',')}`;
+}
+
+function rawPreview(raw: unknown): unknown {
+  const list = extractList<unknown>(raw);
+  if (list.length > 0) return list.slice(0, 2);
+  if (Array.isArray(raw)) return raw.slice(0, 2);
+  if (raw && typeof raw === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(raw).slice(0, 8)) {
+      out[key] = Array.isArray(value) ? value.slice(0, 2) : value;
+    }
+    return out;
+  }
+  return raw;
 }
 
 function normalizeMessageType(type?: LegacyMsgTipo | null): MsgTipo {
@@ -112,6 +247,24 @@ export function mapMessage(b: BMensaje): Message {
 }
 
 function mapConversation(b: BConversacion): Conversation {
+  const raw = b as BConversacion & {
+    id?: number | null;
+    userId?: number | null;
+    usuarioId?: number | null;
+    partner?: { id?: number | null; nombre?: string | null; username?: string | null; foto?: string | null; avatarUrl?: string | null } | null;
+    usuario?: { id?: number | null; nombre?: string | null; username?: string | null; foto?: string | null; avatarUrl?: string | null } | null;
+    partnerName?: string | null;
+    nombre?: string | null;
+    username?: string | null;
+    partnerAvatar?: string | null;
+    avatarUrl?: string | null;
+    foto?: string | null;
+    lastMessage?: string | null;
+    unreadCount?: number | null;
+    isMine?: boolean | null;
+  };
+  const partner = raw.partner ?? raw.usuario ?? null;
+  const partnerId = raw.partnerId ?? partner?.id ?? raw.usuarioId ?? raw.userId ?? raw.id ?? 0;
   const updatedAt = firstValidIsoOrUndefined(
     b.lastMessageAt,
     b.updatedAt,
@@ -122,16 +275,16 @@ function mapConversation(b: BConversacion): Conversation {
     b.createdAt,
   );
   return {
-    partnerId:    b.partnerId,
-    partnerName:  b.partnerNombre,
-    partnerAvatar: b.partnerFoto ? resolveUrl(b.partnerFoto) : undefined,
+    partnerId,
+    partnerName:  raw.partnerNombre ?? raw.partnerName ?? partner?.nombre ?? partner?.username ?? raw.nombre ?? raw.username ?? 'Usuario',
+    partnerAvatar: raw.partnerFoto ? resolveUrl(raw.partnerFoto) : raw.partnerAvatar ? resolveUrl(raw.partnerAvatar) : raw.avatarUrl ? resolveUrl(raw.avatarUrl) : raw.foto ? resolveUrl(raw.foto) : partner?.foto ? resolveUrl(partner.foto) : partner?.avatarUrl ? resolveUrl(partner.avatarUrl) : undefined,
     partnerCarrera: b.partnerCarrera ?? undefined,
     partnerRol:   b.partnerRol ? String(b.partnerRol) : undefined,
-    lastMessage:  b.ultimoMensaje ?? undefined,
+    lastMessage:  raw.ultimoMensaje ?? raw.lastMessage ?? undefined,
     lastTipo:     normalizeMessageType(b.ultimoTipo),
     updatedAt:    updatedAt || undefined,
-    unreadCount:  b.noLeidos,
-    isMine:       b.esMio ?? false,
+    unreadCount:  raw.noLeidos ?? raw.unreadCount ?? 0,
+    isMine:       raw.esMio ?? raw.isMine ?? false,
     archived:     b.archived ?? false,
     muted:        b.muted ?? false,
     online:       b.online ?? false,
@@ -140,17 +293,96 @@ function mapConversation(b: BConversacion): Conversation {
 }
 
 export const chatService = {
-  async getConversations(): Promise<Conversation[]> {
+  async getConversationsResult(): Promise<ChatConversationsResult> {
+    const endpoint = '/mensajes/conversaciones';
+    const apiUrl = getApiBaseUrl();
+    const auth = authDebugInfo();
+    chatListLog('solicitando conversaciones DM', { endpoint, apiUrl, source: 'backend', auth });
+    emitChatDebug({ kind: 'dm', label: 'solicitando DM', apiUrl, endpoint, url: `${apiUrl}${endpoint}`, ...browserLocationInfo(), source: 'backend', status: 'not-called', hasToken: auth.hasToken, tokenLength: auth.tokenLength, user: auth.user });
     try {
-      const data = await api.get<BConversacion[]>('/mensajes/conversaciones', OPTS);
-      const conversations = data.map(mapConversation);
+      const token = getStoredAuthToken();
+      const url = `${apiUrl}${endpoint}?_=${Date.now()}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        cache: 'no-store',
+      });
+      let raw: unknown = null;
+      try { raw = await res.json(); } catch { raw = null; }
+      chatListLog('respuesta cruda DM', {
+        endpoint,
+        url,
+        status: res.status,
+        ok: res.ok,
+        auth: authDebugInfo(),
+        raw,
+      });
+      if (!res.ok) {
+        emitChatDebug({ kind: 'dm', label: 'DM falló HTTP', apiUrl, endpoint, url, ...browserLocationInfo(), status: res.status, ok: res.ok, responseType: responseType(raw), rawPreview: rawPreview(raw), source: 'error', hasToken: Boolean(token), tokenLength: token?.length ?? 0, user: authDebugInfo().user });
+        const errorData = raw as { error?: string; message?: string } | null;
+        throw new Error(errorData?.error ?? errorData?.message ?? `HTTP ${res.status}`);
+      }
+      const data = extractList<BConversacion>(raw);
+      const conversations = data
+        .map(mapConversation)
+        .filter(conv => Number.isFinite(conv.partnerId) && conv.partnerId > 0);
+      emitChatDebug({
+        kind: 'dm',
+        label: 'DM recibido',
+        apiUrl,
+        endpoint,
+        url,
+        ...browserLocationInfo(),
+        status: res.status,
+        ok: res.ok,
+        responseType: responseType(raw),
+        rawCount: data.length,
+        mappedCount: data.length,
+        filteredCount: conversations.length,
+        filteredOut: data.length - conversations.length,
+        source: 'backend',
+        hasToken: Boolean(token),
+        tokenLength: token?.length ?? 0,
+        user: authDebugInfo().user,
+        rawPreview: rawPreview(raw),
+      });
+      chatListLog('conversaciones DM mapeadas', {
+        endpoint,
+        source: 'backend',
+        rawCount: data.length,
+        mappedCount: conversations.length,
+        filteredOut: data.length - conversations.length,
+      });
       chatOffline.setConversations(conversations);
-      return conversations;
+      return {
+        conversations,
+        source: 'backend',
+        backendCount: conversations.length,
+        reason: conversations.length > 0 ? 'backend-valid' : 'backend-empty',
+      };
     } catch (err) {
       const cached = chatOffline.getConversations();
-      if (cached.length > 0) return cached;
+      chatListLog('falló carga DM', { endpoint, source: cached.length > 0 ? 'cache' : 'backend', cachedCount: cached.length, error: err });
+      emitChatDebug({ kind: 'dm', label: 'DM error/catch', apiUrl, endpoint, url: `${apiUrl}${endpoint}`, ...browserLocationInfo(), source: cached.length > 0 ? 'cache' : 'error', dmStateCount: cached.length, error: err instanceof Error ? err.message : String(err), hasToken: authDebugInfo().hasToken, tokenLength: authDebugInfo().tokenLength, user: authDebugInfo().user });
+      if (cached.length > 0) {
+        return {
+          conversations: cached,
+          source: 'cache',
+          backendCount: 0,
+          reason: 'backend-error-cache-fallback',
+        };
+      }
       throw err;
     }
+  },
+
+  async getConversations(): Promise<Conversation[]> {
+    return (await chatService.getConversationsResult()).conversations;
   },
 
   async getMessages(partnerId: number, opts?: { beforeId?: number; limit?: number }): Promise<Message[]> {
@@ -214,7 +446,7 @@ export const chatService = {
     if (extra?.waveformData) formData.append('waveformData', extra.waveformData);
     const token = getStoredAuthToken();
     if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/mensajes/enviar/${receiverId}/adjunto`, {
+    const res = await fetch(`${getApiBaseUrl()}/mensajes/enviar/${receiverId}/adjunto`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -229,7 +461,7 @@ export const chatService = {
     formData.append('archivo', file);
     const token = getStoredAuthToken();
     if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/mensajes/adjunto/${receiverId}`, {
+    const res = await fetch(`${getApiBaseUrl()}/mensajes/adjunto/${receiverId}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

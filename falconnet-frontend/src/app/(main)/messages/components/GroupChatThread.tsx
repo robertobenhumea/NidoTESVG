@@ -65,6 +65,11 @@ function fileSizeLabel(size?: number | null): string {
   return `${Math.max(1, Math.round(size / 1024))} KB`;
 }
 
+function isAudioFile(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return file.type.startsWith('audio/') || ['webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav'].includes(ext);
+}
+
 function roleRank(role?: ChatGrupoRol) {
   return role === 'OWNER' ? 4 : role === 'ADMIN' ? 3 : role === 'MODERADOR' ? 2 : 1;
 }
@@ -657,7 +662,10 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
         msg = await groupChatService.editMessage(groupId, editing.id, text.trim());
         setMessages(prev => prev.map(item => item.id === msg.id ? msg : item));
       } else if (file) {
-        msg = await groupChatService.sendWithAttachment(groupId, text.trim(), file, { replyToMessageId: replyTo?.id });
+        msg = await groupChatService.sendWithAttachment(groupId, text.trim(), file, {
+          replyToMessageId: replyTo?.id,
+          messageType: isAudioFile(file) ? 'AUDIO' : undefined,
+        });
         setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
       } else {
         msg = await groupChatService.sendMessage(groupId, { contenido: text.trim(), replyToMessageId: replyTo?.id });

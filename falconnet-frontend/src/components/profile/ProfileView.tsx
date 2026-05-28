@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarModal } from '@/components/ui/AvatarModal';
@@ -19,7 +19,9 @@ import { api } from '@/services/api';
 import { HighlightCarousel } from '@/components/highlights/HighlightCarousel';
 import { FollowListModal } from '@/components/social/FollowListModal';
 import { SuggestionsPanel } from '@/components/social/SuggestionsPanel';
+import { ComposeModal } from '@/app/(main)/correos/components/ComposeModal';
 import type { User, Post, MarketplaceListing, ReclutamientoFeedItem } from '@/types';
+import type { BUser } from '@/app/(main)/correos/components/types';
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -123,6 +125,7 @@ function ProfileTabBar({
 export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const { user: currentUser } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryId = propUserId ? String(propUserId) : searchParams.get('id');
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -141,6 +144,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [followListOpen, setFollowListOpen] = useState(false);
   const [followListTab, setFollowListTab]   = useState<'seguidores' | 'siguiendo'>('seguidores');
+  const [composeOpen, setComposeOpen]       = useState(false);
   const [error, setError]             = useState('');
   const avatarInputRef                = useRef<HTMLInputElement>(null);
   const { updateUser }                = useAuth();
@@ -379,7 +383,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
               )}
             </div>
 
-            {/* Action button */}
+            {/* Action buttons */}
             <div className="flex gap-2 mb-1 shrink-0">
               {isOwnProfile ? (
                 <button
@@ -389,19 +393,47 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
                   Editar perfil
                 </button>
               ) : (
-                <button
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  className={`h-9 px-5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 ${
-                    stats.isFollowing
-                      ? 'border border-[var(--border)] text-[var(--text-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)]'
-                      : 'bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]'
-                  }`}
-                >
-                  {followLoading ? (
-                    <span className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
-                  ) : stats.isFollowing ? 'Siguiendo' : 'Seguir'}
-                </button>
+                <>
+                  {/* Follow */}
+                  <button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    className={`h-9 px-4 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 ${
+                      stats.isFollowing
+                        ? 'border border-[var(--border)] text-[var(--text-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)]'
+                        : 'bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]'
+                    }`}
+                  >
+                    {followLoading ? (
+                      <span className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
+                    ) : stats.isFollowing ? 'Siguiendo' : 'Seguir'}
+                  </button>
+
+                  {/* Message */}
+                  <button
+                    onClick={() => router.push(`/messages/${targetId}`)}
+                    title="Enviar mensaje"
+                    className="h-9 px-3 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span className="text-sm font-medium hidden sm:inline">Mensaje</span>
+                  </button>
+
+                  {/* Mail */}
+                  <button
+                    onClick={() => setComposeOpen(true)}
+                    title="Enviar correo institucional"
+                    className="h-9 px-3 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    <span className="text-sm font-medium hidden sm:inline">Correo</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -591,6 +623,23 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
           onClose={() => setFollowListOpen(false)}
           userId={profileUser.id}
           initialTab={followListTab}
+        />
+      )}
+
+      {/* Compose institutional mail to this user */}
+      {!isOwnProfile && composeOpen && profileUser && (
+        <ComposeModal
+          onClose={() => setComposeOpen(false)}
+          onSent={() => setComposeOpen(false)}
+          mode="compose"
+          initialTo={[{
+            id:         profileUser.id,
+            username:   profileUser.displayName ?? profileUser.username,
+            correo:     profileUser.email,
+            fotoPerfil: profileUser.avatarUrl,
+            carrera:    profileUser.carrera,
+            grupo:      profileUser.grupo,
+          } satisfies BUser]}
         />
       )}
     </>
