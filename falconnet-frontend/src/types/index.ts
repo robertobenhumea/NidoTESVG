@@ -14,6 +14,7 @@ export interface BUser {
   fechaNacimiento?: string;
   rol?: string;
   activo?: boolean;
+  lastSeen?: string | null;
 }
 
 export interface BPublicacion {
@@ -136,6 +137,7 @@ export interface User {
   portfolio?: string;
   habilidades?: string[];
   isOnline?: boolean;
+  lastSeen?: string | null;
 }
 
 export interface UserProfile extends User {
@@ -280,9 +282,19 @@ export interface ReclutamientoFeedItem {
 
 export type MsgTipo = 'TEXT' | 'IMAGE' | 'DOCUMENT';
 export type LegacyMsgTipo = MsgTipo | 'TEXTO' | 'IMAGEN' | 'ARCHIVO' | 'VIDEO';
+export type MessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 
 export interface BMensaje {
   id: number;
+  content?: string;
+  senderId?: number;
+  senderName?: string | null;
+  recipientId?: number;
+  status?: MessageStatus;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  deleted?: boolean;
   emisorId: number;
   receptorId: number;
   contenido: string;
@@ -300,6 +312,26 @@ export interface BMensaje {
   eliminado?: boolean;
   referenciaId?: number | null;
   referencia?: { id: number; contenido: string; tipo: LegacyMsgTipo; emisorId: number; emisorNombre: string };
+  replyPreview?: {
+    id: number;
+    senderId: number;
+    senderName: string;
+    contenido: string;
+    content?: string;
+    tipo: LegacyMsgTipo;
+    eliminado: boolean;
+  } | null;
+  emisorNombre?: string | null;
+  emisorFoto?: string | null;
+  editado?: boolean;
+  actualizadoEn?: string | null;
+  reenviado?: boolean;
+  mensajeOriginalId?: number | null;
+  pinned?: boolean;
+  pinnedBy?: number | null;
+  pinnedAt?: string | null;
+  reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
+  myReaction?: string | null;
 }
 
 export interface BConversacion {
@@ -313,6 +345,10 @@ export interface BConversacion {
   fecha?: string;
   noLeidos: number;
   esMio?: boolean;
+  archived?: boolean;
+  muted?: boolean;
+  online?: boolean;
+  lastSeen?: string | null;
 }
 
 export interface Conversation {
@@ -326,12 +362,17 @@ export interface Conversation {
   updatedAt?: string;
   unreadCount: number;
   isMine?: boolean;
+  archived?: boolean;
+  muted?: boolean;
+  online?: boolean;
+  lastSeen?: string | null;
 }
 
 export interface Message {
   id: number;
   senderId: number;
   receiverId: number;
+  senderName?: string | null;
   content: string;
   createdAt: string;
   read: boolean;
@@ -345,6 +386,23 @@ export interface Message {
   eliminado?: boolean;
   referenciaId?: number | null;
   referencia?: { id: number; content: string; tipo: MsgTipo; senderId: number; senderName: string };
+  replyPreview?: { id: number; content: string; tipo: MsgTipo; senderId: number; senderName: string; eliminado: boolean } | null;
+  status?: MessageStatus;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  pending?: boolean;
+  retryContent?: string;
+  retryReferenciaId?: number;
+  editado?: boolean;
+  actualizadoEn?: string | null;
+  reenviado?: boolean;
+  mensajeOriginalId?: number | null;
+  pinned?: boolean;
+  pinnedBy?: number | null;
+  pinnedAt?: string | null;
+  reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
+  myReaction?: string | null;
 }
 
 /* ── Notifications ── */
@@ -497,6 +555,7 @@ export interface CreateDestacadoPayload {
 
 export interface ApiError {
   status: number;
+  error?: string;
   message: string;
   errors?: Record<string, string>;
 }

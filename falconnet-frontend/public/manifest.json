@@ -41,10 +41,17 @@
       "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
     },
     {
-      "name": "Marketplace",
-      "short_name": "Market",
-      "description": "Explorar marketplace",
-      "url": "/marketplace",
+      "name": "Grupos",
+      "short_name": "Grupos",
+      "description": "Abrir chats grupales",
+      "url": "/messages?tab=groups",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Perfil",
+      "short_name": "Perfil",
+      "description": "Abrir mi perfil",
+      "url": "/profile",
       "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
     }
   ],

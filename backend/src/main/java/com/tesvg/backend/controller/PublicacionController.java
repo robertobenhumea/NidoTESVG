@@ -5,6 +5,7 @@ import com.tesvg.backend.model.Usuario;
 import com.tesvg.backend.repository.PublicacionRepository;
 import com.tesvg.backend.repository.UsuarioRepository;
 import com.tesvg.backend.service.NotificacionService;
+import com.tesvg.backend.service.RedisCacheService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +33,9 @@ public class PublicacionController {
     @Autowired
     private NotificacionService notificacionService;
 
+    @Autowired
+    private RedisCacheService redisCacheService;
+
     // Crear publicación normal
     @PostMapping
     public ResponseEntity<?> crear(@RequestBody Publicacion publicacion,
@@ -45,7 +50,9 @@ public class PublicacionController {
         publicacion.setEsAnuncio(false);
         publicacion.setExpiresAt(now.plusHours(24));
 
-        return ResponseEntity.ok(publicacionRepository.save(publicacion));
+        Publicacion saved = publicacionRepository.save(publicacion);
+        redisCacheService.deleteByPrefix("feed:");
+        return ResponseEntity.ok(saved);
     }
 
     // Crear anuncio — solo AUTORIDAD, ADMIN o DIRECCION
@@ -68,7 +75,9 @@ public class PublicacionController {
         // imagenUrl, fijada, allowComments are accepted as-is from request body
         if (publicacion.getAllowComments() == null) publicacion.setAllowComments(true);
 
-        return ResponseEntity.ok(publicacionRepository.save(publicacion));
+        Publicacion saved = publicacionRepository.save(publicacion);
+        redisCacheService.deleteByPrefix("feed:");
+        return ResponseEntity.ok(saved);
     }
 
     // Editar anuncio — autor o ADMIN pueden editar contenido e imagenUrl
@@ -93,7 +102,9 @@ public class PublicacionController {
         if (body.getAllowComments() != null) pub.setAllowComments(body.getAllowComments());
         if (body.getFijada() != null)     pub.setFijada(body.getFijada());
 
-        return ResponseEntity.ok(publicacionRepository.save(pub));
+        Publicacion saved = publicacionRepository.save(pub);
+        redisCacheService.deleteByPrefix("feed:");
+        return ResponseEntity.ok(saved);
     }
 
     // Eliminar anuncio — autor o ADMIN
@@ -113,6 +124,7 @@ public class PublicacionController {
         }
 
         publicacionRepository.delete(pub);
+        redisCacheService.deleteByPrefix("feed:");
         return ResponseEntity.ok(Map.of("eliminado", true));
     }
 
@@ -123,15 +135,25 @@ public class PublicacionController {
             @RequestParam(required = false) Integer page,
             @RequestParam(defaultValue = "15") int size) {
         if (page == null) {
-            return ResponseEntity.ok(publicacionRepository.findAllByOrderByFechaDesc());
+            String key = "feed:all";
+            var cached = redisCacheService.get(key, List.class);
+            if (cached.isPresent()) return ResponseEntity.ok(cached.get());
+            List<Publicacion> result = publicacionRepository.findAllByOrderByFechaDesc();
+            redisCacheService.set(key, result, Duration.ofSeconds(30));
+            return ResponseEntity.ok(result);
         }
+        String key = "feed:page:" + page + ":size:" + size;
+        var cached = redisCacheService.get(key, Map.class);
+        if (cached.isPresent()) return ResponseEntity.ok(cached.get());
         Page<Publicacion> result = publicacionRepository.findActiveFeed(
                 LocalDateTime.now(), PageRequest.of(page, size));
-        return ResponseEntity.ok(Map.of(
+        Map<String, Object> response = Map.of(
                 "content",  result.getContent(),
                 "hasMore",  !result.isLast(),
                 "page",     page
-        ));
+        );
+        redisCacheService.set(key, response, Duration.ofSeconds(20));
+        return ResponseEntity.ok(response);
     }
 
     // Solo anuncios oficiales (más reciente primero)
@@ -160,7 +182,9 @@ public class PublicacionController {
         if (!pub.getUsuarioId().equals(usuario.getId())) return ResponseEntity.status(403).build();
 
         pub.setContenido(body.getContenido());
-        return ResponseEntity.ok(publicacionRepository.save(pub));
+        Publicacion saved = publicacionRepository.save(pub);
+        redisCacheService.deleteByPrefix("feed:");
+        return ResponseEntity.ok(saved);
     }
 
     // Fijar/desfijar publicación (solo el autor; una sola a la vez)
@@ -181,7 +205,9 @@ public class PublicacionController {
                     .ifPresent(anterior -> { anterior.setFijada(false); publicacionRepository.save(anterior); });
             pub.setFijada(true);
         }
-        return ResponseEntity.ok(publicacionRepository.save(pub));
+        Publicacion saved = publicacionRepository.save(pub);
+        redisCacheService.deleteByPrefix("feed:");
+        return ResponseEntity.ok(saved);
     }
 
     // Compartir una publicación
@@ -219,6 +245,7 @@ public class PublicacionController {
         compartida.setContenido(comentario.trim());
 
         Publicacion guardada = publicacionRepository.save(compartida);
+        redisCacheService.deleteByPrefix("feed:");
 
         // Notificar al autor original
         Publicacion raiz = publicacionRepository.findById(origenId).orElse(original);
@@ -244,6 +271,7 @@ public class PublicacionController {
         if (!pub.getUsuarioId().equals(usuario.getId())) return ResponseEntity.status(403).build();
 
         publicacionRepository.delete(pub);
+        redisCacheService.deleteByPrefix("feed:");
         return ResponseEntity.ok(Map.of("mensaje", "Publicación eliminada"));
     }
 }

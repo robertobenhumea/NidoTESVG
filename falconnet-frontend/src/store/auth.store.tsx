@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { STORAGE_KEYS } from '@/lib/utils';
+import { STORAGE_KEYS, getStoredAuthToken } from '@/lib/utils';
 import type { User } from '@/types';
 
 interface AuthState {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Hydrate from localStorage and validate token
   useEffect(() => {
-    const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const storedToken = getStoredAuthToken();
     const storedUser  = localStorage.getItem(STORAGE_KEYS.USER);
 
     if (storedToken && !isTokenExpired(storedToken)) {

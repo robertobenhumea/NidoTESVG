@@ -1,8 +1,8 @@
 import { getStoredAuthToken, getWsBaseUrl } from '@/lib/utils';
 
 type MessageHandler = (body: unknown) => void;
-type StateHandler = (connected: boolean) => void;
-type ConnectionState = 'disconnected' | 'connecting' | 'connected';
+type StateHandler = (connected: boolean, state: ConnectionState) => void;
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
 function wsUrl(): string {
   const raw = getWsBaseUrl();
@@ -35,7 +35,6 @@ class StompClient {
   private subscriptions = new Map<string, { id: string; handlers: Set<MessageHandler> }>();
   private stateHandlers = new Set<StateHandler>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pendingSends: Array<{ destination: string; body: unknown }> = [];
 
   private get connected() {
     return this.state === 'connected';
@@ -62,19 +61,17 @@ class StompClient {
     };
   }
 
-  send(destination: string, body: unknown = {}): void {
+  send(destination: string, body: unknown = {}): boolean {
     this.ensure();
     if (!this.connected || !this.open) {
-      this.pendingSends.push({ destination, body });
-      if (this.pendingSends.length > 50) this.pendingSends.shift();
-      return;
+      return false;
     }
-    this.safeSendFrame(frame('SEND', { destination, 'content-type': 'application/json' }, JSON.stringify(body)));
+    return this.safeSendFrame(frame('SEND', { destination, 'content-type': 'application/json' }, JSON.stringify(body)));
   }
 
   onState(handler: StateHandler): () => void {
     this.stateHandlers.add(handler);
-    handler(this.connected);
+    handler(this.connected, this.state);
     return () => this.stateHandlers.delete(handler);
   }
 
@@ -108,7 +105,6 @@ class StompClient {
         this.subscriptions.forEach((sub, destination) => {
           this.safeSendFrame(frame('SUBSCRIBE', { id: sub.id, destination }));
         });
-        this.flushPendingSends();
       }
       if (parsed.command === 'MESSAGE') {
         const destination = parsed.headers.destination;
@@ -122,9 +118,13 @@ class StompClient {
   }
 
   private scheduleReconnect() {
-    this.setState('disconnected');
     this.ws = null;
-    if (this.reconnectTimer || this.subscriptions.size === 0) return;
+    if (this.subscriptions.size === 0) {
+      this.setState('disconnected');
+      return;
+    }
+    this.setState('reconnecting');
+    if (this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.ensure();
@@ -141,14 +141,6 @@ class StompClient {
     }
   }
 
-  private flushPendingSends() {
-    if (!this.connected || this.pendingSends.length === 0) return;
-    const pending = this.pendingSends.splice(0);
-    pending.forEach(item => {
-      this.safeSendFrame(frame('SEND', { destination: item.destination, 'content-type': 'application/json' }, JSON.stringify(item.body)));
-    });
-  }
-
   private setState(next: ConnectionState) {
     if (this.state === next) return;
     this.state = next;
@@ -156,7 +148,7 @@ class StompClient {
   }
 
   private publishState() {
-    this.stateHandlers.forEach(handler => handler(this.connected));
+    this.stateHandlers.forEach(handler => handler(this.connected, this.state));
   }
 }
 

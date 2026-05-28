@@ -12,7 +12,7 @@ export type Tab =
   | 'archivados'
   | 'no-leidos'
   | 'papelera';
-export type FilterType = 'all' | 'unread' | 'starred';
+export type FilterType = 'all' | 'unread' | 'starred' | 'comunicados';
 
 export interface UsuarioInstitucional {
   id: number;
@@ -23,7 +23,10 @@ export interface UsuarioInstitucional {
   carrera?: string;
   semestre?: string;
   grupo?: string;
+  matricula?: string;
+  numeroControl?: string;
   rol?: string;
+  rolLabel?: string;
   departamento?: string;
   facultad?: string;
   verificadoInstitucional?: boolean;
@@ -32,7 +35,8 @@ export interface UsuarioInstitucional {
 export interface CorreoAdjuntoItem {
   id: number;
   nombreArchivo: string;
-  archivoUrl: string;
+  /** Secure download URL: /correos/adjuntos/{id}/descargar — requires JWT */
+  downloadUrl: string;
   tipoArchivo?: string;
   tamanio?: number;
   fecha?: string;
@@ -48,6 +52,7 @@ export interface CorreoItem {
   destinatarioNombres?: string[];
   asunto: string;
   cuerpo?: string;
+  cuerpoHtml?: string;
   fecha: string;
   leido?: boolean;
   esFavorito?: boolean;
@@ -60,6 +65,39 @@ export interface CorreoItem {
   prioridad?: 'ALTA' | 'NORMAL' | string;
   categoria?: string;
   tipo?: string;
+  threadId?: number;
+  parentId?: number;
+  tipoAccion?: string;
+  reenviadoDe?: number;
+  replicasCount?: number;
+  esComunicado?: boolean;
+  audiencia?: string;
+  audienciaCarrera?: string;
+  audienciaGrupo?: string;
+}
+
+export interface ThreadMessage {
+  id: number;
+  emisorId: number;
+  asunto: string;
+  cuerpo?: string;
+  cuerpoHtml?: string;
+  fecha: string;
+  tipoAccion?: string;
+  threadId?: number;
+  parentId?: number;
+  emisor?: UsuarioInstitucional;
+  adjuntos?: CorreoAdjuntoItem[];
+}
+
+/** Paginated response returned by all bandeja endpoints */
+export interface CorreoPageResponse {
+  content: CorreoItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasMore: boolean;
 }
 
 export interface BUser {
@@ -70,5 +108,33 @@ export interface BUser {
   activo?: boolean;
   carrera?: string;
   grupo?: string;
+  matricula?: string;
+  numeroControl?: string;
   rol?: string;
+  rolLabel?: string;
+}
+
+export interface GrupoInfo {
+  nombre: string;
+  totalEstudiantes: number;
+}
+
+export interface CarreraInfo {
+  nombre: string;
+  totalEstudiantes: number;
+  totalDocentes: number;
+  grupos: GrupoInfo[];
+}
+
+export interface AudienciaInfo {
+  carreras: CarreraInfo[];
+}
+
+export interface BuzonOficialItem {
+  id: number;
+  nombre: string;
+  alias: string;
+  descripcion?: string;
+  tipo: string;
+  miembrosCount: number;
 }

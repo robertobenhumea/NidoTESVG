@@ -9,6 +9,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -52,8 +53,15 @@ public class PresenceService {
         redisCacheService.delete("presence:session:" + sessionId);
         if (sessions.isEmpty()) {
             userSessions.remove(user.getId());
+            user.setLastSeen(LocalDateTime.now());
+            usuarioRepository.save(user);
             publish(user, false, 0);
         }
+    }
+
+    public boolean isOnline(Long userId) {
+        Set<String> sessions = userSessions.get(userId);
+        return sessions != null && !sessions.isEmpty();
     }
 
     public long activeConnections() {

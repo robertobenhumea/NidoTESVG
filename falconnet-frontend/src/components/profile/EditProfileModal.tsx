@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ImageCropEditor } from '@/components/profile/ImageCropEditor';
 import { userService } from '@/services/user.service';
 import type { User } from '@/types';
 
@@ -46,6 +47,8 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerCropSrc, setBannerCropSrc] = useState<File | null>(null);
+  const bannerPreviewUrlRef = useRef<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +67,7 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
     setAvatarFile(null);
     setBannerPreview(null);
     setBannerFile(null);
+    setBannerCropSrc(null);
     setError('');
     setSaved(false);
   }, [profileUser, open]);
@@ -84,6 +88,13 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  // Revoke cover preview object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (bannerPreviewUrlRef.current) URL.revokeObjectURL(bannerPreviewUrlRef.current);
+    };
+  }, []);
+
   function handleImageSelect(
     e: React.ChangeEvent<HTMLInputElement>,
     setFile: (f: File) => void,
@@ -98,6 +109,25 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
     reader.onload = (ev) => setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
     e.target.value = '';
+  }
+
+  function handleBannerFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Solo se permiten imágenes'); return; }
+    if (file.size > 10 * 1024 * 1024) { setError('Tamaño máximo: 10 MB'); return; }
+    e.target.value = '';
+    setError('');
+    setBannerCropSrc(file);
+  }
+
+  async function handleBannerCropSave(blob: Blob): Promise<void> {
+    if (bannerPreviewUrlRef.current) URL.revokeObjectURL(bannerPreviewUrlRef.current);
+    const url = URL.createObjectURL(blob);
+    bannerPreviewUrlRef.current = url;
+    setBannerPreview(url);
+    setBannerFile(new File([blob], 'cover.jpg', { type: 'image/jpeg' }));
+    setBannerCropSrc(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -206,7 +236,7 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => handleImageSelect(e, setBannerFile, setBannerPreview)}
+                onChange={handleBannerFileSelect}
               />
             </div>
 
@@ -332,5 +362,18 @@ export function EditProfileModal({ open, onClose, profileUser, onSaved }: EditPr
     </div>
   );
 
-  return createPortal(panel, document.body);
+  return createPortal(
+    <>
+      {panel}
+      {bannerCropSrc && (
+        <ImageCropEditor
+          src={bannerCropSrc}
+          mode="cover"
+          onSave={handleBannerCropSave}
+          onClose={() => setBannerCropSrc(null)}
+        />
+      )}
+    </>,
+    document.body,
+  );
 }

@@ -46,6 +46,28 @@ public class Correo {
     @Column(name = "referencia_id")
     private Long referenciaId;
 
+    // INDIVIDUAL, CARRERA, GRUPO, TODOS_ACTIVOS, DOCENTES_CARRERA, BUZON
+    @Column(length = 30)
+    private String audiencia = "INDIVIDUAL";
+
+    @Column(name = "audiencia_carrera", length = 200)
+    private String audienciaCarrera;
+
+    @Column(name = "audiencia_grupo", length = 100)
+    private String audienciaGrupo;
+
+    @Column(name = "thread_id")
+    private Long threadId;
+
+    @Column(name = "parent_id")
+    private Long parentId;
+
+    @Column(name = "tipo_accion", length = 20)
+    private String tipoAccion;
+
+    @Column(name = "reenviado_de")
+    private Long reenviadoDe;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getEmisorId() { return emisorId; }
@@ -72,4 +94,18 @@ public class Correo {
     public void setTipo(String tipo) { this.tipo = tipo; }
     public Long getReferenciaId() { return referenciaId; }
     public void setReferenciaId(Long referenciaId) { this.referenciaId = referenciaId; }
+    public String getAudiencia() { return audiencia; }
+    public void setAudiencia(String a) { this.audiencia = a; }
+    public String getAudienciaCarrera() { return audienciaCarrera; }
+    public void setAudienciaCarrera(String a) { this.audienciaCarrera = a; }
+    public String getAudienciaGrupo() { return audienciaGrupo; }
+    public void setAudienciaGrupo(String a) { this.audienciaGrupo = a; }
+    public Long getThreadId() { return threadId; }
+    public void setThreadId(Long threadId) { this.threadId = threadId; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public String getTipoAccion() { return tipoAccion; }
+    public void setTipoAccion(String tipoAccion) { this.tipoAccion = tipoAccion; }
+    public Long getReenviadoDe() { return reenviadoDe; }
+    public void setReenviadoDe(Long reenviadoDe) { this.reenviadoDe = reenviadoDe; }
 }

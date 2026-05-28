@@ -23,7 +23,9 @@ export function useUnreadCounts(): UnreadCounts {
     try {
       const [messages, mail, notifications] = await Promise.all([
         chatService.getUnreadCount(),
-        api.get<{ count: number }>('/correos/no-leidos').then(r => r.count),
+        api.get<{ count: number }>('/correos/no-leidos', { suppressAuthExpiry: true })
+          .then(r => r.count ?? 0)
+          .catch(() => 0),
         notificationService.getUnreadCount(),
       ]);
       setCounts({ messages, mail, notifications });

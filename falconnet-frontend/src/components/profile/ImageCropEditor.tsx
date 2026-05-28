@@ -14,8 +14,8 @@ const CONFIGS = {
     hint: 'Arrastra para centrar · Desliza para hacer zoom',
   },
   cover: {
-    frameW: 360, frameH: 120,
-    outputW: 1200, outputH: 400,
+    frameW: 336, frameH: 140,
+    outputW: 1200, outputH: 500,
     label: 'Foto de portada',
     circle: false,
     hint: 'Arrastra para reencuadrar · Desliza para hacer zoom',
@@ -27,7 +27,7 @@ type Mode = keyof typeof CONFIGS;
 /* ── Props ─────────────────────────────────────────────────────── */
 
 interface Props {
-  file: File;
+  src: File | string;
   mode: Mode;
   onSave: (blob: Blob) => Promise<void>;
   onClose: () => void;
@@ -61,7 +61,7 @@ function distanceBetween(
 
 /* ── Main component ────────────────────────────────────────────── */
 
-export function ImageCropEditor({ file, mode, onSave, onClose }: Props) {
+export function ImageCropEditor({ src, mode, onSave, onClose }: Props) {
   const cfg = CONFIGS[mode];
   const { frameW, frameH, outputW, outputH } = cfg;
 
@@ -83,12 +83,16 @@ export function ImageCropEditor({ file, mode, onSave, onClose }: Props) {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Revoke URL when unmounted
+  // Build imgSrc: object-URL for File inputs, direct URL for string inputs
   useEffect(() => {
-    const url = URL.createObjectURL(file);
+    if (typeof src === 'string') {
+      setImgSrc(src);
+      return;
+    }
+    const url = URL.createObjectURL(src);
     setImgSrc(url);
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [src]);
 
   // Escape key to close
   useEffect(() => {
@@ -202,10 +206,11 @@ export function ImageCropEditor({ file, mode, onSave, onClose }: Props) {
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Load via Image to avoid CORS taint (same-origin blob URL is always safe)
       const img = new Image();
+      // crossOrigin needed when src is a URL (not a same-origin blob URL) to avoid canvas taint
+      if (typeof src === 'string') img.crossOrigin = 'anonymous';
       img.src = imgSrc;
-      await new Promise<void>((res) => { img.onload = () => res(); });
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); });
 
       ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outputW, outputH);
 
@@ -236,7 +241,7 @@ export function ImageCropEditor({ file, mode, onSave, onClose }: Props) {
 
   const content = (
     <div
-      className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

@@ -13,5 +13,6 @@ export function mapBUser(b: BUser): User {
     role: b.rol ?? undefined,
     grupo: b.grupo ?? undefined,
     carrera: b.carrera ?? undefined,
+    lastSeen: b.lastSeen ?? null,
   };
 }

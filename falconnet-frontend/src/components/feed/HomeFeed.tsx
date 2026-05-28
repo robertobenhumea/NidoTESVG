@@ -12,6 +12,7 @@ import { ReclutamientoFeedCard } from '@/components/feed/ReclutamientoFeedCard';
 import { postService } from '@/services/post.service';
 import { api } from '@/services/api';
 import { resolveUrl, getAvisoImageCache } from '@/lib/utils';
+import { PeopleYouMayKnow } from '@/components/social/PeopleYouMayKnow';
 import type { Post, Poll, ReclutamientoFeedItem } from '@/types';
 import type { AvisoFeedItem } from '@/components/feed/AvisoFeedCard';
 
@@ -252,27 +253,33 @@ export function HomeFeed() {
         <EmptyFeed />
       ) : (
         <>
-          {feedItems.map((entry) =>
-            entry.kind === 'aviso' ? (
-              <AvisoFeedCard key={`aviso-${entry.aviso.id}`} aviso={entry.aviso} />
-            ) : entry.kind === 'reclutamiento' ? (
-              <ReclutamientoFeedCard
-                key={`recl-${entry.reclutamiento.id}`}
-                item={entry.reclutamiento}
-                currentUserId={user?.id}
-              />
-            ) : (
-              <PostCard
-                key={`post-${entry.post.id}`}
-                post={{ ...entry.post, poll: polls.get(entry.post.id) }}
-                currentUserId={user?.id}
-                onDelete={handleDeletePost}
-                onReact={handleReact}
-                onCommentAdded={handleCommentAdded}
-                onVote={(opcionId, encuestaId) => handleVote(entry.post.id, opcionId, encuestaId)}
-              />
-            )
-          )}
+          {feedItems.map((entry, idx) => (
+            <div key={
+              entry.kind === 'aviso' ? `aviso-${entry.aviso.id}`
+              : entry.kind === 'reclutamiento' ? `recl-${entry.reclutamiento.id}`
+              : `post-${entry.post.id}`
+            }>
+              {entry.kind === 'aviso' ? (
+                <AvisoFeedCard aviso={entry.aviso} />
+              ) : entry.kind === 'reclutamiento' ? (
+                <ReclutamientoFeedCard
+                  item={entry.reclutamiento}
+                  currentUserId={user?.id}
+                />
+              ) : (
+                <PostCard
+                  post={{ ...entry.post, poll: polls.get(entry.post.id) }}
+                  currentUserId={user?.id}
+                  onDelete={handleDeletePost}
+                  onReact={handleReact}
+                  onCommentAdded={handleCommentAdded}
+                  onVote={(opcionId, encuestaId) => handleVote(entry.post.id, opcionId, encuestaId)}
+                />
+              )}
+              {/* People you may know — appears after the 3rd item */}
+              {idx === 2 && <PeopleYouMayKnow />}
+            </div>
+          ))}
 
           <div ref={sentinelRef} className="h-4" aria-hidden />
 

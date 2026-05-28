@@ -3,6 +3,7 @@ package com.tesvg.backend.dto;
 import com.tesvg.backend.model.Usuario;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class UsuarioResponse {
     private Long id;
@@ -18,6 +19,7 @@ public class UsuarioResponse {
     private LocalDate fechaNacimiento;
     private Usuario.Rol rol;
     private boolean activo;
+    private LocalDateTime lastSeen;
 
     public static UsuarioResponse from(Usuario u) {
         UsuarioResponse r = new UsuarioResponse();
@@ -34,6 +36,7 @@ public class UsuarioResponse {
         r.fechaNacimiento = u.getFechaNacimiento();
         r.rol = u.getRol();
         r.activo = u.isActivo();
+        r.lastSeen = u.getLastSeen();
         return r;
     }
 
@@ -50,4 +53,5 @@ public class UsuarioResponse {
     public LocalDate getFechaNacimiento() { return fechaNacimiento; }
     public Usuario.Rol getRol() { return rol; }
     public boolean isActivo() { return activo; }
+    public LocalDateTime getLastSeen() { return lastSeen; }
 }

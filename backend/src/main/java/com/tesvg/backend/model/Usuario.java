@@ -56,6 +56,12 @@ public class Usuario {
     @Column(name = "token_version", nullable = false)
     private int tokenVersion = 0;
 
+    @Column(name = "numero_control", length = 20)
+    private String numeroControl;
+
+    @Column(name = "last_seen")
+    private java.time.LocalDateTime lastSeen;
+
     public enum Rol {
         ESTUDIANTE, DOCENTE, AUTORIDAD, ADMINISTRATIVO, PERSONAL, ADMIN, DIRECCION
     }
@@ -93,4 +99,8 @@ public class Usuario {
     public void setPreferencias(String preferencias) { this.preferencias = preferencias; }
     public int getTokenVersion() { return tokenVersion; }
     public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
+    public String getNumeroControl() { return numeroControl; }
+    public void setNumeroControl(String numeroControl) { this.numeroControl = numeroControl; }
+    public java.time.LocalDateTime getLastSeen() { return lastSeen; }
+    public void setLastSeen(java.time.LocalDateTime lastSeen) { this.lastSeen = lastSeen; }
 }

@@ -73,7 +73,7 @@ async function request<T>(
 
       throw new FetchError(
         res.status,
-        errorData?.message ?? `HTTP ${res.status}`,
+        errorData?.error ?? errorData?.message ?? `HTTP ${res.status}`,
         errorData,
       );
     }

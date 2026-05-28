@@ -9,6 +9,7 @@ import com.tesvg.backend.repository.ProductoRepository;
 import com.tesvg.backend.repository.SolicitudCompraRepository;
 import com.tesvg.backend.repository.UsuarioRepository;
 import com.tesvg.backend.service.NotificacionService;
+import com.tesvg.backend.service.RedisCacheService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,7 @@ public class MarketController {
     @Autowired private UsuarioRepository usuarioRepo;
     @Autowired private SolicitudCompraRepository solicitudRepo;
     @Autowired private NotificacionService notificacionService;
+    @Autowired private RedisCacheService redisCacheService;
 
     private Long resolveUserId(HttpServletRequest req) {
         String correo = (String) req.getAttribute("correo");
@@ -106,6 +109,14 @@ public class MarketController {
             HttpServletRequest req) {
 
         Long userId = resolveUserId(req);
+        String cacheKey = "market:products:user:" + (userId != null ? userId : 0)
+                + ":cat:" + Optional.ofNullable(categoria).orElse("_")
+                + ":q:" + Optional.ofNullable(q).orElse("_")
+                + ":limit:" + limit
+                + ":page:" + Optional.ofNullable(page).map(String::valueOf).orElse("_")
+                + ":size:" + size;
+        var cached = redisCacheService.get(cacheKey, Object.class);
+        if (cached.isPresent()) return ResponseEntity.ok(cached.get());
 
         if (page != null) {
             PageRequest pr = PageRequest.of(page, size);
@@ -126,11 +137,13 @@ public class MarketController {
             }
             List<Map<String, Object>> content = result.getContent().stream()
                     .map(p -> toMap(p, userId)).collect(Collectors.toList());
-            return ResponseEntity.ok(Map.of(
+            Map<String, Object> response = Map.of(
                     "content", content,
                     "hasMore", !result.isLast(),
                     "page",    page
-            ));
+            );
+            redisCacheService.set(cacheKey, response, Duration.ofSeconds(60));
+            return ResponseEntity.ok(response);
         }
 
         List<Producto> productos;
@@ -153,8 +166,10 @@ public class MarketController {
             productos = productos.stream().limit(limit).collect(Collectors.toList());
         }
 
-        return ResponseEntity.ok(productos.stream().map(p -> toMap(p, userId))
-                .collect(Collectors.toList()));
+        List<Map<String, Object>> response = productos.stream().map(p -> toMap(p, userId))
+                .collect(Collectors.toList());
+        redisCacheService.set(cacheKey, response, Duration.ofSeconds(60));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/productos/vendedor/{vendedorId}")
@@ -182,7 +197,9 @@ public class MarketController {
         producto.setEstado(Producto.Estado.DISPONIBLE);
         if (producto.getCantidad() == null || producto.getCantidad() < 1) producto.setCantidad(1);
 
-        return ResponseEntity.ok(productoRepo.save(producto));
+        Producto saved = productoRepo.save(producto);
+        redisCacheService.deleteByPrefix("market:products:");
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/productos/{id}")
@@ -206,7 +223,9 @@ public class MarketController {
         p.setUbicacion(body.getUbicacion());
         if (body.getCantidad() != null && body.getCantidad() >= 1) p.setCantidad(body.getCantidad());
 
-        return ResponseEntity.ok(productoRepo.save(p));
+        Producto saved = productoRepo.save(p);
+        redisCacheService.deleteByPrefix("market:products:");
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/productos/{id}/estado")
@@ -228,7 +247,9 @@ public class MarketController {
             return ResponseEntity.badRequest().body("Estado inválido");
         }
 
-        return ResponseEntity.ok(productoRepo.save(p));
+        Producto saved = productoRepo.save(p);
+        redisCacheService.deleteByPrefix("market:products:");
+        return ResponseEntity.ok(saved);
     }
 
     @Transactional
@@ -245,6 +266,7 @@ public class MarketController {
 
         favoritoRepo.deleteByProductoId(p.getId());
         productoRepo.delete(p);
+        redisCacheService.deleteByPrefix("market:products:");
         return ResponseEntity.ok(Map.of("mensaje", "Producto eliminado"));
     }
 
@@ -266,6 +288,7 @@ public class MarketController {
 
         if (existente.isPresent()) {
             favoritoRepo.delete(existente.get());
+            redisCacheService.deleteByPrefix("market:products:");
             return ResponseEntity.ok(Map.of("guardado", false,
                     "favoritos", Math.max(0, favoritoRepo.countByProductoId(productoId))));
         } else {
@@ -274,6 +297,7 @@ public class MarketController {
             f.setProductoId(productoId);
             f.setFecha(LocalDateTime.now());
             favoritoRepo.save(f);
+            redisCacheService.deleteByPrefix("market:products:");
             return ResponseEntity.ok(Map.of("guardado", true,
                     "favoritos", favoritoRepo.countByProductoId(productoId)));
         }

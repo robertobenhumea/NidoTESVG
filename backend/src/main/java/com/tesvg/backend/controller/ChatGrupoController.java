@@ -5,6 +5,7 @@ import com.tesvg.backend.dto.*;
 import com.tesvg.backend.repository.*;
 import com.tesvg.backend.service.RateLimitService;
 import com.tesvg.backend.service.RedisCacheService;
+import com.tesvg.backend.service.WebPushService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,7 @@ public class ChatGrupoController {
     private static final long MAX_ATTACHMENT_SIZE = 10L * 1024L * 1024L;
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> DANGEROUS_EXTENSIONS = Set.of("html", "htm", "svg", "js", "exe", "bat", "sh", "cmd", "com", "scr", "msi", "jar");
 
     @Autowired private ChatGrupoRepository grupoRepo;
     @Autowired private ChatGrupoMiembroRepository miembroRepo;
@@ -43,6 +45,8 @@ public class ChatGrupoController {
     @Autowired private SimpMessagingTemplate messagingTemplate;
     @Autowired private RedisCacheService redisCacheService;
     @Autowired private RateLimitService rateLimitService;
+    @Autowired private ChatAuditLogRepository auditRepository;
+    @Autowired private WebPushService webPushService;
 
     @Value("${app.upload.dir}")
     private String uploadDir;
@@ -53,6 +57,10 @@ public class ChatGrupoController {
     @GetMapping
     public ResponseEntity<?> misGrupos(HttpServletRequest request) {
         Usuario yo = getUsuario(request);
+        if (!rateLimitService.allow("create:group", yo.getId().toString(), 5, Duration.ofHours(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP", null, "create:group");
+            return ResponseEntity.status(429).body(Map.of("error", "Espera antes de crear más grupos"));
+        }
         List<ChatGrupo> grupos = grupoRepo.findByMiembro(yo.getId());
 
         List<ChatGroupDTO> resultado = grupos.stream().map(g -> {
@@ -273,6 +281,7 @@ public class ChatGrupoController {
             return ResponseEntity.status(403).body(Map.of("error", "No puedes enviar mensajes en este grupo"));
         }
         if (!allowSend(yo.getId())) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_MESSAGE", id, "send:group");
             return ResponseEntity.status(429).body(Map.of("error", "Demasiados mensajes, intenta de nuevo en un momento"));
         }
 
@@ -314,6 +323,7 @@ public class ChatGrupoController {
 
         ChatGroupMessageDTO dto = toMessageDTO(m, yo.getId());
         publishGroupEvent("message.created", id, m.getId(), dto, yo.getId());
+        notifyGroupMembers(id, yo, m);
         return ResponseEntity.ok(dto);
     }
 
@@ -338,6 +348,7 @@ public class ChatGrupoController {
             return ResponseEntity.status(403).body(Map.of("error", "No puedes enviar mensajes en este grupo"));
         }
         if (!allowSend(yo.getId())) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_MESSAGE", id, "send:group");
             return ResponseEntity.status(429).body(Map.of("error", "Demasiados mensajes, intenta de nuevo en un momento"));
         }
         if (!rateLimitService.allow("upload:group", yo.getId().toString(), 20, Duration.ofMinutes(1))) {
@@ -387,6 +398,7 @@ public class ChatGrupoController {
         miembroRepo.actualizarUltimaLectura(id, yo.getId(), m.getFecha());
         ChatGroupMessageDTO dto = toMessageDTO(m, yo.getId());
         publishGroupEvent("message.created", id, m.getId(), dto, yo.getId());
+        notifyGroupMembers(id, yo, m);
         return ResponseEntity.ok(dto);
     }
 
@@ -399,6 +411,13 @@ public class ChatGrupoController {
         Usuario yo = getUsuario(request);
         ChatGrupoMensaje m = mensajeRepo.findById(msgId).orElse(null);
         if (m == null || !m.getGrupoId().equals(id)) return ResponseEntity.notFound().build();
+        ChatGrupoMiembro miembro = miembroRepo.findByGrupoIdAndUsuarioId(id, yo.getId()).orElse(null);
+        if (miembro == null || !Boolean.TRUE.equals(miembro.getActivo())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro de este grupo"));
+        }
+        if (Boolean.TRUE.equals(miembro.getSilenciado())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No puedes editar mensajes en este grupo"));
+        }
         if (!m.getEmisorId().equals(yo.getId()) || Boolean.TRUE.equals(m.getEsSistema())) {
             return ResponseEntity.status(403).body(Map.of("error", "Solo puedes editar tus mensajes"));
         }
@@ -427,6 +446,10 @@ public class ChatGrupoController {
         if (m == null || !m.getGrupoId().equals(id)) return ResponseEntity.notFound().build();
         if (!miembroRepo.existsByGrupoIdAndUsuarioIdAndActivoTrue(id, yo.getId())) {
             return ResponseEntity.status(403).body(Map.of("error", "No eres miembro de este grupo"));
+        }
+        if (!rateLimitService.allow("reaction:group", yo.getId().toString(), 80, Duration.ofMinutes(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_REACTION", msgId, "reaction:group");
+            return ResponseEntity.status(429).body(Map.of("error", "Espera unos segundos antes de reaccionar de nuevo"));
         }
         if (Boolean.TRUE.equals(m.getEliminado()) || Boolean.TRUE.equals(m.getEsSistema())) {
             return ResponseEntity.badRequest().body(Map.of("error", "No se puede reaccionar a este mensaje"));
@@ -459,8 +482,15 @@ public class ChatGrupoController {
         Usuario yo = getUsuario(request);
         ChatGrupoMensaje original = mensajeRepo.findById(msgId).orElse(null);
         if (original == null || !original.getGrupoId().equals(id)) return ResponseEntity.notFound().build();
+        if (!miembroRepo.existsByGrupoIdAndUsuarioIdAndActivoTrue(id, yo.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro del grupo origen"));
+        }
         if (Boolean.TRUE.equals(original.getEliminado()) || Boolean.TRUE.equals(original.getEsSistema())) {
             return ResponseEntity.badRequest().body(Map.of("error", "No se puede reenviar este mensaje"));
+        }
+        if (!rateLimitService.allow("forward:group", yo.getId().toString(), 10, Duration.ofMinutes(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_FORWARD", msgId, "forward:group");
+            return ResponseEntity.status(429).body(Map.of("error", "Estás reenviando demasiado rápido"));
         }
 
         Long destinoId = body.grupoId() != null ? body.grupoId() : id;
@@ -619,6 +649,7 @@ public class ChatGrupoController {
 
         objetivo.setActivo(false);
         miembroRepo.save(objetivo);
+        audit(yo.getId(), esSelf ? "GROUP_MEMBER_LEFT" : "GROUP_MEMBER_REMOVED", "GROUP_MEMBER", uid, "grupo=" + id);
 
         String nombreSaliente = nombreDeUsuario(uid);
         String msg = esSelf ? nombreSaliente + " salió del grupo"
@@ -645,6 +676,7 @@ public class ChatGrupoController {
 
         objetivo.setRol(nuevoRol);
         miembroRepo.save(objetivo);
+        audit(yo.getId(), "GROUP_ROLE_CHANGED", "GROUP_MEMBER", uid, "grupo=" + id + ",rol=" + nuevoRol);
         enviarSistema(id, yo.getUsername() + " cambió el rol de " + nombreDeUsuario(uid) + " a " + nuevoRol);
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -661,6 +693,7 @@ public class ChatGrupoController {
         boolean silenciado = Boolean.TRUE.equals(body.get("silenciado"));
         objetivo.setSilenciado(silenciado);
         miembroRepo.save(objetivo);
+        audit(yo.getId(), "GROUP_MEMBER_MUTED", "GROUP_MEMBER", uid, "grupo=" + id + ",silenciado=" + silenciado);
         enviarSistema(id, yo.getUsername() + (silenciado ? " silenció a " : " activó a ") + nombreDeUsuario(uid));
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -676,6 +709,7 @@ public class ChatGrupoController {
             return ResponseEntity.status(403).body(Map.of("error", "No eres miembro de este grupo"));
         }
         if (!rateLimitService.allow("upload:group", yo.getId().toString(), 20, Duration.ofMinutes(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_UPLOAD", id, "upload:group");
             return ResponseEntity.status(429).body(Map.of("error", "Demasiadas subidas, intenta de nuevo en un momento"));
         }
 
@@ -869,6 +903,22 @@ public class ChatGrupoController {
         redisCacheService.publish("falconnet:chat-events", event);
     }
 
+    private void notifyGroupMembers(Long grupoId, Usuario sender, ChatGrupoMensaje message) {
+        try {
+            ChatGrupo grupo = grupoRepo.findById(grupoId).orElse(null);
+            String title = grupo != null ? grupo.getNombre() : "FalconNet";
+            String body = sender.getUsername() + ": " + ("TEXT".equals(normalizarTipo(message.getTipo()))
+                    ? previewText(message.getContenido(), 80)
+                    : "IMAGE".equals(normalizarTipo(message.getTipo())) ? "Imagen" : "Documento");
+            for (ChatGrupoMiembro member : miembroRepo.findByGrupoIdAndActivoTrue(grupoId)) {
+                if (member.getUsuarioId().equals(sender.getId())) continue;
+                webPushService.sendToUser(member.getUsuarioId(), title, body, "/messages/groups/" + grupoId);
+            }
+        } catch (Exception ignored) {
+            // Push is best-effort and must not affect group messaging.
+        }
+    }
+
     private List<ChatGrupoMensaje> filtrarOcultos(List<ChatGrupoMensaje> mensajes, Long usuarioId) {
         if (mensajes.isEmpty()) return mensajes;
         List<Long> ids = mensajes.stream().map(ChatGrupoMensaje::getId).toList();
@@ -1019,9 +1069,14 @@ public class ChatGrupoController {
 
         String original = archivo.getOriginalFilename() != null ? archivo.getOriginalFilename() : "archivo";
         String ext = obtenerExtension(original);
+        if (DANGEROUS_EXTENSIONS.contains(ext)) {
+            audit(null, "FILE_REJECTED", "GROUP_ATTACHMENT", null, "dangerous_extension:" + ext);
+            throw new IllegalArgumentException("Archivo bloqueado por seguridad");
+        }
         String messageType = detectarMessageType(ext);
         String contentType = archivo.getContentType() != null ? archivo.getContentType() : Files.probeContentType(Paths.get(original));
         validarContentType(messageType, contentType);
+        validarMagicBytes(ext, archivo);
 
         Path carpeta = Paths.get(uploadDir, folder).normalize();
         Files.createDirectories(carpeta);
@@ -1086,6 +1141,39 @@ public class ChatGrupoController {
         if ("DOCUMENT".equals(messageType) && lower.startsWith("image/")) {
             throw new IllegalArgumentException("Tipo de documento no permitido");
         }
+    }
+
+    private void validarMagicBytes(String ext, MultipartFile archivo) throws IOException {
+        byte[] header = archivo.getInputStream().readNBytes(12);
+        if (header.length >= 2 && header[0] == 'M' && header[1] == 'Z') {
+            audit(null, "FILE_REJECTED", "GROUP_ATTACHMENT", null, "executable_magic");
+            throw new IllegalArgumentException("Archivo bloqueado por seguridad");
+        }
+        if (Set.of("jpg", "jpeg").contains(ext) && !(header.length >= 3 && (header[0] & 0xff) == 0xff && (header[1] & 0xff) == 0xd8 && (header[2] & 0xff) == 0xff)) {
+            throw new IllegalArgumentException("Contenido de imagen inválido");
+        }
+        if ("png".equals(ext) && !(header.length >= 8 && (header[0] & 0xff) == 0x89 && header[1] == 'P' && header[2] == 'N' && header[3] == 'G')) {
+            throw new IllegalArgumentException("Contenido de imagen inválido");
+        }
+        if ("webp".equals(ext) && !(header.length >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P')) {
+            throw new IllegalArgumentException("Contenido de imagen inválido");
+        }
+        if ("pdf".equals(ext) && !(header.length >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F')) {
+            throw new IllegalArgumentException("Contenido de PDF inválido");
+        }
+    }
+
+    private void audit(Long actorId, String action, String targetType, Long targetId, String detail) {
+        try {
+            ChatAuditLog log = new ChatAuditLog();
+            log.setActorId(actorId);
+            log.setAction(action);
+            log.setTargetType(targetType);
+            log.setTargetId(targetId);
+            log.setDetail(detail);
+            log.setCreatedAt(LocalDateTime.now());
+            auditRepository.save(log);
+        } catch (Exception ignored) {}
     }
 
     private record AttachmentData(String url, String messageType, String fileName, String fileType, Long fileSize) {}

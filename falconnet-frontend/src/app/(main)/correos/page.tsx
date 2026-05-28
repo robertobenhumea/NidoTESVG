@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, type TouchEvent as RTouchEvent } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { api } from '@/services/api';
 import { timeAgo, cn } from '@/lib/utils';
 import { ComposeModal } from './components/ComposeModal';
 import { MailDetail }   from './components/MailDetail';
-import type { CorreoItem, Tab, FilterType, BUser } from './components/types';
+import type { CorreoItem, CorreoPageResponse, Tab, FilterType, BUser } from './components/types';
+
+const VALID_TABS = new Set<Tab>([
+  'general','academico','equipos','marketplace','eventos',
+  'institucional','importante','entrada','enviados',
+  'favoritos','archivados','no-leidos','papelera',
+]);
 
 function resolveUrl(path?: string | null): string | undefined {
   if (!path) return undefined;
@@ -182,17 +189,20 @@ function EmptyState({ tab }: { tab: Tab }) {
    Mail list item
 ──────────────────────────────────────────────── */
 interface MailItemProps {
-  msg:        CorreoItem;
-  tab:        Tab;
-  isSelected: boolean;
-  onClick:    () => void;
-  onFavorite: (id: number) => void;
-  onTrash:    (id: number) => void;
-  onArchive:  (id: number) => void;
-  onRestore:  (id: number) => void;
+  msg:              CorreoItem;
+  tab:              Tab;
+  isSelected:       boolean;
+  onClick:          () => void;
+  onFavorite:       (id: number) => void;
+  onTrash:          (id: number) => void;
+  onArchive:        (id: number) => void;
+  onRestore:        (id: number) => void;
+  selectMode?:      boolean;
+  isChecked?:       boolean;
+  onToggleSelect?:  (id: number) => void;
 }
 
-function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchive, onRestore }: MailItemProps) {
+function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchive, onRestore, selectMode, isChecked, onToggleSelect }: MailItemProps) {
   const [dragX, setDragX]       = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX                  = useRef(0);
@@ -253,7 +263,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
       )}
 
       <button
-        onClick={onClick}
+        onClick={selectMode ? () => onToggleSelect?.(msg.id) : onClick}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -263,21 +273,40 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
         }}
         className={cn(
           'w-full text-left px-3 py-3 rounded-xl transition-colors duration-150',
-          isSelected
+          isSelected && !selectMode
             ? 'bg-[var(--brand-muted)]'
-            : 'hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-elevated)]',
+            : isChecked
+              ? 'bg-[var(--brand-muted)]/60'
+              : 'hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-elevated)]',
         )}
       >
         <div className="flex items-start gap-3">
-          {/* Avatar + unread dot */}
+          {/* Avatar / checkbox */}
           <div className="relative shrink-0 mt-0.5">
-            <Avatar
-              src={isInbox ? resolveUrl(msg.emisorFoto) : undefined}
-              name={displayName}
-              size="sm"
-            />
-            {isUnread && (
-              <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-[var(--brand)] border-2 border-[var(--bg-surface)]" />
+            {selectMode ? (
+              <div className={cn(
+                'size-9 rounded-full border-2 flex items-center justify-center transition-all',
+                isChecked
+                  ? 'border-[var(--brand)] bg-[var(--brand)]'
+                  : 'border-[var(--border)] bg-[var(--bg-elevated)]',
+              )}>
+                {isChecked && (
+                  <svg className="size-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+            ) : (
+              <>
+                <Avatar
+                  src={isInbox ? resolveUrl(msg.emisorFoto) : undefined}
+                  name={displayName}
+                  size="sm"
+                />
+                {isUnread && (
+                  <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-[var(--brand)] border-2 border-[var(--bg-surface)]" />
+                )}
+              </>
             )}
           </div>
 
@@ -306,8 +335,13 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
                 {msg.prioridad === 'ALTA' && <span className="text-amber-500 mr-1">Alta</span>}
                 {msg.asunto}
               </p>
-            {preview && (
+            {(preview || msg.esComunicado) && (
               <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5 leading-snug flex items-center gap-1">
+                {msg.esComunicado && (
+                  <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--brand)]/10 text-[var(--brand)] border border-[var(--brand)]/20 uppercase tracking-wide">
+                    Comunicado
+                  </span>
+                )}
                 {msg.tieneAdjuntos && <span aria-label="Tiene adjuntos">📎</span>}
                 {msg.etiqueta && <span className="text-[var(--brand)]">#{msg.etiqueta}</span>}
                 <span className="truncate">{preview}</span>
@@ -315,42 +349,46 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
             )}
           </div>
 
-          {/* Star */}
-          <button
-            onClick={e => { e.stopPropagation(); onFavorite(msg.id); }}
-            aria-label={msg.esFavorito ? 'Quitar de favoritos' : 'Favorito'}
-            className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 -mr-0.5 mt-0.5"
-          >
-            <svg
-              className="size-3.5 transition-colors"
-              viewBox="0 0 24 24"
-              fill={msg.esFavorito ? '#f59e0b' : 'none'}
-              stroke={msg.esFavorito ? '#f59e0b' : 'currentColor'}
-              strokeWidth={2}
-            >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </button>
-          {tab === 'papelera' ? (
-            <button
-              onClick={e => { e.stopPropagation(); onRestore(msg.id); }}
-              aria-label="Restaurar"
-              className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
-            >
-              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
-              </svg>
-            </button>
-          ) : isInbox && (
-            <button
-              onClick={e => { e.stopPropagation(); onArchive(msg.id); }}
-              aria-label={msg.archivado ? 'Desarchivar' : 'Archivar'}
-              className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
-            >
-              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
-              </svg>
-            </button>
+          {/* Star + archive (hidden in select mode) */}
+          {!selectMode && (
+            <>
+              <button
+                onClick={e => { e.stopPropagation(); onFavorite(msg.id); }}
+                aria-label={msg.esFavorito ? 'Quitar de favoritos' : 'Favorito'}
+                className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 -mr-0.5 mt-0.5"
+              >
+                <svg
+                  className="size-3.5 transition-colors"
+                  viewBox="0 0 24 24"
+                  fill={msg.esFavorito ? '#f59e0b' : 'none'}
+                  stroke={msg.esFavorito ? '#f59e0b' : 'currentColor'}
+                  strokeWidth={2}
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </button>
+              {tab === 'papelera' ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onRestore(msg.id); }}
+                  aria-label="Restaurar"
+                  className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
+                >
+                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+                  </svg>
+                </button>
+              ) : isInbox && (
+                <button
+                  onClick={e => { e.stopPropagation(); onArchive(msg.id); }}
+                  aria-label={msg.archivado ? 'Desarchivar' : 'Archivar'}
+                  className="size-6 flex items-center justify-center rounded-full hover:bg-[var(--bg-hover)] transition-colors shrink-0 mt-0.5 text-[var(--text-muted)]"
+                >
+                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
+                  </svg>
+                </button>
+              )}
+            </>
           )}
         </div>
       </button>
@@ -557,52 +595,203 @@ function DetailPlaceholder({ onCompose }: { onCompose: () => void }) {
 /* ────────────────────────────────────────────────
    Page
 ──────────────────────────────────────────────── */
-interface ReplyContext { to: BUser[]; subject: string; }
+type ComposeMode = 'compose' | 'reply' | 'replyAll' | 'forward';
+
+interface ReplyContext {
+  to: BUser[];
+  subject: string;
+  mode: ComposeMode;
+  initialBody?: string;
+  threadId?: number;
+  parentId?: number;
+}
+
+interface AdvFilters {
+  q: string;
+  categoria: string;
+  fechaDesde: string;
+  fechaHasta: string;
+  tieneAdjuntos: '' | 'true' | 'false';
+  esComunicado: '' | 'true' | 'false';
+}
+
+const DEFAULT_ADV: AdvFilters = {
+  q: '', categoria: '', fechaDesde: '', fechaHasta: '', tieneAdjuntos: '', esComunicado: '',
+};
+
+const CATEGORIAS = [
+  'GENERAL','ACADEMICO','INSTITUCIONAL','COORDINACION','TRAMITE',
+  'JUSTIFICANTE','SOLICITUD','REPORTE','DUDA','EQUIPOS','MARKETPLACE','EVENTOS','IMPORTANTE',
+];
 
 export default function CorreosPage() {
-  const [tab, setTab]               = useState<Tab>('general');
+  const searchParams                = useSearchParams();
+  const router                      = useRouter();
+
+  const [tab, setTab]               = useState<Tab>(() => {
+    const p = searchParams.get('tab') as Tab | null;
+    return p && VALID_TABS.has(p) ? p : 'enviados';
+  });
   const [items, setItems]           = useState<CorreoItem[]>([]);
   const [selected, setSelected]     = useState<CorreoItem | null>(null);
   const [loading, setLoading]       = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore]       = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const [compose, setCompose]       = useState(false);
   const [replyCtx, setReplyCtx]     = useState<ReplyContext | null>(null);
   const [search, setSearch]         = useState('');
   const [filter, setFilter]         = useState<FilterType>('all');
   const [drawer, setDrawer]         = useState(false);
   const [toast, setToast]           = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [loadError, setLoadError]   = useState(false);
+  const loadGenRef                  = useRef(0);
+  // Phase 4: advanced filters
+  const [showAdvFilters, setShowAdvFilters] = useState(false);
+  const [advFilters, setAdvFilters]         = useState<AdvFilters>(DEFAULT_ADV);
+  const [isSearchMode, setIsSearchMode]     = useState(false);
+  const [advSearchTotal, setAdvSearchTotal] = useState(0);
+  const [advSearchLoading, setAdvSearchLoading] = useState(false);
+  // Phase 4: multi-select
+  const [selectMode, setSelectMode]   = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const showToast = useCallback((msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2600);
   }, []);
 
+  const hasAdvFilters = advFilters.q !== '' || advFilters.categoria !== '' ||
+    advFilters.fechaDesde !== '' || advFilters.fechaHasta !== '' ||
+    advFilters.tieneAdjuntos !== '' || advFilters.esComunicado !== '';
+
+  async function loadAdvSearch(pg = 0) {
+    setAdvSearchLoading(true);
+    if (pg === 0) { setSelected(null); setIsSearchMode(true); setItems([]); }
+    const params = new URLSearchParams({ page: String(pg), size: '20' });
+    if (advFilters.q)              params.set('q', advFilters.q);
+    if (advFilters.categoria)      params.set('categoria', advFilters.categoria);
+    if (advFilters.fechaDesde)     params.set('fechaDesde', advFilters.fechaDesde);
+    if (advFilters.fechaHasta)     params.set('fechaHasta', advFilters.fechaHasta);
+    if (advFilters.tieneAdjuntos)  params.set('tieneAdjuntos', advFilters.tieneAdjuntos);
+    if (advFilters.esComunicado)   params.set('esComunicado', advFilters.esComunicado);
+    try {
+      const data = await api.get<CorreoPageResponse>(`/correos/buscar-avanzado?${params}`, { suppressAuthExpiry: true });
+      setItems(prev => pg === 0 ? data.content : [...prev, ...data.content]);
+      setHasMore(data.hasMore);
+      setCurrentPage(pg);
+      setAdvSearchTotal(data.totalElements);
+    } catch {
+      showToast('Error al buscar', 'error');
+    } finally {
+      setAdvSearchLoading(false);
+    }
+  }
+
+  function clearAdvSearch() {
+    setAdvFilters(DEFAULT_ADV);
+    setIsSearchMode(false);
+    setShowAdvFilters(false);
+    setAdvSearchTotal(0);
+    void load();
+  }
+
+  async function handleBulkAction(accion: string, etiqueta?: string) {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    try {
+      await api.post('/correos/acciones-masivas', { ids, accion, etiqueta }, { suppressAuthExpiry: true });
+      showToast(`${ids.length} correo${ids.length !== 1 ? 's' : ''} actualizados`, 'success');
+      const idSet = selectedIds;
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      if (accion === 'leer')
+        setItems(p => p.map(m => idSet.has(m.id) ? { ...m, leido: true } : m));
+      else if (accion === 'no-leer')
+        setItems(p => p.map(m => idSet.has(m.id) ? { ...m, leido: false } : m));
+      else if (accion === 'favorito')
+        setItems(p => p.map(m => idSet.has(m.id) ? { ...m, esFavorito: true } : m));
+      else if (accion === 'no-favorito')
+        setItems(p => p.map(m => idSet.has(m.id) ? { ...m, esFavorito: false } : m));
+      else if (['archivar', 'papelera', 'restaurar'].includes(accion)) {
+        setItems(p => p.filter(m => !idSet.has(m.id)));
+        setSelected(s => (s && idSet.has(s.id)) ? null : s);
+      }
+    } catch {
+      showToast('Error al aplicar la acción', 'error');
+    }
+  }
+
+  const tabPath = useCallback((t: Tab): string => {
+    const paths: Record<Tab, string> = {
+      general:       '/correos/categoria/GENERAL',
+      academico:     '/correos/categoria/ACADEMICO',
+      equipos:       '/correos/categoria/EQUIPOS',
+      marketplace:   '/correos/categoria/MARKETPLACE',
+      eventos:       '/correos/categoria/EVENTOS',
+      institucional: '/correos/categoria/INSTITUCIONAL',
+      importante:    '/correos/categoria/IMPORTANTE',
+      entrada:       '/correos/entrada',
+      enviados:      '/correos/enviados',
+      favoritos:     '/correos/favoritos',
+      archivados:    '/correos/archivados',
+      'no-leidos':   '/correos/no-leidos/lista',
+      papelera:      '/correos/papelera',
+    };
+    return paths[t];
+  }, []);
+
   const load = useCallback(async () => {
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setSelected(null);
+    setLoadError(false);
+    setCurrentPage(0);
+    setHasMore(false);
     try {
-      const paths: Record<Tab, string> = {
-        general: '/correos/categoria/GENERAL',
-        academico: '/correos/categoria/ACADEMICO',
-        equipos: '/correos/categoria/EQUIPOS',
-        marketplace: '/correos/categoria/MARKETPLACE',
-        eventos: '/correos/categoria/EVENTOS',
-        institucional: '/correos/categoria/INSTITUCIONAL',
-        importante: '/correos/categoria/IMPORTANTE',
-        entrada: '/correos/entrada',
-        enviados: '/correos/enviados',
-        favoritos: '/correos/favoritos',
-        archivados: '/correos/archivados',
-        'no-leidos': '/correos/no-leidos/lista',
-        papelera: '/correos/papelera',
-      };
-      const path = paths[tab];
-      setItems(await api.get<CorreoItem[]>(path));
+      const path = tabPath(tab);
+      const data = await api.get<CorreoPageResponse | CorreoItem[]>(
+        `${path}?page=0&size=20`,
+        { suppressAuthExpiry: true },
+      );
+      if (gen !== loadGenRef.current) return;
+      if (data && typeof data === 'object' && !Array.isArray(data) && 'content' in data) {
+        const paged = data as CorreoPageResponse;
+        setItems(paged.content);
+        setHasMore(paged.hasMore);
+        setCurrentPage(0);
+      } else {
+        setItems(Array.isArray(data) ? (data as CorreoItem[]) : []);
+        setHasMore(false);
+      }
     } catch {
-      setItems([]);
+      if (gen !== loadGenRef.current) return;
+      setItems(prev => prev.length > 0 ? prev : []);
+      setLoadError(true);
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) setLoading(false);
     }
-  }, [tab]);
+  }, [tab, tabPath]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const path = tabPath(tab);
+      const data = await api.get<CorreoPageResponse>(
+        `${path}?page=${nextPage}&size=20`,
+        { suppressAuthExpiry: true },
+      );
+      setItems(prev => [...prev, ...data.content]);
+      setHasMore(data.hasMore);
+      setCurrentPage(nextPage);
+    } catch {
+      // ignore — user can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, currentPage, tab, tabPath]);
 
   useEffect(() => {
     const id = window.setTimeout(() => { void load(); }, 0);
@@ -612,10 +801,9 @@ export default function CorreosPage() {
   /* ── Actions ── */
   async function handleFavorite(id: number) {
     const current = items.find(m => m.id === id)?.esFavorito ?? selected?.esFavorito ?? false;
-    await api.put(`/correos/${id}/favorito`, { favorito: !current }).catch(() => {});
+    await api.put(`/correos/${id}/favorito`, { favorito: !current }, { suppressAuthExpiry: true }).catch(() => {});
+    showToast(current ? 'Quitado de favoritos' : '⭐ Marcado como favorito');
     setItems(prev => {
-      const wasFav = prev.find(m => m.id === id)?.esFavorito;
-      showToast(wasFav ? 'Quitado de favoritos' : '⭐ Marcado como favorito');
       const updated = prev.map(m => m.id === id ? { ...m, esFavorito: !m.esFavorito } : m);
       return tab === 'favoritos' ? updated.filter(m => m.id !== id) : updated;
     });
@@ -624,7 +812,7 @@ export default function CorreosPage() {
   }
 
   async function handleTrash(id: number) {
-    await api.put(`/correos/${id}/papelera`).catch(() => {});
+    await api.put(`/correos/${id}/papelera`, undefined, { suppressAuthExpiry: true }).catch(() => {});
     setItems(p => p.filter(m => m.id !== id));
     setSelected(s => s?.id === id ? null : s);
     showToast('Movido a papelera');
@@ -632,7 +820,7 @@ export default function CorreosPage() {
 
   async function handleArchive(id: number) {
     const current = items.find(m => m.id === id)?.archivado ?? selected?.archivado ?? false;
-    await api.put(`/correos/${id}/archivar`, { archivado: !current }).catch(() => {});
+    await api.put(`/correos/${id}/archivar`, { archivado: !current }, { suppressAuthExpiry: true }).catch(() => {});
     setItems(prev => {
       const updated = prev.map(m => m.id === id ? { ...m, archivado: !current } : m);
       return tab === 'entrada' || tab === 'archivados' ? updated.filter(m => m.id !== id) : updated;
@@ -642,7 +830,7 @@ export default function CorreosPage() {
   }
 
   async function handleRestore(id: number) {
-    await api.put(`/correos/${id}/restaurar`).catch(() => {});
+    await api.put(`/correos/${id}/restaurar`, undefined, { suppressAuthExpiry: true }).catch(() => {});
     setItems(prev => prev.filter(m => m.id !== id));
     setSelected(s => s?.id === id ? null : s);
     showToast('Mensaje restaurado');
@@ -651,22 +839,102 @@ export default function CorreosPage() {
   function openMessage(msg: CorreoItem) {
     setSelected(msg);
     if (tab !== 'enviados' && !msg.leido) {
-      api.put(`/correos/${msg.id}/leer`).catch(() => {});
+      api.put(`/correos/${msg.id}/leer`, undefined, { suppressAuthExpiry: true }).catch(() => {});
       setItems(p => p.map(m => m.id === msg.id ? { ...m, leido: true } : m));
     }
+    // Fetch full body + threading detail (list only carries 200-char preview)
+    api.get<CorreoItem>(`/correos/${msg.id}`, { suppressAuthExpiry: true })
+      .then(detail => {
+        setSelected(prev => prev?.id === msg.id ? { ...prev, ...detail } : prev);
+      })
+      .catch(() => {});
   }
 
   function handleReply() {
     if (!selected || tab === 'enviados' || tab === 'papelera') return;
+    const rootId = selected.threadId ?? selected.id;
     setReplyCtx({
+      mode:     'reply',
       to: [{
         id:         selected.emisorId,
-        username:   selected.emisorNombre ?? `Usuario #${selected.emisorId}`,
-        fotoPerfil: selected.emisorFoto,
+        username:   selected.emisor?.nombre ?? selected.emisorNombre ?? `Usuario #${selected.emisorId}`,
+        fotoPerfil: selected.emisor?.fotoPerfil ?? selected.emisorFoto,
+        correo:     selected.emisor?.correo,
+        rol:        selected.emisor?.rol,
+        rolLabel:   selected.emisor?.rolLabel,
       }],
-      subject: selected.asunto.startsWith('Re: ') ? selected.asunto : `Re: ${selected.asunto}`,
+      subject:  selected.asunto.startsWith('Re: ') ? selected.asunto : `Re: ${selected.asunto}`,
+      threadId: rootId,
+      parentId: selected.id,
     });
     setCompose(true);
+  }
+
+  function handleReplyAll() {
+    if (!selected || tab === 'enviados' || tab === 'papelera') return;
+    const rootId = selected.threadId ?? selected.id;
+    const recipients: BUser[] = [];
+
+    // Include original sender
+    recipients.push({
+      id:         selected.emisorId,
+      username:   selected.emisor?.nombre ?? selected.emisorNombre ?? `Usuario #${selected.emisorId}`,
+      fotoPerfil: selected.emisor?.fotoPerfil ?? selected.emisorFoto,
+      correo:     selected.emisor?.correo,
+      rol:        selected.emisor?.rol,
+      rolLabel:   selected.emisor?.rolLabel,
+    });
+
+    // Include all recipients (backend will filter self)
+    if (selected.destinatarios) {
+      for (const d of selected.destinatarios) {
+        if (!recipients.find(r => r.id === d.id)) {
+          recipients.push({
+            id:         d.id,
+            username:   d.nombre ?? d.username,
+            fotoPerfil: d.fotoPerfil,
+            correo:     d.correo,
+            rol:        d.rol,
+            rolLabel:   d.rolLabel,
+          });
+        }
+      }
+    }
+
+    setReplyCtx({
+      mode:     'replyAll',
+      to:       recipients,
+      subject:  selected.asunto.startsWith('Re: ') ? selected.asunto : `Re: ${selected.asunto}`,
+      threadId: rootId,
+      parentId: selected.id,
+    });
+    setCompose(true);
+  }
+
+  function handleForward() {
+    if (!selected) return;
+    const date = new Date(selected.fecha).toLocaleString('es-MX', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const senderName = selected.emisor?.nombre ?? selected.emisorNombre ?? `Usuario #${selected.emisorId}`;
+    const quotedBody = `\n\n--- Mensaje original ---\nDe: ${senderName}\nFecha: ${date}\nAsunto: ${selected.asunto}\n\n${selected.cuerpo ?? ''}`;
+
+    setReplyCtx({
+      mode:        'forward',
+      to:          [],
+      subject:     selected.asunto.startsWith('Fw: ') ? selected.asunto : `Fw: ${selected.asunto}`,
+      initialBody: quotedBody,
+    });
+    setCompose(true);
+  }
+
+  async function handleMarkUnread() {
+    if (!selected) return;
+    await api.patch(`/correos/${selected.id}/marcar-no-leido`, undefined, { suppressAuthExpiry: true }).catch(() => {});
+    setItems(p => p.map(m => m.id === selected.id ? { ...m, leido: false } : m));
+    setSelected(s => s ? { ...s, leido: false } : null);
+    showToast('Marcado como no leído');
   }
 
   function closeCompose() {
@@ -679,15 +947,24 @@ export default function CorreosPage() {
     setSearch('');
     setFilter('all');
     setDrawer(false);
+    setHasMore(false);
+    setCurrentPage(0);
+    setIsSearchMode(false);
+    setAdvFilters(DEFAULT_ADV);
+    setShowAdvFilters(false);
+    setAdvSearchTotal(0);
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    router.replace(`?tab=${t}`, { scroll: false });
   }
 
   /* ── Keyboard shortcuts — use ref to avoid stale closures ── */
-  const handlersRef = useRef({ handleFavorite, handleTrash, handleReply });
+  const handlersRef = useRef({ handleFavorite, handleTrash, handleReply, handleMarkUnread, handleReplyAll, handleForward });
 
   const stateRef = useRef({ selected, tab, compose, drawer });
 
   useEffect(() => {
-    handlersRef.current = { handleFavorite, handleTrash, handleReply };
+    handlersRef.current = { handleFavorite, handleTrash, handleReply, handleMarkUnread, handleReplyAll, handleForward };
     stateRef.current = { selected, tab, compose, drawer };
   });
 
@@ -720,8 +997,9 @@ export default function CorreosPage() {
   /* ── Filtered items ── */
   const filteredItems = items
     .filter(m => {
-      if (filter === 'unread')  return !m.leido;
-      if (filter === 'starred') return m.esFavorito;
+      if (filter === 'unread')       return !m.leido;
+      if (filter === 'starred')      return m.esFavorito;
+      if (filter === 'comunicados')  return m.esComunicado === true;
       return true;
     })
     .filter(m => {
@@ -838,21 +1116,57 @@ export default function CorreosPage() {
           {/* Desktop section header */}
           <div className="hidden lg:flex items-center justify-between px-4 pt-4 pb-1 shrink-0">
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">
-              {TAB_LABELS[tab]}
-              {tab === 'entrada' && unreadCount > 0 && (
-                <span className="ml-1.5 text-[var(--brand)] normal-case tracking-normal">({unreadCount})</span>
+              {isSearchMode ? `Resultados (${advSearchTotal})` : (
+                <>
+                  {TAB_LABELS[tab]}
+                  {tab === 'entrada' && unreadCount > 0 && (
+                    <span className="ml-1.5 text-[var(--brand)] normal-case tracking-normal">({unreadCount})</span>
+                  )}
+                </>
               )}
             </span>
-            <button
-              onClick={load}
-              className="size-6 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
-              aria-label="Actualizar"
-            >
-              <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setSelectMode(p => !p); setSelectedIds(new Set()); }}
+                title="Selección múltiple"
+                className={cn(
+                  'size-6 flex items-center justify-center rounded-lg transition-colors',
+                  selectMode ? 'text-[var(--brand)] bg-[var(--brand-muted)]' : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+                )}
+              >
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="4" height="4" rx="1" /><line x1="9" y1="7" x2="21" y2="7" />
+                  <rect x="3" y="11" width="4" height="4" rx="1" /><line x1="9" y1="13" x2="21" y2="13" />
+                  <rect x="3" y="17" width="4" height="4" rx="1" /><line x1="9" y1="19" x2="21" y2="19" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setShowAdvFilters(p => !p)}
+                title="Filtros avanzados"
+                className={cn(
+                  'size-6 flex items-center justify-center rounded-lg transition-colors',
+                  showAdvFilters || hasAdvFilters || isSearchMode
+                    ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]',
+                )}
+              >
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+              </button>
+              {!isSearchMode && (
+                <button
+                  onClick={load}
+                  className="size-6 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
+                  aria-label="Actualizar"
+                >
+                  <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Search */}
@@ -865,34 +1179,150 @@ export default function CorreosPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar mensajes…"
-                className="w-full pl-8 pr-8 h-9 rounded-xl bg-[var(--bg-elevated)] border border-transparent focus:border-[var(--border-focus)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-colors"
+                className="w-full pl-8 pr-16 h-9 rounded-xl bg-[var(--bg-elevated)] border border-transparent focus:border-[var(--border-focus)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-colors"
               />
-              {search && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="size-4 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+                {/* Mobile filter toggle */}
                 <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                  aria-label="Limpiar búsqueda"
+                  onClick={() => setShowAdvFilters(p => !p)}
+                  className={cn(
+                    'lg:hidden size-6 flex items-center justify-center rounded-lg transition-colors',
+                    showAdvFilters || hasAdvFilters || isSearchMode
+                      ? 'text-[var(--brand)] bg-[var(--brand-muted)]'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]',
+                  )}
                 >
-                  <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                   </svg>
                 </button>
-              )}
+              </div>
             </div>
           </div>
 
+          {/* Advanced filter panel */}
+          {showAdvFilters && (
+            <div className="mx-3 mb-2 p-3 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
+              <div className="grid grid-cols-2 gap-2 mb-2.5">
+                <div className="col-span-2">
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Texto (asunto / cuerpo)</label>
+                  <input
+                    value={advFilters.q}
+                    onChange={e => setAdvFilters(p => ({ ...p, q: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && void loadAdvSearch(0)}
+                    placeholder="Palabras clave…"
+                    className="w-full h-8 px-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--brand)]/50 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Categoría</label>
+                  <select
+                    value={advFilters.categoria}
+                    onChange={e => setAdvFilters(p => ({ ...p, categoria: e.target.value }))}
+                    className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)] focus:outline-none"
+                  >
+                    <option value="">Todas</option>
+                    {CATEGORIAS.map(c => (
+                      <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Adjuntos</label>
+                  <select
+                    value={advFilters.tieneAdjuntos}
+                    onChange={e => setAdvFilters(p => ({ ...p, tieneAdjuntos: e.target.value as AdvFilters['tieneAdjuntos'] }))}
+                    className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)] focus:outline-none"
+                  >
+                    <option value="">Cualquiera</option>
+                    <option value="true">Con adjuntos</option>
+                    <option value="false">Sin adjuntos</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Desde</label>
+                  <input
+                    type="date"
+                    value={advFilters.fechaDesde}
+                    onChange={e => setAdvFilters(p => ({ ...p, fechaDesde: e.target.value }))}
+                    className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Hasta</label>
+                  <input
+                    type="date"
+                    value={advFilters.fechaHasta}
+                    onChange={e => setAdvFilters(p => ({ ...p, fechaHasta: e.target.value }))}
+                    className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-1">Tipo</label>
+                  <select
+                    value={advFilters.esComunicado}
+                    onChange={e => setAdvFilters(p => ({ ...p, esComunicado: e.target.value as AdvFilters['esComunicado'] }))}
+                    className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-xs text-[var(--text-primary)] focus:outline-none"
+                  >
+                    <option value="">Todos</option>
+                    <option value="true">Solo comunicados</option>
+                    <option value="false">Solo mensajes normales</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void loadAdvSearch(0)}
+                  disabled={advSearchLoading}
+                  className="flex-1 h-8 rounded-lg bg-[var(--brand)] text-white text-xs font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {advSearchLoading ? (
+                    <svg className="size-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="15 85" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  )}
+                  Buscar
+                </button>
+                {(hasAdvFilters || isSearchMode) && (
+                  <button
+                    onClick={clearAdvSearch}
+                    className="h-8 px-3 rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Filter chips */}
-          <div className="px-3 pb-2 flex items-center gap-1.5 shrink-0">
+          <div className="px-3 pb-2 flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-hide">
             {([
-              { key: 'all' as const,     label: 'Todos' },
-              { key: 'unread' as const,  label: 'No leídos' },
-              { key: 'starred' as const, label: '⭐ Favoritos' },
+              { key: 'all'         as const, label: 'Todos' },
+              { key: 'unread'      as const, label: 'No leídos' },
+              { key: 'starred'     as const, label: '⭐ Favoritos' },
+              { key: 'comunicados' as const, label: '📢 Comunicados' },
             ]).map(f => (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-xs font-medium transition-all',
+                  'px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0',
                   filter === f.key
                     ? 'bg-[var(--brand)] text-white shadow-sm'
                     : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:text-[var(--text-primary)]',
@@ -907,7 +1337,30 @@ export default function CorreosPage() {
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {loading ? (
               <MailSkeleton />
-            ) : filteredItems.length === 0 ? (
+            ) : loadError && items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-4 animate-fade-in">
+                <div className="flex items-center justify-center rounded-2xl bg-red-500/10" style={{ width: 72, height: 72 }}>
+                  <svg className="size-9 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 9v4M12 17h.01" />
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">No se pudo cargar el correo</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[200px] leading-relaxed">Verifica tu conexión e intenta de nuevo</p>
+                </div>
+                <button
+                  onClick={load}
+                  className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--brand)] text-white text-sm font-semibold hover:bg-[var(--brand-hover)] active:scale-[0.97] transition-all shadow-sm"
+                >
+                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                  Reintentar
+                </button>
+              </div>
+            ) : filteredItems.length === 0 && !loadError ? (
               search.trim() ? (
                 <div className="text-center py-14 px-6 animate-fade-in">
                   <p className="text-sm text-[var(--text-muted)]">
@@ -921,21 +1374,53 @@ export default function CorreosPage() {
                 <EmptyState tab={tab} />
               )
             ) : (
-              <div className="px-2 py-1 space-y-px">
-                {filteredItems.map(msg => (
-                  <MailItem
-                    key={msg.id}
-                    msg={msg}
-                    tab={tab}
-                    isSelected={selected?.id === msg.id}
-                    onClick={() => openMessage(msg)}
-                    onFavorite={handleFavorite}
-                    onTrash={handleTrash}
-                    onArchive={handleArchive}
-                    onRestore={handleRestore}
-                  />
-                ))}
-              </div>
+              <>
+                {loadError && (
+                  <div className="mx-3 mt-2 mb-1 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                    <svg className="size-3.5 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                    </svg>
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400 flex-1">No se pudo actualizar</span>
+                    <button onClick={load} className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline shrink-0">Reintentar</button>
+                  </div>
+                )}
+                <div className="px-2 py-1 space-y-px">
+                  {filteredItems.map(msg => (
+                    <MailItem
+                      key={msg.id}
+                      msg={msg}
+                      tab={tab}
+                      isSelected={selected?.id === msg.id}
+                      onClick={() => openMessage(msg)}
+                      onFavorite={handleFavorite}
+                      onTrash={handleTrash}
+                      onArchive={handleArchive}
+                      onRestore={handleRestore}
+                    />
+                  ))}
+                </div>
+                {/* Load more */}
+                {hasMore && !search.trim() && filter === 'all' && (
+                  <div className="px-4 py-3 flex justify-center">
+                    <button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="flex items-center gap-2 h-8 px-4 rounded-xl border border-[var(--border)] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50"
+                    >
+                      {loadingMore ? (
+                        <svg className="size-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="15 85" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      )}
+                      {loadingMore ? 'Cargando…' : 'Cargar más'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
@@ -950,6 +1435,9 @@ export default function CorreosPage() {
               onFavorite={handleFavorite}
               onTrash={handleTrash}
               onReply={handleReply}
+              onMarkUnread={handleMarkUnread}
+              onReplyAll={handleReplyAll}
+              onForward={handleForward}
             />
           ) : (
             <DetailPlaceholder onCompose={() => setCompose(true)} />
@@ -973,6 +1461,9 @@ export default function CorreosPage() {
               onFavorite={handleFavorite}
               onTrash={handleTrash}
               onReply={handleReply}
+              onMarkUnread={handleMarkUnread}
+              onReplyAll={handleReplyAll}
+              onForward={handleForward}
             />
           )}
         </div>
@@ -1004,11 +1495,19 @@ export default function CorreosPage() {
           onClose={closeCompose}
           onSent={() => {
             closeCompose();
-            if (tab === 'enviados') load();
+            if (tab === 'enviados') {
+              load();
+            } else {
+              switchTab('enviados');
+            }
             showToast('Mensaje enviado', 'success');
           }}
+          mode={replyCtx?.mode ?? 'compose'}
           initialTo={replyCtx?.to}
           initialSubject={replyCtx?.subject}
+          initialBody={replyCtx?.initialBody}
+          threadId={replyCtx?.threadId}
+          parentId={replyCtx?.parentId}
         />
       )}
 

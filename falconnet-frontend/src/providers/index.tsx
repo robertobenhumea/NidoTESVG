@@ -7,6 +7,7 @@ import { UIProvider } from '@/store/ui.store';
 import { Toaster } from '@/components/ui/Toast';
 import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
+import { enableChatPush } from '@/lib/chatPush';
 
 /**
  * Registers the PWA service worker on first client load.
@@ -26,7 +27,10 @@ function PWASetup() {
 
     navigator.serviceWorker
       .register(config.sw.path, { scope: config.sw.scope })
-      .then((reg) => logger.debug('SW registered', { scope: reg.scope }))
+      .then((reg) => {
+        logger.debug('SW registered', { scope: reg.scope });
+        void enableChatPush().catch(() => undefined);
+      })
       .catch((err) => logger.warn('SW registration failed', { error: String(err) }));
   }, []);
 

@@ -15,8 +15,11 @@ import com.tesvg.backend.repository.UsuarioRepository;
 import com.tesvg.backend.dto.LoginRequest;
 import com.tesvg.backend.dto.UsuarioResponse;
 import com.tesvg.backend.security.JwtUtil;
+import com.tesvg.backend.service.RateLimitService;
+import com.tesvg.backend.service.RedisCacheService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -26,6 +29,8 @@ public class UsuarioController {
     @Autowired private CodigoRegistroRepository codigoRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired private RateLimitService rateLimitService;
+    @Autowired private RedisCacheService redisCacheService;
 
     private Usuario getUsuarioAutenticado(HttpServletRequest req) {
         String correo = (String) req.getAttribute("correo");
@@ -75,9 +80,13 @@ public class UsuarioController {
 
     // ── LOGIN ────────────────────────────────────────────────────────────────────
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         if (request.getCorreo() == null || request.getPassword() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Correo y contraseña son requeridos"));
+        }
+        String actor = httpRequest.getRemoteAddr() + ":" + request.getCorreo().trim().toLowerCase();
+        if (!rateLimitService.allow("login", actor, 10, Duration.ofMinutes(5))) {
+            return ResponseEntity.status(429).body(Map.of("error", "Demasiados intentos, intenta de nuevo en unos minutos"));
         }
         Optional<Usuario> usuarioOpt =
                 usuarioRepository.findByCorreo(request.getCorreo().trim());
@@ -121,7 +130,9 @@ public class UsuarioController {
             usuario.setFechaNacimiento(fn != null && !fn.isBlank()
                 ? java.time.LocalDate.parse(fn) : null);
         }
-        return ResponseEntity.ok(UsuarioResponse.from(usuarioRepository.save(usuario)));
+        Usuario saved = usuarioRepository.save(usuario);
+        redisCacheService.deleteByPrefix("suggestions:");
+        return ResponseEntity.ok(UsuarioResponse.from(saved));
     }
 
     // ── PERFIL PÚBLICO ───────────────────────────────────────────────────────────

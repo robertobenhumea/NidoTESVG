@@ -17,6 +17,8 @@ import { marketplaceService } from '@/services/marketplace.service';
 import { equipoService } from '@/services/equipo.service';
 import { api } from '@/services/api';
 import { HighlightCarousel } from '@/components/highlights/HighlightCarousel';
+import { FollowListModal } from '@/components/social/FollowListModal';
+import { SuggestionsPanel } from '@/components/social/SuggestionsPanel';
 import type { User, Post, MarketplaceListing, ReclutamientoFeedItem } from '@/types';
 
 /* ── Types ──────────────────────────────────────────────────────── */
@@ -133,11 +135,13 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
   const [loading, setLoading]         = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [cropTarget, setCropTarget]   = useState<{ file: File; mode: 'avatar' | 'cover' } | null>(null);
+  const [cropTarget, setCropTarget]   = useState<{ src: File | string; mode: 'avatar' | 'cover' } | null>(null);
   const [editOpen, setEditOpen]       = useState(false);
   const [avatarOpen, setAvatarOpen]   = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [followListOpen, setFollowListOpen] = useState(false);
+  const [followListTab, setFollowListTab]   = useState<'seguidores' | 'siguiendo'>('seguidores');
   const [error, setError]             = useState('');
-  const coverInputRef                 = useRef<HTMLInputElement>(null);
   const avatarInputRef                = useRef<HTMLInputElement>(null);
   const { updateUser }                = useAuth();
 
@@ -181,20 +185,18 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  function handleCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !isOwnProfile) return;
-    if (!file.type.startsWith('image/')) return;
-    e.target.value = '';
-    setCropTarget({ file, mode: 'cover' });
-  }
-
   function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !isOwnProfile) return;
     if (!file.type.startsWith('image/')) return;
     e.target.value = '';
-    setCropTarget({ file, mode: 'avatar' });
+    setCropTarget({ src: file, mode: 'avatar' });
+  }
+
+  function handleAdjustAvatar() {
+    setAvatarMenuOpen(false);
+    if (profileUser?.avatarUrl) setCropTarget({ src: profileUser.avatarUrl, mode: 'avatar' });
+    else avatarInputRef.current?.click();
   }
 
   async function handleCropSave(blob: Blob) {
@@ -273,29 +275,6 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
             />
           )}
 
-          {isOwnProfile && (
-            <>
-              <button
-                onClick={() => coverInputRef.current?.click()}
-                disabled={photoUploading}
-                aria-label="Cambiar foto de portada"
-                className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/50 text-white text-xs font-medium backdrop-blur-sm hover:bg-black/70 transition-colors disabled:opacity-50"
-              >
-                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-                {photoUploading ? 'Subiendo…' : 'Cambiar portada'}
-              </button>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverFileChange}
-              />
-            </>
-          )}
         </div>
 
         {/* ── PROFILE HEADER ──────────────────────────────────── */}
@@ -303,48 +282,102 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
 
           {/* Avatar row */}
           <div className="flex items-end justify-between -mt-12 sm:-mt-16 mb-3">
-            {/* Tappable avatar */}
-            <button
-              onClick={() => isOwnProfile ? avatarInputRef.current?.click() : setAvatarOpen(true)}
-              aria-label={isOwnProfile ? 'Cambiar foto de perfil' : `Ver foto de ${displayName}`}
-              disabled={photoUploading}
-              className="relative shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-[var(--brand)] group disabled:opacity-70"
-            >
-              {/* Wrapper controla el tamaño real — evita el mismatch con size="xl" (80px) */}
-              <div className="size-24 sm:size-32 rounded-full overflow-hidden ring-4 ring-[var(--bg-surface)]">
-                <Avatar
-                  src={profileUser.avatarUrl}
-                  name={displayName}
-                  size="xl"
-                  className="w-full h-full [&>div]:!w-full [&>div]:!h-full"
-                />
-              </div>
-              {profileUser.isOnline && !isOwnProfile && (
-                <span className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 size-4 sm:size-5 rounded-full bg-green-500 border-2 border-[var(--bg-surface)]" />
+            {/* Avatar + dropdown menu wrapper */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => isOwnProfile ? setAvatarMenuOpen(v => !v) : setAvatarOpen(true)}
+                aria-label={isOwnProfile ? 'Opciones de foto de perfil' : `Ver foto de ${displayName}`}
+                disabled={photoUploading}
+                className="relative rounded-full focus-visible:outline-2 focus-visible:outline-[var(--brand)] group disabled:opacity-70"
+              >
+                <div className="size-24 sm:size-32 rounded-full overflow-hidden ring-4 ring-[var(--bg-surface)]">
+                  <Avatar
+                    src={profileUser.avatarUrl}
+                    name={displayName}
+                    size="xl"
+                    className="w-full h-full [&>div]:!w-full [&>div]:!h-full"
+                  />
+                </div>
+                {profileUser.isOnline && !isOwnProfile && (
+                  <span className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 size-4 sm:size-5 rounded-full bg-green-500 border-2 border-[var(--bg-surface)]" />
+                )}
+                {/* Dark overlay on hover (desktop) */}
+                {isOwnProfile && (
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 rounded-full bg-black/55 opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-0.5 pointer-events-none"
+                  >
+                    <svg className="size-6 text-white drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    <span className="text-[10px] font-semibold text-white leading-none tracking-wide">Editar</span>
+                  </div>
+                )}
+                {/* Camera badge — always visible on mobile, fades out on desktop hover */}
+                {isOwnProfile && (
+                  <span
+                    aria-hidden
+                    className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 size-7 sm:size-8 rounded-full bg-[var(--bg-surface)] border-2 border-[var(--bg-surface)] flex items-center justify-center shadow-md transition-opacity sm:group-hover:opacity-0"
+                  >
+                    <svg className="size-3.5 sm:size-4 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </span>
+                )}
+              </button>
+
+              {/* Avatar edit dropdown */}
+              {isOwnProfile && avatarMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setAvatarMenuOpen(false)} />
+                  <div className="absolute top-full mt-2 left-0 z-50 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden min-w-[210px] animate-fade-in">
+                    <div className="py-1.5">
+                      <button
+                        onClick={() => { setAvatarMenuOpen(false); avatarInputRef.current?.click(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+                      >
+                        <svg className="size-5 text-[var(--brand)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <div className="text-left">
+                          <div className="font-medium">Cambiar foto</div>
+                          <div className="text-xs text-[var(--text-muted)]">Subir nueva imagen</div>
+                        </div>
+                      </button>
+                      {profileUser.avatarUrl && (
+                        <button
+                          onClick={handleAdjustAvatar}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+                        >
+                          <svg className="size-5 text-[var(--brand)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 2 6 16 20 16"/>
+                            <polyline points="4 8 18 8 18 22"/>
+                          </svg>
+                          <div className="text-left">
+                            <div className="font-medium">Ajustar encuadre</div>
+                            <div className="text-xs text-[var(--text-muted)]">Reposicionar y zoom</div>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
-              {/* Camera overlay for own profile */}
+
+              {/* Hidden avatar file input */}
               {isOwnProfile && (
-                <span
-                  aria-hidden
-                  className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 size-7 sm:size-8 rounded-full bg-[var(--bg-surface)] border-2 border-[var(--bg-surface)] flex items-center justify-center shadow-md group-hover:bg-[var(--bg-elevated)] transition-colors"
-                >
-                  <svg className="size-3.5 sm:size-4 text-[var(--text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                </span>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
               )}
-            </button>
-            {/* Hidden avatar file input */}
-            {isOwnProfile && (
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarFileChange}
-              />
-            )}
+            </div>
 
             {/* Action button */}
             <div className="flex gap-2 mb-1 shrink-0">
@@ -408,13 +441,13 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
           <div className="flex gap-6 py-3 border-y border-[var(--border)]">
             {[
               { label: 'Publicaciones', value: posts.length,    onClick: () => setActiveTab('publicaciones') },
-              { label: 'Seguidores',    value: stats.followers, onClick: undefined },
-              { label: 'Siguiendo',     value: stats.following, onClick: undefined },
+              { label: 'Seguidores',    value: stats.followers, onClick: () => { setFollowListTab('seguidores'); setFollowListOpen(true); } },
+              { label: 'Siguiendo',     value: stats.following, onClick: () => { setFollowListTab('siguiendo');  setFollowListOpen(true); } },
             ].map(({ label, value, onClick }) => (
               <button
                 key={label}
                 onClick={onClick}
-                className={`flex flex-col items-center gap-0.5 ${onClick ? 'hover:opacity-80 transition-opacity' : 'cursor-default'}`}
+                className="flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity"
               >
                 <span className="text-base font-bold text-[var(--text-primary)] tabular-nums">
                   {value}
@@ -432,6 +465,9 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
             isOwner={isOwnProfile}
           />
         )}
+
+        {/* ── SUGERENCIAS (solo perfil propio) ──────────────────── */}
+        {isOwnProfile && <SuggestionsPanel />}
 
         {/* ── INSIGNIAS ─────────────────────────────────────────── */}
         {insignias.length > 0 && (
@@ -531,7 +567,7 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
       {/* Photo crop editor — avatar or cover */}
       {cropTarget && (
         <ImageCropEditor
-          file={cropTarget.file}
+          src={cropTarget.src}
           mode={cropTarget.mode}
           onSave={handleCropSave}
           onClose={() => setCropTarget(null)}
@@ -545,6 +581,16 @@ export function ProfileView({ userId: propUserId }: { userId?: number }) {
           onClose={() => setEditOpen(false)}
           profileUser={profileUser}
           onSaved={handleSaved}
+        />
+      )}
+
+      {/* Followers / following modal */}
+      {profileUser && (
+        <FollowListModal
+          open={followListOpen}
+          onClose={() => setFollowListOpen(false)}
+          userId={profileUser.id}
+          initialTab={followListTab}
         />
       )}
     </>

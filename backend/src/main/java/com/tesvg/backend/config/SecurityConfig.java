@@ -74,7 +74,7 @@ public class SecurityConfig {
                         "/usuarios/registro",
                         "/ws/**"
                 ).permitAll()
-                .requestMatchers("/imagenes/adjuntos/**").permitAll()
+                .requestMatchers("/imagenes/adjuntos/**").denyAll()
                 .requestMatchers("/imagenes/mensajes/**").authenticated()
                 .requestMatchers("/imagenes/grupos-chat/**").authenticated()
                 .requestMatchers("/imagenes/**").permitAll()

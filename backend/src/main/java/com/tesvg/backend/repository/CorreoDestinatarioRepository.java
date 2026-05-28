@@ -36,6 +36,11 @@ public interface CorreoDestinatarioRepository extends JpaRepository<CorreoDestin
 
     @Modifying
     @Transactional
+    @Query("UPDATE CorreoDestinatario d SET d.leido = false, d.fechaLectura = null WHERE d.correoId = :correoId AND d.receptorId = :receptorId")
+    void marcarNoLeido(@Param("correoId") Long correoId, @Param("receptorId") Long receptorId);
+
+    @Modifying
+    @Transactional
     @Query("UPDATE CorreoDestinatario d SET d.esFavorito = :valor WHERE d.correoId = :correoId AND d.receptorId = :receptorId")
     void setFavorito(@Param("correoId") Long correoId, @Param("receptorId") Long receptorId, @Param("valor") boolean valor);
 

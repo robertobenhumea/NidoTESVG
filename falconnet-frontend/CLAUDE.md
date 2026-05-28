@@ -46,7 +46,27 @@ NO debe parecer:
 ==================================================
 REGLAS CRÍTICAS
 ==================================================
+# Permissions
 
+The agent is allowed to:
+
+- edit frontend files
+- edit backend files
+- run npm commands
+- run git commands
+- run Spring Boot builds
+- run Next.js dev server
+- create components
+- refactor UI
+- fix TypeScript issues
+- commit changes
+- push to GitHub
+
+The agent should ask before:
+- deleting large folders
+- dropping database tables
+- changing production environment variables
+- force pushing git history
 - Mobile-first obligatorio
 - Compatible con Safari iOS
 - Compatible con Android PWA
