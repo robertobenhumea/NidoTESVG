@@ -31,6 +31,8 @@ public class CorreoResumenDTO {
     private String audiencia;
     private String audienciaCarrera;
     private String audienciaGrupo;
+    /** True when the logged-in user is the sender of this mail (e.g. in Favoritos showing a sent mail). */
+    private boolean esMio;
 
     public Long getId()                       { return id; }
     public void setId(Long id)                { this.id = id; }
@@ -82,4 +84,6 @@ public class CorreoResumenDTO {
     public void setAudienciaCarrera(String a)     { this.audienciaCarrera = a; }
     public String getAudienciaGrupo()             { return audienciaGrupo; }
     public void setAudienciaGrupo(String a)       { this.audienciaGrupo = a; }
+    public boolean isEsMio()                      { return esMio; }
+    public void setEsMio(boolean esMio)           { this.esMio = esMio; }
 }

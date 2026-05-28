@@ -48,6 +48,12 @@ public class ChatGrupoMensaje {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
+    @Column(name = "waveform_data", columnDefinition = "TEXT")
+    private String waveformData;
+
     @Column(nullable = false)
     private Boolean eliminado = false;
 
@@ -107,6 +113,10 @@ public class ChatGrupoMensaje {
     public void setFileType(String fileType) { this.fileType = fileType; }
     public Long getFileSize() { return fileSize; }
     public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+    public Integer getDurationSeconds() { return durationSeconds; }
+    public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
+    public String getWaveformData() { return waveformData; }
+    public void setWaveformData(String waveformData) { this.waveformData = waveformData; }
     public Boolean getEliminado() { return eliminado; }
     public void setEliminado(Boolean eliminado) { this.eliminado = eliminado; }
     public Long getReferenciaId() { return referenciaId; }

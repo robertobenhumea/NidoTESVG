@@ -11,6 +11,13 @@ import { groupChatService } from '@/services/groupChat.service';
 import { searchService } from '@/services/search.service';
 import type { ChatGroup, Conversation, SearchUser } from '@/types';
 
+function safeTimeAgo(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return timeAgo(value);
+}
+
 function ConvSkeleton() {
   return (
     <div className="flex items-center gap-3 px-4 py-3 animate-pulse">
@@ -35,6 +42,7 @@ interface ConvRowProps {
 function ConvRow({ conv, active, onlineIds }: ConvRowProps) {
   const isOnline = onlineIds.has(conv.partnerId);
   const hasUnread = conv.unreadCount > 0;
+  const updatedLabel = safeTimeAgo(conv.updatedAt);
 
   const lastPreview = conv.isMine
     ? `Tú: ${conv.lastMessage ?? ''}`
@@ -63,9 +71,9 @@ function ConvRow({ conv, active, onlineIds }: ConvRowProps) {
           <p className={`text-sm truncate ${hasUnread ? 'font-bold text-[var(--text-primary)]' : 'font-medium text-[var(--text-secondary)]'}`}>
             {conv.partnerName}
           </p>
-          {conv.updatedAt && (
+          {updatedLabel && (
             <span className={`text-[11px] shrink-0 tabular-nums ${hasUnread ? 'text-[var(--brand)] font-semibold' : 'text-[var(--text-muted)]'}`}>
-              {timeAgo(conv.updatedAt)}
+              {updatedLabel}
             </span>
           )}
         </div>
@@ -93,7 +101,7 @@ interface ConvListProps {
 
 function GroupRow({ group, active }: { group: ChatGroup; active: boolean }) {
   const hasUnread = group.noLeidos > 0;
-  const lastDateLabel = group.lastDate ? timeAgo(group.lastDate) : '';
+  const lastDateLabel = safeTimeAgo(group.lastDate);
   const lastMessage = group.lastMessage?.trim()
     ? `${group.lastSender ? `${group.lastSender}: ` : ''}${group.lastMessage}`
     : 'Sin mensajes todavía';

@@ -29,7 +29,8 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query("""
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.enPapelera = false AND d.archivado = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.enPapelera = false AND d.archivado = false
         AND c.esBorrador = false
         AND (c.programadoPara IS NULL OR c.programadoPara <= CURRENT_TIMESTAMP)
         ORDER BY c.fecha DESC
@@ -40,7 +41,8 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query(value = """
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.enPapelera = false AND d.archivado = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.enPapelera = false AND d.archivado = false
         AND c.esBorrador = false
         AND (c.programadoPara IS NULL OR c.programadoPara <= CURRENT_TIMESTAMP)
         ORDER BY c.fecha DESC
@@ -48,7 +50,8 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
         countQuery = """
         SELECT COUNT(c) FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.enPapelera = false AND d.archivado = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.enPapelera = false AND d.archivado = false
         AND c.esBorrador = false
         AND (c.programadoPara IS NULL OR c.programadoPara <= CURRENT_TIMESTAMP)
         """)
@@ -81,7 +84,8 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query("""
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.leido = false AND d.enPapelera = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.leido = false AND d.enPapelera = false
         AND c.esBorrador = false
         ORDER BY c.fecha DESC
         """)
@@ -91,14 +95,16 @@ public interface CorreoRepository extends JpaRepository<Correo, Long> {
     @Query(value = """
         SELECT c FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.leido = false AND d.enPapelera = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.leido = false AND d.enPapelera = false
         AND c.esBorrador = false
         ORDER BY c.fecha DESC
         """,
         countQuery = """
         SELECT COUNT(c) FROM Correo c
         JOIN CorreoDestinatario d ON d.correoId = c.id
-        WHERE d.receptorId = :receptorId AND d.leido = false AND d.enPapelera = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.leido = false AND d.enPapelera = false
         AND c.esBorrador = false
         """)
     Page<Correo> findNoLeidosPaged(@Param("receptorId") Long receptorId, Pageable pageable);

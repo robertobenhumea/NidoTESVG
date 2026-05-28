@@ -49,8 +49,10 @@ public class MensajeController {
     private static final int DEFAULT_PAGE_SIZE = 50;
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_TEXT_LENGTH = 2000;
+    private static final int MAX_AUDIO_DURATION_SECONDS = 5 * 60;
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> AUDIO_EXTENSIONS = Set.of("webm", "ogg", "mp3", "m4a", "mp4", "wav");
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of("html", "htm", "svg", "js", "exe", "bat", "sh", "cmd", "com", "scr", "msi", "jar");
 
     @Autowired private MensajeRepository mensajeRepository;
@@ -83,6 +85,8 @@ public class MensajeController {
                 : body.containsKey("archivoUrl") ? (String) body.get("archivoUrl") : null;
         String nombreArchivo = body.containsKey("fileName") ? (String) body.get("fileName")
                 : body.containsKey("nombreArchivo") ? (String) body.get("nombreArchivo") : null;
+        Integer durationSeconds = body.get("durationSeconds") != null ? Integer.valueOf(body.get("durationSeconds").toString()) : null;
+        String waveformData = body.get("waveformData") != null ? body.get("waveformData").toString() : null;
         Object refIdObj = body.get("referenciaId");
         Long referenciaId = refIdObj != null ? Long.valueOf(refIdObj.toString()) : null;
         String trimmed = contenido != null ? contenido.trim() : "";
@@ -118,6 +122,12 @@ public class MensajeController {
         m.setNombreArchivo(nombreArchivo);
         m.setFileType(body.containsKey("fileType") ? String.valueOf(body.get("fileType")) : null);
         m.setFileSize(body.containsKey("fileSize") && body.get("fileSize") != null ? Long.valueOf(body.get("fileSize").toString()) : null);
+        try {
+            m.setDurationSeconds(sanitizeAudioDuration(normalizarTipo(tipo), durationSeconds));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+        m.setWaveformData("AUDIO".equals(normalizarTipo(tipo)) ? limit(waveformData, 2000) : null);
         m.setReferenciaId(referenciaId);
         m.setFecha(now);
         m.setSentAt(now);
@@ -141,6 +151,10 @@ public class MensajeController {
                                               @RequestParam(value = "content", required = false) String content,
                                               @RequestParam(value = "referenciaId", required = false) Long referenciaId,
                                               @RequestParam(value = "conversationId", required = false) Long conversationId,
+                                              @RequestParam(value = "messageType", required = false) String messageType,
+                                              @RequestParam(value = "tipo", required = false) String tipo,
+                                              @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
+                                              @RequestParam(value = "waveformData", required = false) String waveformData,
                                               @RequestParam(value = "archivo", required = false) MultipartFile archivo,
                                               @RequestParam(value = "file", required = false) MultipartFile file,
                                               HttpServletRequest request) {
@@ -167,6 +181,14 @@ public class MensajeController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Error al guardar el archivo"));
         }
+        ResponseEntity<?> typeError = validateRequestedAttachmentType(data.messageType(), messageType != null ? messageType : tipo);
+        if (typeError != null) return typeError;
+        Integer safeDuration;
+        try {
+            safeDuration = sanitizeAudioDuration(data.messageType(), durationSeconds);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
 
         LocalDateTime now = LocalDateTime.now();
         Mensaje m = new Mensaje();
@@ -178,6 +200,8 @@ public class MensajeController {
         m.setNombreArchivo(data.fileName());
         m.setFileType(data.fileType());
         m.setFileSize(data.fileSize());
+        m.setDurationSeconds(safeDuration);
+        m.setWaveformData("AUDIO".equals(data.messageType()) ? limit(waveformData, 2000) : null);
         m.setReferenciaId(referenciaId);
         m.setFecha(now);
         m.setSentAt(now);
@@ -212,18 +236,19 @@ public class MensajeController {
 
         try {
             AttachmentData data = guardarAdjunto(resolveMultipart(archivo, file), "mensajes", "/imagenes/mensajes/");
-
-            return ResponseEntity.ok(Map.of(
-                    "url", data.url(),
-                    "tipo", data.messageType(),
-                    "messageType", data.messageType(),
-                    "nombre", data.fileName(),
-                    "fileName", data.fileName(),
-                    "tamanio", data.fileSize(),
-                    "fileSize", data.fileSize(),
-                    "tipoArchivo", data.fileType(),
-                    "fileType", data.fileType()
-            ));
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("url", data.url());
+            response.put("tipo", data.messageType());
+            response.put("messageType", data.messageType());
+            response.put("nombre", data.fileName());
+            response.put("fileName", data.fileName());
+            response.put("tamanio", data.fileSize());
+            response.put("fileSize", data.fileSize());
+            response.put("durationSeconds", 0);
+            response.put("waveformData", "");
+            response.put("tipoArchivo", data.fileType());
+            response.put("fileType", data.fileType());
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IOException e) {
@@ -295,11 +320,12 @@ public class MensajeController {
             long noLeidos = mensajeRepository.countByReceptorIdAndEmisorIdAndLeidoFalse(yo.getId(), partnerId);
 
             boolean deleted = Boolean.TRUE.equals(ultimo.getEliminado());
-            String previewType = normalizarTipo(ultimo.getTipo());
-            String preview = deleted ? "Mensaje eliminado"
-                    : "TEXT".equals(previewType) ? ultimo.getContenido()
-                    : "IMAGE".equals(previewType) ? "Imagen"
-                    : "Documento: " + (ultimo.getNombreArchivo() != null ? ultimo.getNombreArchivo() : "Archivo");
+        String previewType = normalizarTipo(ultimo.getTipo());
+        String preview = deleted ? "Mensaje eliminado"
+                : "TEXT".equals(previewType) ? ultimo.getContenido()
+                : "IMAGE".equals(previewType) ? "Imagen"
+                : "AUDIO".equals(previewType) ? "Audio"
+                : "Documento: " + (ultimo.getNombreArchivo() != null ? ultimo.getNombreArchivo() : "Archivo");
 
             Map<String, Object> conv = new LinkedHashMap<>();
             conv.put("partnerId", partner.getId());
@@ -309,7 +335,7 @@ public class MensajeController {
             conv.put("partnerRol", partner.getRol());
             conv.put("ultimoMensaje", preview);
             conv.put("ultimoTipo", previewType);
-            conv.put("fecha", ultimo.getFecha());
+            conv.put("fecha", resolveCreatedAt(ultimo));
             conv.put("noLeidos", noLeidos);
             conv.put("esMio", ultimo.getEmisorId().equals(yo.getId()));
             conv.put("archived", pref != null && Boolean.TRUE.equals(pref.getArchived()));
@@ -669,6 +695,7 @@ public class MensajeController {
         String fileName = deleted ? null : m.getNombreArchivo();
         String fileType = deleted ? null : m.getFileType();
         Long fileSize = deleted ? null : m.getFileSize();
+        LocalDateTime createdAt = resolveCreatedAt(m);
         return new MessageDTO(
                 m.getId(),
                 content,
@@ -676,7 +703,7 @@ public class MensajeController {
                 sender != null ? sender.getUsername() : null,
                 m.getReceptorId(),
                 resolveStatus(m),
-                m.getSentAt() != null ? m.getSentAt() : m.getFecha(),
+                m.getSentAt() != null ? m.getSentAt() : createdAt,
                 m.getDeliveredAt(),
                 m.getReadAt(),
                 deleted,
@@ -684,8 +711,8 @@ public class MensajeController {
                 m.getEmisorId(),
                 m.getReceptorId(),
                 content,
-                m.getFecha(),
-                m.getFecha(),
+                createdAt,
+                createdAt,
                 Boolean.TRUE.equals(m.getLeido()),
                 normalizarTipo(m.getTipo()),
                 normalizarTipo(m.getTipo()),
@@ -693,6 +720,8 @@ public class MensajeController {
                 fileName,
                 fileType,
                 fileSize,
+                deleted ? null : m.getDurationSeconds(),
+                deleted ? null : m.getWaveformData(),
                 fileUrl,
                 fileName,
                 deleted,
@@ -711,6 +740,12 @@ public class MensajeController {
                         .map(DMMessageReaction::getReactionType)
                         .orElse(null)
         );
+    }
+
+    private LocalDateTime resolveCreatedAt(Mensaje m) {
+        if (m.getFecha() != null) return m.getFecha();
+        if (m.getSentAt() != null) return m.getSentAt();
+        return LocalDateTime.now();
     }
 
     private ResponseEntity<?> validateText(String text) {
@@ -905,7 +940,8 @@ public class MensajeController {
             if (pref != null && Boolean.TRUE.equals(pref.getMuted())) return;
             String preview = "TEXT".equals(message.messageType())
                     ? previewText(message.content(), 90)
-                    : "IMAGE".equals(message.messageType()) ? "Imagen" : "Documento";
+                    : "IMAGE".equals(message.messageType()) ? "Imagen"
+                    : "AUDIO".equals(message.messageType()) ? "Audio" : "Documento";
             webPushService.sendToUser(recipientId, sender.getUsername(), preview, "/messages/" + sender.getId());
         } catch (Exception ignored) {
             // Push is best-effort and must not affect message persistence.
@@ -923,6 +959,7 @@ public class MensajeController {
         return switch (tipo.toUpperCase()) {
             case "IMAGE", "IMAGEN" -> "IMAGE";
             case "DOCUMENT", "ARCHIVO" -> "DOCUMENT";
+            case "AUDIO", "VOICE", "VOZ" -> "AUDIO";
             case "TEXT", "TEXTO" -> "TEXT";
             default -> "TEXT";
         };
@@ -961,6 +998,7 @@ public class MensajeController {
 
     private String detectarMessageType(String ext) {
         if (IMAGE_EXTENSIONS.contains(ext)) return "IMAGE";
+        if (AUDIO_EXTENSIONS.contains(ext)) return "AUDIO";
         if (DOCUMENT_EXTENSIONS.contains(ext)) return "DOCUMENT";
         throw new IllegalArgumentException("Tipo de archivo no permitido");
     }
@@ -973,6 +1011,9 @@ public class MensajeController {
         }
         if ("DOCUMENT".equals(messageType) && lower.startsWith("image/")) {
             throw new IllegalArgumentException("Tipo de documento no permitido");
+        }
+        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/")) {
+            throw new IllegalArgumentException("Tipo de audio no permitido");
         }
     }
 
@@ -994,6 +1035,24 @@ public class MensajeController {
         if ("pdf".equals(ext) && !(header.length >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F')) {
             throw new IllegalArgumentException("Contenido de PDF inválido");
         }
+    }
+
+    private Integer sanitizeAudioDuration(String messageType, Integer durationSeconds) {
+        if (!"AUDIO".equals(messageType)) return null;
+        if (durationSeconds == null || durationSeconds <= 0) return null;
+        if (durationSeconds > MAX_AUDIO_DURATION_SECONDS) {
+            throw new IllegalArgumentException("El audio no puede superar 5 minutos");
+        }
+        return durationSeconds;
+    }
+
+    private ResponseEntity<?> validateRequestedAttachmentType(String detectedType, String requestedType) {
+        if (requestedType == null || requestedType.isBlank()) return null;
+        String normalizedRequested = normalizarTipo(requestedType);
+        if (!detectedType.equals(normalizedRequested)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El tipo de mensaje no coincide con el archivo enviado"));
+        }
+        return null;
     }
 
     private String obtenerExtension(String nombre) {

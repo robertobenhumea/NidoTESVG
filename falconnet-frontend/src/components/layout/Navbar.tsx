@@ -63,7 +63,7 @@ function NavBtn({ href, icon, label, active, badge }: NavBtnProps) {
   );
 }
 
-export function Navbar() {
+export function Navbar({ hideOnMobile = false }: { hideOnMobile?: boolean }) {
   const pathname = usePathname();
   const router   = useRouter();
   const unread   = useUnreadCounts();
@@ -72,7 +72,10 @@ export function Navbar() {
   return (
     <header
       role="banner"
-      className="fixed top-0 inset-x-0 z-50 h-[var(--nav-h)]"
+      className={cn(
+        'fixed top-0 inset-x-0 z-50 h-[var(--nav-h)]',
+        hideOnMobile && 'hidden md:block',
+      )}
       style={{ paddingTop: 'var(--safe-top)' }}
     >
       <div className="h-full flex items-center px-4 gap-3 bg-[var(--bg-surface)]/85 backdrop-blur-md border-b border-[var(--border)]">

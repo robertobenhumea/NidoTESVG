@@ -66,6 +66,9 @@ interface TabItem {
 export function MobileNav() {
   const pathname = usePathname();
   const unread   = useUnreadCounts();
+  const hideForChatDetail = /^\/messages\/(?:groups\/[^/]+|[^/]+)$/.test(pathname);
+
+  if (hideForChatDetail) return null;
 
   const tabs: TabItem[] = [
     {

@@ -20,6 +20,10 @@ function normalizeMessageType(type?: LegacyMsgTipo | null): MsgTipo {
     case 'ARCHIVO':
     case 'DOCUMENT':
       return 'DOCUMENT';
+    case 'VOICE':
+    case 'VOZ':
+    case 'AUDIO':
+      return 'AUDIO';
     case 'TEXTO':
     case 'TEXT':
     default:
@@ -65,6 +69,8 @@ export function mapGroupMessage(b: BChatGrupoMensaje | GroupMessage): GroupMessa
     fileName,
     fileType:     raw.fileType ?? null,
     fileSize:     raw.fileSize ?? null,
+    durationSeconds: raw.durationSeconds ?? null,
+    waveformData: raw.waveformData ?? null,
     archivoUrl:   fileUrl,
     nombreArchivo: fileName,
     eliminado:    raw.eliminado ?? false,
@@ -155,6 +161,8 @@ export const groupChatService = {
     nombreArchivo?: string;
     fileType?: string;
     fileSize?: number;
+    durationSeconds?: number;
+    waveformData?: string;
     replyToMessageId?: number;
     originalMessageId?: number;
     forwarded?: boolean;
@@ -163,14 +171,20 @@ export const groupChatService = {
     return mapGroupMessage(data);
   },
 
-  async sendWithAttachment(groupId: number, content: string, file: File, opts?: { replyToMessageId?: number }): Promise<GroupMessage> {
+  async sendWithAttachment(groupId: number, content: string, file: File, opts?: { replyToMessageId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string }): Promise<GroupMessage> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('groupId', String(groupId));
+    if (opts?.messageType) {
+      formData.append('messageType', opts.messageType);
+      formData.append('tipo', opts.messageType);
+    }
     if (content.trim()) {
       formData.append('content', content.trim());
     }
     if (opts?.replyToMessageId) formData.append('replyToMessageId', String(opts.replyToMessageId));
+    if (opts?.durationSeconds) formData.append('durationSeconds', String(opts.durationSeconds));
+    if (opts?.waveformData) formData.append('waveformData', opts.waveformData);
     const token = getStoredAuthToken();
     if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
     const res = await fetch(

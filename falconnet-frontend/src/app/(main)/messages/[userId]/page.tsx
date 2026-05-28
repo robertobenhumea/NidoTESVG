@@ -11,10 +11,7 @@ export default function MessageThreadPage() {
   const partnerId  = Number(userId);
 
   return (
-    <div
-      className="flex overflow-hidden"
-      style={{ height: 'calc(100dvh - var(--nav-h) - var(--safe-top))' }}
-    >
+    <div className="flex h-[100dvh] overflow-hidden md:h-[calc(100dvh-var(--nav-h)-var(--safe-top))]">
       {/* Left panel — desktop only */}
       <aside className="hidden md:flex w-80 lg:w-[340px] xl:w-[360px] shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)] flex-col">
         <ConvList activePartnerId={partnerId} />

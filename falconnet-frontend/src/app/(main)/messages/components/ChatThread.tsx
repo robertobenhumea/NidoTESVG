@@ -6,17 +6,21 @@ import Link from 'next/link';
 import { Avatar } from '@/components/ui/Avatar';
 import { chatService, mapMessage } from '@/services/chat.service';
 import { chatOffline } from '@/lib/chatOffline';
+import { chatDayLabel, chatTimeLabel, parseMessageDate, sameCalendarDay } from '@/lib/chatDates';
 import { userService } from '@/services/user.service';
 import { useAuth } from '@/hooks/useAuth';
 import { stompClient, type ConnectionState } from '@/lib/stomp';
 import type { BMensaje, Message, MessageStatus, User } from '@/types';
 import { SecureImage, openSecureAttachment } from './SecureAttachment';
+import { VoicePlayer, VoiceRecorder } from './VoiceMessage';
 
 const POLL_MS = 5_000;
 const PAGE_SIZE = 50;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt']);
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+const LONG_PRESS_MS = 650;
+const LONG_PRESS_MOVE_PX = 10;
 
 /* ── Emoji picker ─────────────────────────────────────────── */
 const EMOJIS = [
@@ -25,29 +29,6 @@ const EMOJIS = [
   '❤️','🔥','✨','💯','🎉','🎊','🥳','🏆','⚡','💫',
   '👋','🫶','💀','🤯','😅','😬','🥺','😏','🤭','🫠',
 ];
-
-/* ── Date utils ───────────────────────────────────────────── */
-function sameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-}
-function dayLabel(date: Date): string {
-  if (Number.isNaN(date.getTime())) return 'Fecha desconocida';
-  const today = new Date();
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-  if (sameDay(date, today)) return 'Hoy';
-  if (sameDay(date, yesterday)) return 'Ayer';
-  return date.toLocaleDateString('es-MX', { weekday: 'long', month: 'long', day: 'numeric' });
-}
-function timeStr(iso: string): string {
-  try {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-  }
-  catch { return ''; }
-}
 
 function lastSeenLabel(iso?: string | null): string {
   if (!iso) return '';
@@ -65,7 +46,7 @@ function fileSizeLabel(size?: number | null): string {
 function hasVisibleMessage(msg: Message): boolean {
   if (msg.eliminado) return true;
   if ((msg.content ?? '').trim()) return true;
-  return Boolean((msg.tipo === 'IMAGE' || msg.tipo === 'DOCUMENT') && msg.archivoUrl);
+  return Boolean((msg.tipo === 'IMAGE' || msg.tipo === 'DOCUMENT' || msg.tipo === 'AUDIO') && msg.archivoUrl);
 }
 
 function mergeMessages(current: Message[], incoming: Message[]): Message[] {
@@ -73,7 +54,9 @@ function mergeMessages(current: Message[], incoming: Message[]): Message[] {
   for (const msg of current) byId.set(msg.id, msg);
   for (const msg of incoming) byId.set(msg.id, msg);
   return [...byId.values()].sort((a, b) => {
-    const timeDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    const aDate = parseMessageDate(a);
+    const bDate = parseMessageDate(b);
+    const timeDiff = (aDate?.getTime() ?? 0) - (bDate?.getTime() ?? 0);
     return timeDiff !== 0 ? timeDiff : a.id - b.id;
   });
 }
@@ -159,9 +142,23 @@ function StatusIcon({ status }: { status?: MessageStatus }) {
   );
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest('button,a,input,textarea,select,audio,video'));
+}
+
 function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onReact, onEdit, onForward, onDeleteForMe, onPin, onReport }: BubbleProps) {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!menu) return;
@@ -171,6 +168,35 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [menu]);
+
+  useEffect(() => cancelLongPress, [cancelLongPress]);
+
+  useEffect(() => {
+    document.addEventListener('scroll', cancelLongPress, true);
+    return () => document.removeEventListener('scroll', cancelLongPress, true);
+  }, [cancelLongPress]);
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    if (isInteractiveTarget(e.target)) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      setMenu(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    const start = touchStartRef.current;
+    if (!start) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_PX || Math.abs(dy) > LONG_PRESS_MOVE_PX) {
+      cancelLongPress();
+    }
+  }
 
   if (msg.eliminado) {
     return (
@@ -219,7 +245,10 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
         </div>
         <div
           onContextMenu={e => { e.preventDefault(); setMenu(true); }}
-          onTouchStart={() => { const t = setTimeout(() => setMenu(true), 500); return () => clearTimeout(t); }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={cancelLongPress}
+          onTouchCancel={cancelLongPress}
           className={`relative px-3 py-2 rounded-2xl ${
             isOwn
               ? `bg-[var(--brand)] text-white ${showTail ? 'rounded-br-sm' : ''}`
@@ -262,6 +291,15 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
             </button>
           )}
 
+          {msg.tipo === 'AUDIO' && msg.archivoUrl && (
+            <VoicePlayer
+              url={msg.archivoUrl}
+              fileName={msg.nombreArchivo ?? msg.fileName ?? 'nota-voz.webm'}
+              durationSeconds={msg.durationSeconds}
+              isOwn={isOwn}
+            />
+          )}
+
           {/* Text */}
           {msg.reenviado && (
             <p className={`mb-1 text-[10px] italic ${isOwn ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>Reenviado</p>
@@ -272,11 +310,14 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
           {msg.tipo === 'IMAGE' && msg.content && (
             <p className="text-xs leading-relaxed break-words mt-1">{msg.content}</p>
           )}
+          {msg.tipo === 'AUDIO' && msg.content && (
+            <p className="text-xs leading-relaxed break-words mt-1">{msg.content}</p>
+          )}
 
           {/* Footer: time + read receipt */}
           <div className={`flex items-center justify-end gap-1 mt-0.5 ${isOwn ? 'text-white/55' : 'text-[var(--text-muted)]'}`}>
             {msg.editado && <span className="text-[10px]">editado</span>}
-            <span className="text-[10px] tabular-nums">{timeStr(msg.createdAt)}</span>
+            <span className="text-[10px] tabular-nums">{chatTimeLabel(parseMessageDate(msg))}</span>
             {isOwn && <StatusIcon status={msg.status ?? (msg.read ? 'READ' : 'SENT')} />}
           </div>
         </div>
@@ -397,7 +438,7 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     if (!ALLOWED_EXTENSIONS.has(ext)) {
-      setError('Tipo no permitido. Usa jpg, jpeg, png, webp, pdf, doc, docx o txt.');
+      setError('Tipo no permitido. Usa imagen, documento o audio compatible.');
       if (fileRef.current) fileRef.current.value = '';
       return;
     }
@@ -467,7 +508,7 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
               {replyTo.senderId === partnerId ? partnerName : 'Tú'}
             </p>
             <p className="text-xs text-[var(--text-muted)] truncate">
-              {replyTo.tipo !== 'TEXT' ? 'Archivo' : replyTo.content}
+              {replyTo.tipo === 'AUDIO' ? 'Audio' : replyTo.tipo !== 'TEXT' ? 'Archivo' : replyTo.content}
             </p>
           </div>
           <button onClick={onClearReply} className="size-6 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors">
@@ -546,7 +587,7 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
           </svg>
         </button>
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange}
-          accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" />
+          accept="image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt,.webm,.ogg,.mp3,.m4a,.mp4,.wav" />
 
         {/* Textarea */}
         <textarea
@@ -561,6 +602,20 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
           rows={1}
           className="flex-1 resize-none rounded-2xl bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] px-4 py-2.5 border border-transparent focus:border-[var(--border-focus)] focus:outline-none transition-colors max-h-32 overflow-y-auto"
           style={{ fieldSizing: 'content' } as React.CSSProperties}
+        />
+
+        <VoiceRecorder
+          disabled={disabled || sending || uploading}
+          onSend={async (file, durationSeconds) => {
+            try {
+              setUploading(true);
+              const msg = await chatService.sendWithAttachment(partnerId, '', file, { referenciaId: replyTo?.id, messageType: 'AUDIO', durationSeconds });
+              onSent(msg);
+              onClearReply();
+            } finally {
+              setUploading(false);
+            }
+          }}
         />
 
         {/* Send */}
@@ -1085,18 +1140,18 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
 
   for (let i = 0; i < visibleMessages.length; i++) {
     const msg = visibleMessages[i];
-    const date = new Date(msg.createdAt);
-    if (!prevDate || !sameDay(prevDate, date)) {
-      grouped.push({ type: 'date', label: dayLabel(date) });
+    const date = parseMessageDate(msg);
+    if (date && (!prevDate || !sameCalendarDay(prevDate, date))) {
+      grouped.push({ type: 'date', label: chatDayLabel(date) });
     }
     const nextMsg = visibleMessages[i + 1];
     const isLast = !nextMsg || nextMsg.senderId !== msg.senderId || (() => {
-      const nd = new Date(nextMsg.createdAt);
-      if (Number.isNaN(nd.getTime()) || Number.isNaN(date.getTime())) return true;
+      const nd = parseMessageDate(nextMsg);
+      if (!date || !nd) return true;
       return nd.getTime() - date.getTime() > 5 * 60 * 1000;
     })();
     grouped.push({ type: 'msg', msg, showTail: isLast });
-    prevDate = date;
+    if (date) prevDate = date;
     prevSenderId = msg.senderId;
   }
   void prevSenderId;

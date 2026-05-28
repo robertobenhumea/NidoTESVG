@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef, type TouchEvent as RTouchEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
-import { api } from '@/services/api';
-import { timeAgo, cn } from '@/lib/utils';
+import { api, FetchError } from '@/services/api';
+import { cn } from '@/lib/utils';
+import { mailTimeAgo } from './components/mailDate';
 import { ComposeModal } from './components/ComposeModal';
 import { MailDetail }   from './components/MailDetail';
 import type { CorreoItem, CorreoPageResponse, Tab, FilterType, BUser } from './components/types';
@@ -209,7 +210,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
   const startY                  = useRef(0);
   const axisLock                = useRef<'x' | 'y' | null>(null);
 
-  const isInbox  = tab !== 'enviados';
+  const isInbox  = tab !== 'enviados' && !msg.esMio;
   const isUnread = !msg.leido && isInbox;
 
   const displayName = isInbox
@@ -219,13 +220,13 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
 
   const preview = (msg.cuerpo ?? '').replace(/\n+/g, ' ').trim();
 
-  function onTouchStart(e: RTouchEvent<HTMLButtonElement>) {
+  function onTouchStart(e: RTouchEvent<HTMLDivElement>) {
     startX.current   = e.touches[0].clientX;
     startY.current   = e.touches[0].clientY;
     axisLock.current = null;
   }
 
-  function onTouchMove(e: RTouchEvent<HTMLButtonElement>) {
+  function onTouchMove(e: RTouchEvent<HTMLDivElement>) {
     const dx = e.touches[0].clientX - startX.current;
     const dy = e.touches[0].clientY - startY.current;
     if (!axisLock.current) {
@@ -262,8 +263,16 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
         </div>
       )}
 
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={selectMode ? () => onToggleSelect?.(msg.id) : onClick}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectMode ? onToggleSelect?.(msg.id) : onClick();
+          }
+        }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -272,7 +281,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
           transition: dragging ? 'none' : 'transform 220ms cubic-bezier(0.25,0.46,0.45,0.94)',
         }}
         className={cn(
-          'w-full text-left px-3 py-3 rounded-xl transition-colors duration-150',
+          'w-full text-left px-3 py-3 rounded-xl transition-colors duration-150 cursor-pointer',
           isSelected && !selectMode
             ? 'bg-[var(--brand-muted)]'
             : isChecked
@@ -320,7 +329,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
                 {displayName}
               </p>
               <time className="text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
-                {timeAgo(msg.fecha)}
+                {mailTimeAgo(msg.fecha)}
               </time>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] truncate mb-0.5">
@@ -391,7 +400,7 @@ function MailItem({ msg, tab, isSelected, onClick, onFavorite, onTrash, onArchiv
             </>
           )}
         </div>
-      </button>
+      </div>
     </div>
   );
 }
@@ -702,6 +711,7 @@ export default function CorreosPage() {
     try {
       await api.post('/correos/acciones-masivas', { ids, accion, etiqueta }, { suppressAuthExpiry: true });
       showToast(`${ids.length} correo${ids.length !== 1 ? 's' : ''} actualizados`, 'success');
+      refreshInboxCount();
       const idSet = selectedIds;
       setSelectedIds(new Set());
       setSelectMode(false);
@@ -717,8 +727,9 @@ export default function CorreosPage() {
         setItems(p => p.filter(m => !idSet.has(m.id)));
         setSelected(s => (s && idSet.has(s.id)) ? null : s);
       }
-    } catch {
-      showToast('Error al aplicar la acción', 'error');
+    } catch (err) {
+      console.error('[correo/masiva] error:', err);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'Error al aplicar la acción', 'error');
     }
   }
 
@@ -757,8 +768,8 @@ export default function CorreosPage() {
       if (gen !== loadGenRef.current) return;
       if (data && typeof data === 'object' && !Array.isArray(data) && 'content' in data) {
         const paged = data as CorreoPageResponse;
-        setItems(paged.content);
-        setHasMore(paged.hasMore);
+        setItems(paged.content ?? []);
+        setHasMore(paged.hasMore ?? false);
         setCurrentPage(0);
       } else {
         setItems(Array.isArray(data) ? (data as CorreoItem[]) : []);
@@ -783,8 +794,8 @@ export default function CorreosPage() {
         `${path}?page=${nextPage}&size=20`,
         { suppressAuthExpiry: true },
       );
-      setItems(prev => [...prev, ...data.content]);
-      setHasMore(data.hasMore);
+      setItems(prev => [...prev, ...(data.content ?? [])]);
+      setHasMore(data.hasMore ?? false);
       setCurrentPage(nextPage);
     } catch {
       // ignore — user can retry
@@ -798,48 +809,101 @@ export default function CorreosPage() {
     return () => window.clearTimeout(id);
   }, [load]);
 
+  /* ── Unread badge (independent of current tab) ── */
+  const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
+
+  const refreshInboxCount = useCallback(() => {
+    api.get<{ count: number }>('/correos/no-leidos', { suppressAuthExpiry: true })
+      .then(r => setInboxUnreadCount(r.count))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { refreshInboxCount(); }, [refreshInboxCount]);
+
   /* ── Actions ── */
   async function handleFavorite(id: number) {
     const current = items.find(m => m.id === id)?.esFavorito ?? selected?.esFavorito ?? false;
-    await api.put(`/correos/${id}/favorito`, { favorito: !current }, { suppressAuthExpiry: true }).catch(() => {});
-    showToast(current ? 'Quitado de favoritos' : '⭐ Marcado como favorito');
-    setItems(prev => {
-      const updated = prev.map(m => m.id === id ? { ...m, esFavorito: !m.esFavorito } : m);
-      return tab === 'favoritos' ? updated.filter(m => m.id !== id) : updated;
-    });
-    setSelected(s => s?.id === id ? { ...s, esFavorito: !s.esFavorito } : s);
-    if (tab === 'favoritos') setSelected(s => s?.id === id ? null : s);
+    const newVal  = !current;
+
+    // Optimistic update (always safe for toggling; defer removal from Favoritos until confirmed)
+    if (tab !== 'favoritos' || newVal) {
+      setItems(prev => prev.map(m => m.id === id ? { ...m, esFavorito: newVal } : m));
+      setSelected(s => s?.id === id ? { ...s, esFavorito: newVal } : s);
+    }
+
+    try {
+      await api.put(`/correos/${id}/favorito`, { favorito: newVal }, { suppressAuthExpiry: true });
+      showToast(newVal ? '⭐ Marcado como favorito' : 'Quitado de favoritos');
+      // Remove from Favoritos list only after backend confirms
+      if (tab === 'favoritos' && !newVal) {
+        setItems(prev => prev.filter(m => m.id !== id));
+        setSelected(s => s?.id === id ? null : s);
+      }
+    } catch (err) {
+      console.error('[correo/favorito] error:', err);
+      // Revert optimistic update
+      setItems(prev => prev.map(m => m.id === id ? { ...m, esFavorito: current } : m));
+      setSelected(s => s?.id === id ? { ...s, esFavorito: current } : s);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'No se pudo actualizar', 'error');
+    }
   }
 
   async function handleTrash(id: number) {
-    await api.put(`/correos/${id}/papelera`, undefined, { suppressAuthExpiry: true }).catch(() => {});
     setItems(p => p.filter(m => m.id !== id));
     setSelected(s => s?.id === id ? null : s);
-    showToast('Movido a papelera');
+    try {
+      await api.put(`/correos/${id}/papelera`, undefined, { suppressAuthExpiry: true });
+      showToast('Movido a papelera');
+      refreshInboxCount();
+    } catch (err) {
+      console.error('[correo/papelera] error:', err);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'No se pudo mover a papelera', 'error');
+      void load();
+    }
   }
 
   async function handleArchive(id: number) {
     const current = items.find(m => m.id === id)?.archivado ?? selected?.archivado ?? false;
-    await api.put(`/correos/${id}/archivar`, { archivado: !current }, { suppressAuthExpiry: true }).catch(() => {});
-    setItems(prev => {
-      const updated = prev.map(m => m.id === id ? { ...m, archivado: !current } : m);
-      return tab === 'entrada' || tab === 'archivados' ? updated.filter(m => m.id !== id) : updated;
-    });
-    setSelected(s => s?.id === id ? null : s);
-    showToast(current ? 'Mensaje desarchivado' : 'Mensaje archivado');
+    const newVal  = !current;
+    const removes = (tab === 'entrada' && newVal) || (tab === 'archivados' && !newVal);
+
+    if (removes) {
+      setItems(prev => prev.filter(m => m.id !== id));
+      setSelected(s => s?.id === id ? null : s);
+    } else {
+      setItems(prev => prev.map(m => m.id === id ? { ...m, archivado: newVal } : m));
+      setSelected(s => s?.id === id ? { ...s, archivado: newVal } : s);
+    }
+
+    try {
+      await api.put(`/correos/${id}/archivar`, { archivado: newVal }, { suppressAuthExpiry: true });
+      showToast(newVal ? 'Mensaje archivado' : 'Mensaje desarchivado');
+    } catch (err) {
+      console.error('[correo/archivar] error:', err);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'No se pudo archivar el mensaje', 'error');
+      void load();
+    }
   }
 
   async function handleRestore(id: number) {
-    await api.put(`/correos/${id}/restaurar`, undefined, { suppressAuthExpiry: true }).catch(() => {});
     setItems(prev => prev.filter(m => m.id !== id));
     setSelected(s => s?.id === id ? null : s);
-    showToast('Mensaje restaurado');
+    try {
+      await api.put(`/correos/${id}/restaurar`, undefined, { suppressAuthExpiry: true });
+      showToast('Mensaje restaurado');
+    } catch (err) {
+      console.error('[correo/restaurar] error:', err);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'No se pudo restaurar el mensaje', 'error');
+      void load();
+    }
   }
 
   function openMessage(msg: CorreoItem) {
     setSelected(msg);
-    if (tab !== 'enviados' && !msg.leido) {
-      api.put(`/correos/${msg.id}/leer`, undefined, { suppressAuthExpiry: true }).catch(() => {});
+    if (!msg.esMio && !msg.leido) {
+      api.put(`/correos/${msg.id}/leer`, undefined, { suppressAuthExpiry: true })
+        .then(() => refreshInboxCount())
+        .catch(() => {});
       setItems(p => p.map(m => m.id === msg.id ? { ...m, leido: true } : m));
     }
     // Fetch full body + threading detail (list only carries 200-char preview)
@@ -931,10 +995,16 @@ export default function CorreosPage() {
 
   async function handleMarkUnread() {
     if (!selected) return;
-    await api.patch(`/correos/${selected.id}/marcar-no-leido`, undefined, { suppressAuthExpiry: true }).catch(() => {});
-    setItems(p => p.map(m => m.id === selected.id ? { ...m, leido: false } : m));
-    setSelected(s => s ? { ...s, leido: false } : null);
-    showToast('Marcado como no leído');
+    try {
+      await api.patch(`/correos/${selected.id}/marcar-no-leido`, undefined, { suppressAuthExpiry: true });
+      setItems(p => p.map(m => m.id === selected.id ? { ...m, leido: false } : m));
+      setSelected(s => s ? { ...s, leido: false } : null);
+      showToast('Marcado como no leído');
+      refreshInboxCount();
+    } catch (err) {
+      console.error('[correo/no-leido] error:', err);
+      showToast(err instanceof FetchError ? `Error ${err.status}: ${err.message}` : 'No se pudo marcar como no leído', 'error');
+    }
   }
 
   function closeCompose() {
@@ -1013,8 +1083,6 @@ export default function CorreosPage() {
       );
     });
 
-  const unreadCount = items.filter(m => !m.leido).length;
-
   /* ── Render ── */
   return (
     <>
@@ -1032,7 +1100,7 @@ export default function CorreosPage() {
           </div>
           <SidebarNav
             tab={tab}
-            unreadCount={unreadCount}
+            unreadCount={inboxUnreadCount}
             onSwitchTab={switchTab}
             onCompose={() => setCompose(true)}
           />
@@ -1056,7 +1124,7 @@ export default function CorreosPage() {
               </div>
               <SidebarNav
                 tab={tab}
-                unreadCount={unreadCount}
+                unreadCount={inboxUnreadCount}
                 onSwitchTab={switchTab}
                 onCompose={() => { setCompose(true); setDrawer(false); }}
               />
@@ -1087,8 +1155,8 @@ export default function CorreosPage() {
             </button>
             <h1 className="text-base font-bold text-[var(--text-primary)] flex-1 truncate">
               {TAB_LABELS[tab]}
-              {tab === 'entrada' && unreadCount > 0 && (
-                <span className="ml-1.5 text-xs font-semibold text-[var(--brand)]">({unreadCount})</span>
+              {tab === 'entrada' && inboxUnreadCount > 0 && (
+                <span className="ml-1.5 text-xs font-semibold text-[var(--brand)]">({inboxUnreadCount})</span>
               )}
             </h1>
             <button
@@ -1119,8 +1187,8 @@ export default function CorreosPage() {
               {isSearchMode ? `Resultados (${advSearchTotal})` : (
                 <>
                   {TAB_LABELS[tab]}
-                  {tab === 'entrada' && unreadCount > 0 && (
-                    <span className="ml-1.5 text-[var(--brand)] normal-case tracking-normal">({unreadCount})</span>
+                  {tab === 'entrada' && inboxUnreadCount > 0 && (
+                    <span className="ml-1.5 text-[var(--brand)] normal-case tracking-normal">({inboxUnreadCount})</span>
                   )}
                 </>
               )}
@@ -1168,6 +1236,86 @@ export default function CorreosPage() {
               )}
             </div>
           </div>
+
+          {/* Bulk action bar — shown when multi-select is active */}
+          {selectMode && (
+            <div className="px-3 py-2 border-b border-[var(--border)] flex items-center gap-1.5 shrink-0">
+              <span className="text-xs text-[var(--text-muted)] flex-1 truncate">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} seleccionado${selectedIds.size !== 1 ? 's' : ''}`
+                  : 'Seleccionar mensajes'}
+              </span>
+              {selectedIds.size > 0 && (
+                <>
+                  <button
+                    onClick={() => handleBulkAction('leer')}
+                    title="Marcar como leídos"
+                    className="size-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleBulkAction('no-leer')}
+                    title="Marcar como no leídos"
+                    className="size-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 7 13.5 15.5a2.1 2.1 0 0 1-3 0L2 7" /><rect x="2" y="5" width="20" height="14" rx="2" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleBulkAction('favorito')}
+                    title="Marcar favoritos"
+                    className="size-7 flex items-center justify-center rounded-lg text-amber-500 hover:bg-amber-500/10 transition-colors"
+                  >
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </button>
+                  {tab !== 'papelera' && tab !== 'archivados' && tab !== 'enviados' && (
+                    <button
+                      onClick={() => handleBulkAction('archivar')}
+                      title="Archivar"
+                      className="size-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                    >
+                      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="4" rx="1" /><path d="M5 7v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" /><path d="M10 12h4" />
+                      </svg>
+                    </button>
+                  )}
+                  {tab === 'papelera' ? (
+                    <button
+                      onClick={() => handleBulkAction('restaurar')}
+                      title="Restaurar"
+                      className="size-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                    >
+                      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+                      </svg>
+                    </button>
+                  ) : tab !== 'enviados' && (
+                    <button
+                      onClick={() => handleBulkAction('papelera')}
+                      title="Mover a papelera"
+                      className="size-7 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                    >
+                      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+              <button
+                onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                className="text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors px-1.5 shrink-0"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
 
           {/* Search */}
           <div className="px-3 py-2 shrink-0">
@@ -1396,6 +1544,13 @@ export default function CorreosPage() {
                       onTrash={handleTrash}
                       onArchive={handleArchive}
                       onRestore={handleRestore}
+                      selectMode={selectMode}
+                      isChecked={selectedIds.has(msg.id)}
+                      onToggleSelect={id => setSelectedIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(id)) next.delete(id); else next.add(id);
+                        return next;
+                      })}
                     />
                   ))}
                 </div>

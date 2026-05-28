@@ -51,3 +51,8 @@ falconnet-frontend/.vercel/
 falconnet-frontend/coverage/
 falconnet-frontend/*.tsbuildinfo
 falconnet-frontend/next-env.d.ts
+
+# ── Herramientas temporales / Notas ─────────────────────────
+.playwright-mcp/
+TesvgRed_social/
+docs/

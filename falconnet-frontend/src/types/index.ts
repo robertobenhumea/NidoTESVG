@@ -280,8 +280,8 @@ export interface ReclutamientoFeedItem {
 
 /* ── Messages ── */
 
-export type MsgTipo = 'TEXT' | 'IMAGE' | 'DOCUMENT';
-export type LegacyMsgTipo = MsgTipo | 'TEXTO' | 'IMAGEN' | 'ARCHIVO' | 'VIDEO';
+export type MsgTipo = 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'AUDIO';
+export type LegacyMsgTipo = MsgTipo | 'TEXTO' | 'IMAGEN' | 'ARCHIVO' | 'VIDEO' | 'VOICE' | 'VOZ';
 export type MessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 
 export interface BMensaje {
@@ -294,6 +294,9 @@ export interface BMensaje {
   sentAt?: string | null;
   deliveredAt?: string | null;
   readAt?: string | null;
+  fechaCreacion?: string | null;
+  timestamp?: string | null;
+  created_at?: string | null;
   deleted?: boolean;
   emisorId: number;
   receptorId: number;
@@ -307,6 +310,8 @@ export interface BMensaje {
   fileName?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
+  durationSeconds?: number | null;
+  waveformData?: string | null;
   archivoUrl?: string | null;
   nombreArchivo?: string | null;
   eliminado?: boolean;
@@ -343,6 +348,12 @@ export interface BConversacion {
   ultimoMensaje?: string;
   ultimoTipo?: LegacyMsgTipo;
   fecha?: string;
+  lastMessageAt?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+  fechaCreacion?: string | null;
+  timestamp?: string | null;
+  created_at?: string | null;
   noLeidos: number;
   esMio?: boolean;
   archived?: boolean;
@@ -375,12 +386,17 @@ export interface Message {
   senderName?: string | null;
   content: string;
   createdAt: string;
+  fechaCreacion?: string | null;
+  timestamp?: string | null;
+  created_at?: string | null;
   read: boolean;
   tipo: MsgTipo;
   fileUrl?: string | null;
   fileName?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
+  durationSeconds?: number | null;
+  waveformData?: string | null;
   archivoUrl?: string | null;
   nombreArchivo?: string | null;
   eliminado?: boolean;
@@ -761,6 +777,8 @@ export interface BChatGrupoMensaje {
   fileName?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
+  durationSeconds?: number | null;
+  waveformData?: string | null;
   archivoUrl?: string | null;
   nombreArchivo?: string | null;
   eliminado: boolean;
@@ -824,6 +842,8 @@ export interface GroupMessage {
   fileName?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
+  durationSeconds?: number | null;
+  waveformData?: string | null;
   archivoUrl?: string | null;
   nombreArchivo?: string | null;
   eliminado: boolean;

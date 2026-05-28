@@ -9,10 +9,7 @@ export default function GroupMessageThreadPage() {
   const id = Number(groupId);
 
   return (
-    <div
-      className="flex overflow-hidden"
-      style={{ height: 'calc(100dvh - var(--nav-h) - var(--safe-top))' }}
-    >
+    <div className="flex h-[100dvh] overflow-hidden md:h-[calc(100dvh-var(--nav-h)-var(--safe-top))]">
       <aside className="hidden w-80 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-surface)] md:flex lg:w-[340px] xl:w-[360px]">
         <ConvList activeGroupId={id} />
       </aside>

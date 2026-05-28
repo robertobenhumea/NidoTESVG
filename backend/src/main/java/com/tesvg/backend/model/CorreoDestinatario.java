@@ -44,6 +44,10 @@ public class CorreoDestinatario {
     @Column(name = "notificar_lectura", nullable = false)
     private Boolean notificarLectura = false;
 
+    /** True when this row represents the sender's own state-tracking (favorito, etc.) rather than a real recipient. */
+    @Column(name = "es_sender", nullable = false, columnDefinition = "boolean default false")
+    private Boolean esSender = false;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getCorreoId() { return correoId; }
@@ -68,4 +72,6 @@ public class CorreoDestinatario {
     public void setLeidoEn(LocalDateTime leidoEn) { this.leidoEn = leidoEn; }
     public Boolean getNotificarLectura() { return notificarLectura; }
     public void setNotificarLectura(Boolean notificarLectura) { this.notificarLectura = notificarLectura; }
+    public Boolean getEsSender() { return esSender; }
+    public void setEsSender(Boolean esSender) { this.esSender = esSender; }
 }

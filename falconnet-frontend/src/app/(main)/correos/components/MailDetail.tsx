@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
-import { timeAgo, cn, getStoredAuthToken } from '@/lib/utils';
+import { cn, getStoredAuthToken } from '@/lib/utils';
+import { mailFullDate, mailTimeAgo, mailThreadTime } from './mailDate';
 import { api } from '@/services/api';
 import type { CorreoAdjuntoItem, CorreoItem, Tab, ThreadMessage, UsuarioInstitucional } from './types';
 
@@ -306,21 +307,6 @@ function StarIcon({ filled }: { filled?: boolean }) {
   );
 }
 
-function formatFullDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('es-MX', {
-      weekday: 'long',
-      year:    'numeric',
-      month:   'long',
-      day:     'numeric',
-      hour:    '2-digit',
-      minute:  '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 function tipoAccionLabel(tipo?: string): string {
   if (tipo === 'RESPUESTA')       return 'Respuesta';
   if (tipo === 'RESPUESTA_TODOS') return 'Respuesta a todos';
@@ -505,9 +491,9 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply, on
 
           {/* Date subtitle */}
           <p className="text-xs text-[var(--text-muted)] mb-6 capitalize">
-            {formatFullDate(msg.fecha)}
+            {mailFullDate(msg.fecha)}
             {' · '}
-            <span className="text-[var(--text-muted)]">{timeAgo(msg.fecha)}</span>
+            <span className="text-[var(--text-muted)]">{mailTimeAgo(msg.fecha)}</span>
           </p>
 
           {/* ── Institutional identity card ── */}
@@ -591,7 +577,7 @@ export function MailDetail({ msg, tab, onClose, onFavorite, onTrash, onReply, on
                             </span>
                           )}
                           <time className="ml-auto text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
-                            {timeAgo(tmsg.fecha)}
+                            {mailThreadTime(tmsg.fecha)}
                           </time>
                           {idx === threadMessages.length - 1 && !isCurrentMsg && (
                             <span className="text-[9px] font-bold bg-[var(--brand)] text-white px-1.5 py-0.5 rounded-full shrink-0">Nuevo</span>

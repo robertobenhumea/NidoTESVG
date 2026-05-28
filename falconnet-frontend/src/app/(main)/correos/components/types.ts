@@ -74,6 +74,8 @@ export interface CorreoItem {
   audiencia?: string;
   audienciaCarrera?: string;
   audienciaGrupo?: string;
+  /** True when the logged-in user is the sender (e.g. sent mail appearing in Favoritos). */
+  esMio?: boolean;
 }
 
 export interface ThreadMessage {

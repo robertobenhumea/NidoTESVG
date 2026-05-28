@@ -1,4 +1,5 @@
 import { api } from '@/services/api';
+import { isoOrEmpty } from '@/lib/chatDates';
 import { chatOffline } from '@/lib/chatOffline';
 import { getStoredAuthToken } from '@/lib/utils';
 import type { BMensaje, BConversacion, Message, Conversation, LegacyMsgTipo, MsgTipo } from '@/types';
@@ -20,6 +21,10 @@ function normalizeMessageType(type?: LegacyMsgTipo | null): MsgTipo {
     case 'ARCHIVO':
     case 'DOCUMENT':
       return 'DOCUMENT';
+    case 'VOICE':
+    case 'VOZ':
+    case 'AUDIO':
+      return 'AUDIO';
     case 'TEXTO':
     case 'TEXT':
     default:
@@ -27,8 +32,25 @@ function normalizeMessageType(type?: LegacyMsgTipo | null): MsgTipo {
   }
 }
 
+function firstValidIso(...values: Array<string | number | Date | null | undefined>): string {
+  for (const value of values) {
+    const iso = isoOrEmpty(value);
+    if (iso) return iso;
+  }
+  return new Date().toISOString();
+}
+
+function firstValidIsoOrUndefined(...values: Array<string | number | Date | null | undefined>): string | undefined {
+  for (const value of values) {
+    const iso = isoOrEmpty(value);
+    if (iso) return iso;
+  }
+  return undefined;
+}
+
 export function mapMessage(b: BMensaje): Message {
   const deleted = b.deleted ?? b.eliminado ?? false;
+  const createdAt = firstValidIso(b.createdAt, b.fechaCreacion, b.timestamp, b.sentAt, b.created_at, b.fecha);
   const replyPreview = b.replyPreview
     ? {
         id:         b.replyPreview.id,
@@ -55,10 +77,13 @@ export function mapMessage(b: BMensaje): Message {
     receiverId:   b.receptorId,
     senderName:   b.senderName ?? b.emisorNombre ?? null,
     content:      b.content ?? b.contenido,
-    createdAt:    b.createdAt ?? b.fecha,
+    createdAt,
+    fechaCreacion: b.fechaCreacion ?? null,
+    timestamp:    b.timestamp ?? null,
+    created_at:   b.created_at ?? null,
     read:         b.leido,
     status:       b.status ?? (b.readAt || b.leido ? 'READ' : b.deliveredAt ? 'DELIVERED' : 'SENT'),
-    sentAt:       b.sentAt ?? b.createdAt ?? b.fecha,
+    sentAt:       firstValidIsoOrUndefined(b.sentAt, b.createdAt, b.fechaCreacion, b.timestamp, b.created_at, b.fecha) ?? createdAt,
     deliveredAt:  b.deliveredAt ?? null,
     readAt:       b.readAt ?? null,
     tipo:         normalizeMessageType(b.messageType ?? b.tipo),
@@ -66,6 +91,8 @@ export function mapMessage(b: BMensaje): Message {
     fileName:     deleted ? null : b.fileName ?? b.nombreArchivo ?? null,
     fileType:     deleted ? null : b.fileType ?? null,
     fileSize:     deleted ? null : b.fileSize ?? null,
+    durationSeconds: deleted ? null : b.durationSeconds ?? null,
+    waveformData: deleted ? null : b.waveformData ?? null,
     archivoUrl:   deleted ? null : b.fileUrl ? resolveUrl(b.fileUrl) : b.archivoUrl ? resolveUrl(b.archivoUrl) : null,
     nombreArchivo: deleted ? null : b.fileName ?? b.nombreArchivo ?? null,
     eliminado:    deleted,
@@ -85,6 +112,15 @@ export function mapMessage(b: BMensaje): Message {
 }
 
 function mapConversation(b: BConversacion): Conversation {
+  const updatedAt = firstValidIsoOrUndefined(
+    b.lastMessageAt,
+    b.updatedAt,
+    b.fecha,
+    b.fechaCreacion,
+    b.timestamp,
+    b.created_at,
+    b.createdAt,
+  );
   return {
     partnerId:    b.partnerId,
     partnerName:  b.partnerNombre,
@@ -93,7 +129,7 @@ function mapConversation(b: BConversacion): Conversation {
     partnerRol:   b.partnerRol ? String(b.partnerRol) : undefined,
     lastMessage:  b.ultimoMensaje ?? undefined,
     lastTipo:     normalizeMessageType(b.ultimoTipo),
-    updatedAt:    b.fecha ?? undefined,
+    updatedAt:    updatedAt || undefined,
     unreadCount:  b.noLeidos,
     isMine:       b.esMio ?? false,
     archived:     b.archived ?? false,
@@ -141,6 +177,8 @@ export const chatService = {
     nombreArchivo?: string;
     fileType?: string;
     fileSize?: number;
+    durationSeconds?: number;
+    waveformData?: string;
     referenciaId?: number;
   }): Promise<Message> {
     const data = await api.post<BMensaje>(`/mensajes/enviar/${receiverId}`, {
@@ -151,6 +189,8 @@ export const chatService = {
       fileName: extra?.nombreArchivo,
       fileType: extra?.fileType,
       fileSize: extra?.fileSize,
+      durationSeconds: extra?.durationSeconds,
+      waveformData: extra?.waveformData,
       archivoUrl: extra?.archivoUrl,
       nombreArchivo: extra?.nombreArchivo,
       referenciaId: extra?.referenciaId,
@@ -158,14 +198,20 @@ export const chatService = {
     return mapMessage(data);
   },
 
-  async sendWithAttachment(receiverId: number, content: string, file: File, extra?: { referenciaId?: number }): Promise<Message> {
+  async sendWithAttachment(receiverId: number, content: string, file: File, extra?: { referenciaId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string }): Promise<Message> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('conversationId', String(receiverId));
+    if (extra?.messageType) {
+      formData.append('messageType', extra.messageType);
+      formData.append('tipo', extra.messageType);
+    }
     if (content.trim()) {
       formData.append('content', content.trim());
     }
     if (extra?.referenciaId) formData.append('referenciaId', String(extra.referenciaId));
+    if (extra?.durationSeconds) formData.append('durationSeconds', String(extra.durationSeconds));
+    if (extra?.waveformData) formData.append('waveformData', extra.waveformData);
     const token = getStoredAuthToken();
     if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/mensajes/enviar/${receiverId}/adjunto`, {

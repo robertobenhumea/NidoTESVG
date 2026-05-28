@@ -31,8 +31,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/grupos/chat")
 public class ChatGrupoController {
     private static final long MAX_ATTACHMENT_SIZE = 10L * 1024L * 1024L;
+    private static final int MAX_AUDIO_DURATION_SECONDS = 5 * 60;
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> AUDIO_EXTENSIONS = Set.of("webm", "ogg", "mp3", "m4a", "mp4", "wav");
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of("html", "htm", "svg", "js", "exe", "bat", "sh", "cmd", "com", "scr", "msi", "jar");
 
     @Autowired private ChatGrupoRepository grupoRepo;
@@ -289,11 +291,18 @@ public class ChatGrupoController {
         m.setGrupoId(id);
         m.setEmisorId(yo.getId());
         m.setContenido(contenido.trim());
-        m.setTipo(normalizarTipo(tipo));
+        String normalizedTipo = normalizarTipo(tipo);
+        m.setTipo(normalizedTipo);
         m.setArchivoUrl(archivoUrl);
         m.setNombreArchivo(nombreArchivo);
         m.setFileType(body.fileType());
         m.setFileSize(body.fileSize());
+        try {
+            m.setDurationSeconds(sanitizeAudioDuration(normalizedTipo, body.durationSeconds()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+        m.setWaveformData("AUDIO".equals(normalizedTipo) ? limit(body.waveformData(), 2000) : null);
         m.setReferenciaId(validReplyId(id, replyToMessageId));
         m.setReenviado(Boolean.TRUE.equals(body.forwarded()));
         m.setMensajeOriginalId(body.originalMessageId());
@@ -333,6 +342,10 @@ public class ChatGrupoController {
                                               @RequestParam(value = "content", required = false) String content,
                                               @RequestParam(value = "replyToMessageId", required = false) Long replyToMessageId,
                                               @RequestParam(value = "groupId", required = false) Long groupId,
+                                              @RequestParam(value = "messageType", required = false) String messageType,
+                                              @RequestParam(value = "tipo", required = false) String tipo,
+                                              @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
+                                              @RequestParam(value = "waveformData", required = false) String waveformData,
                                               @RequestParam(value = "archivo", required = false) MultipartFile archivo,
                                               @RequestParam(value = "file", required = false) MultipartFile file,
                                               HttpServletRequest request) {
@@ -363,6 +376,14 @@ public class ChatGrupoController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Error al guardar el archivo"));
         }
+        ResponseEntity<?> typeError = validateRequestedAttachmentType(data.messageType(), messageType != null ? messageType : tipo);
+        if (typeError != null) return typeError;
+        Integer safeDuration;
+        try {
+            safeDuration = sanitizeAudioDuration(data.messageType(), durationSeconds);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
 
         ChatGrupoMensaje m = new ChatGrupoMensaje();
         m.setGrupoId(id);
@@ -373,6 +394,8 @@ public class ChatGrupoController {
         m.setNombreArchivo(data.fileName());
         m.setFileType(data.fileType());
         m.setFileSize(data.fileSize());
+        m.setDurationSeconds(safeDuration);
+        m.setWaveformData("AUDIO".equals(data.messageType()) ? limit(waveformData, 2000) : null);
         m.setReferenciaId(validReplyId(id, replyToMessageId));
         m.setReenviado(false);
         m.setEliminado(false);
@@ -866,6 +889,8 @@ public class ChatGrupoController {
                 m.getNombreArchivo(),
                 m.getFileType(),
                 m.getFileSize(),
+                m.getDurationSeconds(),
+                m.getWaveformData(),
                 resolveUrl(m.getArchivoUrl()),
                 m.getNombreArchivo(),
                 Boolean.TRUE.equals(m.getEliminado()),
@@ -909,7 +934,8 @@ public class ChatGrupoController {
             String title = grupo != null ? grupo.getNombre() : "FalconNet";
             String body = sender.getUsername() + ": " + ("TEXT".equals(normalizarTipo(message.getTipo()))
                     ? previewText(message.getContenido(), 80)
-                    : "IMAGE".equals(normalizarTipo(message.getTipo())) ? "Imagen" : "Documento");
+                    : "IMAGE".equals(normalizarTipo(message.getTipo())) ? "Imagen"
+                    : "AUDIO".equals(normalizarTipo(message.getTipo())) ? "Audio" : "Documento");
             for (ChatGrupoMiembro member : miembroRepo.findByGrupoIdAndActivoTrue(grupoId)) {
                 if (member.getUsuarioId().equals(sender.getId())) continue;
                 webPushService.sendToUser(member.getUsuarioId(), title, body, "/messages/groups/" + grupoId);
@@ -998,6 +1024,7 @@ public class ChatGrupoController {
         if (Boolean.TRUE.equals(m.getEsSistema())) return m.getContenido();
         return switch (normalizarTipo(m.getTipo())) {
             case "IMAGE" -> "Imagen";
+            case "AUDIO" -> "Audio";
             case "DOCUMENT" -> "Documento: " + (m.getNombreArchivo() != null ? m.getNombreArchivo() : "Archivo");
             default -> m.getContenido();
         };
@@ -1014,6 +1041,7 @@ public class ChatGrupoController {
         return switch (tipo.toUpperCase()) {
             case "IMAGE", "IMAGEN" -> "IMAGE";
             case "DOCUMENT", "ARCHIVO" -> "DOCUMENT";
+            case "AUDIO", "VOICE", "VOZ" -> "AUDIO";
             case "TEXT", "TEXTO" -> "TEXT";
             default -> "TEXT";
         };
@@ -1128,6 +1156,7 @@ public class ChatGrupoController {
 
     private String detectarMessageType(String ext) {
         if (IMAGE_EXTENSIONS.contains(ext)) return "IMAGE";
+        if (AUDIO_EXTENSIONS.contains(ext)) return "AUDIO";
         if (DOCUMENT_EXTENSIONS.contains(ext)) return "DOCUMENT";
         throw new IllegalArgumentException("Tipo de archivo no permitido");
     }
@@ -1140,6 +1169,9 @@ public class ChatGrupoController {
         }
         if ("DOCUMENT".equals(messageType) && lower.startsWith("image/")) {
             throw new IllegalArgumentException("Tipo de documento no permitido");
+        }
+        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/")) {
+            throw new IllegalArgumentException("Tipo de audio no permitido");
         }
     }
 
@@ -1161,6 +1193,24 @@ public class ChatGrupoController {
         if ("pdf".equals(ext) && !(header.length >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F')) {
             throw new IllegalArgumentException("Contenido de PDF inválido");
         }
+    }
+
+    private Integer sanitizeAudioDuration(String messageType, Integer durationSeconds) {
+        if (!"AUDIO".equals(messageType)) return null;
+        if (durationSeconds == null || durationSeconds <= 0) return null;
+        if (durationSeconds > MAX_AUDIO_DURATION_SECONDS) {
+            throw new IllegalArgumentException("El audio no puede superar 5 minutos");
+        }
+        return durationSeconds;
+    }
+
+    private ResponseEntity<?> validateRequestedAttachmentType(String detectedType, String requestedType) {
+        if (requestedType == null || requestedType.isBlank()) return null;
+        String normalizedRequested = normalizarTipo(requestedType);
+        if (!detectedType.equals(normalizedRequested)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "El tipo de mensaje no coincide con el archivo enviado"));
+        }
+        return null;
     }
 
     private void audit(Long actorId, String action, String targetType, Long targetId, String detail) {

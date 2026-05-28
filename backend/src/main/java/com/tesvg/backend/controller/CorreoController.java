@@ -61,6 +61,19 @@ public class CorreoController {
 
     private static final Pattern SAFE_NAME_PATTERN = Pattern.compile("[^a-zA-Z0-9._\\-áéíóúÁÉÍÓÚüÜñÑ ]");
 
+    // Catálogo oficial TESVG — siempre visible aunque no haya usuarios en esa carrera todavía
+    private static final List<String> TESVG_CARRERAS = List.of(
+            "Ingeniería en Sistemas Computacionales",
+            "Ingeniería Industrial",
+            "Ingeniería Civil",
+            "Arquitectura",
+            "Administración",
+            "Contador Público",
+            "Turismo",
+            "Gastronomía",
+            "Ingeniería en Gestión Empresarial"
+    );
+
     @Autowired private CorreoRepository           correoRepository;
     @Autowired private CorreoDestinatarioRepository destRepository;
     @Autowired private CorreoAdjuntoRepository    adjuntoRepository;
@@ -289,7 +302,7 @@ public class CorreoController {
 
         int procesados = 0;
         for (Long id : ids) {
-            Optional<CorreoDestinatario> dest = destRepository.findByCorreoIdAndReceptorId(id, yo.getId());
+            Optional<CorreoDestinatario> dest = getDestForAction(id, yo.getId());
             if (dest.isEmpty()) continue;
             switch (accion) {
                 case "leer"        -> destRepository.marcarLeido(id, yo.getId());
@@ -811,7 +824,7 @@ public class CorreoController {
                                             @RequestBody(required = false) Map<String, Object> body,
                                             HttpServletRequest request) {
         Usuario yo = getUsuario(request);
-        Optional<CorreoDestinatario> dest = destRepository.findByCorreoIdAndReceptorId(id, yo.getId());
+        Optional<CorreoDestinatario> dest = getDestForAction(id, yo.getId());
         if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
         boolean valor = body != null && body.containsKey("favorito")
                 ? Boolean.TRUE.equals(body.get("favorito"))
@@ -825,7 +838,7 @@ public class CorreoController {
                                       @RequestBody(required = false) Map<String, Object> body,
                                       HttpServletRequest request) {
         Usuario yo = getUsuario(request);
-        Optional<CorreoDestinatario> dest = destRepository.findByCorreoIdAndReceptorId(id, yo.getId());
+        Optional<CorreoDestinatario> dest = getDestForAction(id, yo.getId());
         if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
         boolean valor = body != null && body.containsKey("archivado")
                 ? Boolean.TRUE.equals(body.get("archivado"))
@@ -837,6 +850,8 @@ public class CorreoController {
     @PutMapping("/{id}/papelera")
     public ResponseEntity<?> moverPapelera(@PathVariable Long id, HttpServletRequest request) {
         Usuario yo = getUsuario(request);
+        Optional<CorreoDestinatario> dest = getDestForAction(id, yo.getId());
+        if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
         destRepository.moverPapelera(id, yo.getId());
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -844,6 +859,8 @@ public class CorreoController {
     @PutMapping("/{id}/restaurar")
     public ResponseEntity<?> restaurar(@PathVariable Long id, HttpServletRequest request) {
         Usuario yo = getUsuario(request);
+        Optional<CorreoDestinatario> dest = getDestForAction(id, yo.getId());
+        if (dest.isEmpty()) return ResponseEntity.status(403).body(Map.of("error", "Acceso denegado"));
         destRepository.restaurarDePapelera(id, yo.getId());
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -919,8 +936,17 @@ public class CorreoController {
     @GetMapping("/destinatarios/info-academica")
     public ResponseEntity<?> infoAcademica(HttpServletRequest request) {
         getUsuario(request);
-        List<String> carreras = usuarioRepository.findDistinctCarreras();
-        List<AudienciaInfoDTO.CarreraInfo> carreraInfos = carreras.stream().map(carrera -> {
+
+        // Merge DB carreras with TESVG catalog — catalog always visible even if no users enrolled yet
+        Set<String> carrerasEnDB = new HashSet<>(usuarioRepository.findDistinctCarreras());
+        List<String> todasCarreras = new ArrayList<>(carrerasEnDB);
+        for (String c : TESVG_CARRERAS) {
+            boolean yaExiste = carrerasEnDB.stream().anyMatch(db -> db.equalsIgnoreCase(c));
+            if (!yaExiste) todasCarreras.add(c);
+        }
+        todasCarreras.sort(String::compareToIgnoreCase);
+
+        List<AudienciaInfoDTO.CarreraInfo> carreraInfos = todasCarreras.stream().map(carrera -> {
             int estudiantes = (int) usuarioRepository.countByCarreraAndRolAndActivoTrue(carrera, Rol.ESTUDIANTE);
             int docentes    = (int) usuarioRepository.countByCarreraAndRolAndActivoTrue(carrera, Rol.DOCENTE);
             List<String> grupos = usuarioRepository.findGruposByCarrera(carrera);
@@ -930,9 +956,16 @@ public class CorreoController {
             }).toList();
             return new AudienciaInfoDTO.CarreraInfo(carrera, estudiantes, docentes, grupoInfos);
         }).toList();
+
         AudienciaInfoDTO dto = new AudienciaInfoDTO();
         dto.setCarreras(carreraInfos);
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/catalogos/carreras")
+    public ResponseEntity<?> catalogoCarreras(HttpServletRequest request) {
+        getUsuario(request);
+        return ResponseEntity.ok(TESVG_CARRERAS);
     }
 
     @GetMapping("/destinatarios/por-carrera")
@@ -1262,6 +1295,8 @@ public class CorreoController {
     private List<CorreoResumenDTO> enriquecer(List<Correo> correos, Long receptorId) {
         return correos.stream().map(c -> {
             CorreoResumenDTO dto = correoToResumen(c);
+            boolean isMio = c.getEmisorId().equals(receptorId);
+            dto.setEsMio(isMio);
             usuarioRepository.findById(c.getEmisorId()).ifPresent(e ->
                     dto.setEmisor(usuarioInstitucional(e)));
             destRepository.findByCorreoIdAndReceptorId(c.getId(), receptorId).ifPresent(d -> {
@@ -1271,6 +1306,22 @@ public class CorreoController {
                 dto.setEnPapelera(Boolean.TRUE.equals(d.getEnPapelera()));
                 dto.setArchivado(Boolean.TRUE.equals(d.getArchivado()));
             });
+            // For sent mail appearing in Favoritos/Archivados: also populate recipient names
+            if (isMio) {
+                List<CorreoDestinatario> allDests = destRepository.findByCorreoId(c.getId());
+                List<CorreoDestinatario> realDests = allDests.stream()
+                        .filter(d -> !Boolean.TRUE.equals(d.getEsSender()))
+                        .toList();
+                dto.setDestinatarioNombres(realDests.stream()
+                        .map(d -> usuarioRepository.findById(d.getReceptorId())
+                                .map(Usuario::getUsername).orElse("?"))
+                        .toList());
+                dto.setDestinatarios(realDests.stream()
+                        .map(d -> usuarioRepository.findById(d.getReceptorId())
+                                .map(this::usuarioInstitucional).orElse(null))
+                        .filter(Objects::nonNull)
+                        .toList());
+            }
             return dto;
         }).toList();
     }
@@ -1278,24 +1329,58 @@ public class CorreoController {
     private List<CorreoResumenDTO> enriquecerEnviados(List<Correo> correos) {
         return correos.stream().map(c -> {
             CorreoResumenDTO dto = correoToResumen(c);
+            dto.setEsMio(true);
             usuarioRepository.findById(c.getEmisorId()).ifPresent(e ->
                     dto.setEmisor(usuarioInstitucional(e)));
-            List<CorreoDestinatario> dests = destRepository.findByCorreoId(c.getId());
-            List<String> nombres = dests.stream()
+            List<CorreoDestinatario> allDests = destRepository.findByCorreoId(c.getId());
+            // Exclude sender self-reference rows from the recipient display
+            List<CorreoDestinatario> realDests = allDests.stream()
+                    .filter(d -> !Boolean.TRUE.equals(d.getEsSender()))
+                    .toList();
+            List<String> nombres = realDests.stream()
                     .map(d -> usuarioRepository.findById(d.getReceptorId())
                             .map(Usuario::getUsername).orElse("?"))
                     .toList();
-            List<Map<String, Object>> destinatarios = dests.stream()
+            List<Map<String, Object>> destinatarios = realDests.stream()
                     .map(d -> usuarioRepository.findById(d.getReceptorId())
                             .map(this::usuarioInstitucional).orElse(null))
                     .filter(Objects::nonNull)
                     .toList();
-            boolean todosLeidos = !dests.isEmpty() && dests.stream().allMatch(CorreoDestinatario::getLeido);
+            boolean todosLeidos = !realDests.isEmpty() && realDests.stream().allMatch(CorreoDestinatario::getLeido);
             dto.setDestinatarioNombres(nombres);
             dto.setDestinatarios(destinatarios);
             dto.setLeido(todosLeidos);
+            // Populate sender's own state (esFavorito etc.) from their sender-reference row
+            allDests.stream()
+                    .filter(d -> Boolean.TRUE.equals(d.getEsSender()))
+                    .findFirst()
+                    .ifPresent(senderRow -> {
+                        dto.setEsFavorito(Boolean.TRUE.equals(senderRow.getEsFavorito()));
+                        dto.setArchivado(Boolean.TRUE.equals(senderRow.getArchivado()));
+                        dto.setEnPapelera(Boolean.TRUE.equals(senderRow.getEnPapelera()));
+                    });
             return dto;
         }).toList();
+    }
+
+    /**
+     * Returns the CorreoDestinatario for the given user.
+     * If none exists but the user is the emisor, creates a sender-reference row on demand
+     * so that favorites, archive, trash can be stored per-sender.
+     */
+    private Optional<CorreoDestinatario> getDestForAction(Long correoId, Long userId) {
+        Optional<CorreoDestinatario> existing = destRepository.findByCorreoIdAndReceptorId(correoId, userId);
+        if (existing.isPresent()) return existing;
+        Optional<Correo> correoOpt = correoRepository.findById(correoId);
+        if (correoOpt.isEmpty() || !correoOpt.get().getEmisorId().equals(userId)) {
+            return Optional.empty();
+        }
+        CorreoDestinatario row = new CorreoDestinatario();
+        row.setCorreoId(correoId);
+        row.setReceptorId(userId);
+        row.setLeido(true);
+        row.setEsSender(true);
+        return Optional.of(destRepository.save(row));
     }
 
     private CorreoResumenDTO correoToResumen(Correo c) {

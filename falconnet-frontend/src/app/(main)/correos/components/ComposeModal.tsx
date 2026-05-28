@@ -346,15 +346,13 @@ export function ComposeModal({ onClose, onSent, mode = 'compose', initialTo, ini
         correoId = response.id;
       }
 
-      // Upload attachments (only for individual sends, mass sends don't have adjunto flow here)
+      // Upload attachments for all send modes
       const failed: string[] = [];
-      if (recipientMode === 'individual') {
-        for (const file of attachments) {
-          try {
-            await uploadAttachment(correoId, file);
-          } catch {
-            failed.push(file.name);
-          }
+      for (const file of attachments) {
+        try {
+          await uploadAttachment(correoId, file);
+        } catch {
+          failed.push(file.name);
         }
       }
 
@@ -653,7 +651,14 @@ export function ComposeModal({ onClose, onSent, mode = 'compose', initialTo, ini
                         ))}
                       </div>
                     ) : buzones.length === 0 ? (
-                      <p className="text-xs text-[var(--text-muted)] text-center py-4">No hay buzones disponibles</p>
+                      <div className="text-center py-6 space-y-1.5">
+                        <svg className="size-8 text-[var(--text-muted)] mx-auto opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                          <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <p className="text-xs font-medium text-[var(--text-muted)]">Sin buzones configurados aún</p>
+                        <p className="text-[10px] text-[var(--text-muted)] opacity-70">Los buzones institucionales del TESVG estarán disponibles próximamente</p>
+                      </div>
                     ) : (
                       <div className="space-y-1.5">
                         {buzones.map(b => (
@@ -740,8 +745,8 @@ export function ComposeModal({ onClose, onSent, mode = 'compose', initialTo, ini
                 </p>
               </div>
 
-              {/* Adjuntos — individual mode only */}
-              {recipientMode === 'individual' && <div
+              {/* Adjuntos */}
+              <div
                 className="mx-4 mb-4 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-elevated)]/70 px-3 py-3"
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); validateAndAddFiles(e.dataTransfer.files); }}
@@ -814,7 +819,7 @@ export function ComposeModal({ onClose, onSent, mode = 'compose', initialTo, ini
                     })}
                   </div>
                 )}
-              </div>}
+              </div>
             </div>
 
             {/* Footer */}

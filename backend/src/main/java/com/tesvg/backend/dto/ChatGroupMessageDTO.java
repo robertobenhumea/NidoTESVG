@@ -16,6 +16,8 @@ public record ChatGroupMessageDTO(
         String fileName,
         String fileType,
         Long fileSize,
+        Integer durationSeconds,
+        String waveformData,
         String archivoUrl,
         String nombreArchivo,
         Boolean eliminado,

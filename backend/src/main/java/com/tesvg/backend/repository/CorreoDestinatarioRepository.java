@@ -21,7 +21,8 @@ public interface CorreoDestinatarioRepository extends JpaRepository<CorreoDestin
 
     @Query("""
         SELECT COUNT(d) FROM CorreoDestinatario d
-        WHERE d.receptorId = :receptorId AND d.leido = false AND d.enPapelera = false
+        WHERE d.receptorId = :receptorId AND d.esSender = false
+        AND d.leido = false AND d.enPapelera = false
         """)
     long countNoLeidosBandeja(@Param("receptorId") Long receptorId);
 

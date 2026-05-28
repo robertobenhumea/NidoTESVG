@@ -17,11 +17,14 @@ import type {
   GroupMessage, GroupSharedLink, SearchUser,
 } from '@/types';
 import { SecureImage, openSecureAttachment } from './SecureAttachment';
+import { VoicePlayer, VoiceRecorder } from './VoiceMessage';
 
 const EMOJIS = ['😀','😂','😊','😍','😎','👍','👏','🙌','❤️','🔥','✨','💯','🎉','🏆','⚡','🙏','🤔','😅','🥳','👋'];
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮'];
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt']);
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
+const LONG_PRESS_MS = 650;
+const LONG_PRESS_MOVE_PX = 10;
 
 function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -52,7 +55,7 @@ function timeStr(iso?: string | null) {
 function hasRenderableMessage(msg: GroupMessage) {
   if (msg.eliminado) return true;
   if (msg.esSistema) return Boolean(msg.content?.trim());
-  if (msg.tipo === 'IMAGE' || msg.tipo === 'DOCUMENT') return Boolean(msg.archivoUrl || msg.fileUrl || msg.content?.trim());
+  if (msg.tipo === 'IMAGE' || msg.tipo === 'DOCUMENT' || msg.tipo === 'AUDIO') return Boolean(msg.archivoUrl || msg.fileUrl || msg.content?.trim());
   return Boolean(msg.content?.trim());
 }
 
@@ -74,6 +77,10 @@ function extractLinks(text: string) {
   return text.match(/https?:\/\/[^\s]+/g) ?? [];
 }
 
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest('button,a,input,textarea,select,audio,video'));
+}
+
 function GroupBubble({
   msg, mine, member, onReply, onEdit, onReact, onForward, onDelete, onJumpTo,
 }: {
@@ -89,6 +96,45 @@ function GroupBubble({
 }) {
   const [menu, setMenu] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
+  const longPressTimerRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartRef.current = null;
+  }, []);
+
+  useEffect(() => cancelLongPress, [cancelLongPress]);
+
+  useEffect(() => {
+    document.addEventListener('scroll', cancelLongPress, true);
+    return () => document.removeEventListener('scroll', cancelLongPress, true);
+  }, [cancelLongPress]);
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    if (isInteractiveTarget(e.target)) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      setMenu(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    const start = touchStartRef.current;
+    if (!start) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_PX || Math.abs(dy) > LONG_PRESS_MOVE_PX) {
+      cancelLongPress();
+    }
+  }
 
   if (!hasRenderableMessage(msg)) return null;
 
@@ -115,7 +161,13 @@ function GroupBubble({
         <div className={cn(
           'relative rounded-2xl px-3 py-2 shadow-sm transition-transform active:scale-[0.99]',
           mine ? 'rounded-br-md bg-[var(--brand)] text-white' : 'rounded-bl-md border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-primary)]',
-        )}>
+        )}
+          onContextMenu={e => { e.preventDefault(); setMenu(true); }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={cancelLongPress}
+          onTouchCancel={cancelLongPress}
+        >
           {msg.reenviado && (
             <p className={cn('mb-1 text-[10px] font-semibold uppercase tracking-wide', mine ? 'text-white/60' : 'text-[var(--text-muted)]')}>
               Reenviado
@@ -145,6 +197,14 @@ function GroupBubble({
                   <span className="min-w-0 flex-1 truncate text-xs font-semibold">{msg.nombreArchivo ?? msg.fileName ?? 'Archivo'}</span>
                   <span className="shrink-0 text-[10px] opacity-70">{fileSizeLabel(msg.fileSize)}</span>
                 </button>
+              )}
+              {msg.tipo === 'AUDIO' && (msg.archivoUrl || msg.fileUrl) && (
+                <VoicePlayer
+                  url={(msg.archivoUrl ?? msg.fileUrl)!}
+                  fileName={msg.nombreArchivo ?? msg.fileName ?? 'nota-voz.webm'}
+                  durationSeconds={msg.durationSeconds}
+                  isOwn={mine}
+                />
               )}
               {msg.content && <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{msg.content}</p>}
             </>
@@ -541,7 +601,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
     if (!next) return;
     const ext = next.name.split('.').pop()?.toLowerCase() ?? '';
     if (!ALLOWED_EXTENSIONS.has(ext)) {
-      setError('Tipo no permitido. Usa jpg, jpeg, png, webp, pdf, doc, docx o txt.');
+      setError('Tipo no permitido. Usa imagen, documento o audio compatible.');
       e.target.value = '';
       return;
     }
@@ -758,7 +818,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               )}
             </div>
             <button onClick={() => fileRef.current?.click()} className="grid size-9 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><Paperclip className="size-5" /></button>
-            <input ref={fileRef} type="file" onChange={onFileChange} className="hidden" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt" />
+            <input ref={fileRef} type="file" onChange={onFileChange} className="hidden" accept="image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt,.webm,.ogg,.mp3,.m4a,.mp4,.wav" />
             <textarea
               value={text}
               onChange={e => { setText(e.target.value); sendTyping(); }}
@@ -767,6 +827,24 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               placeholder={editing ? 'Editar mensaje' : 'Mensaje al grupo'}
               className="max-h-32 flex-1 resize-none rounded-2xl border border-transparent bg-[var(--bg-elevated)] px-4 py-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]"
               style={{ fieldSizing: 'content' } as React.CSSProperties}
+            />
+            <VoiceRecorder
+              disabled={sending || Boolean(editing)}
+              onSend={async (voiceFile, durationSeconds) => {
+                setSending(true);
+                try {
+                  const msg = await groupChatService.sendWithAttachment(groupId, '', voiceFile, { replyToMessageId: replyTo?.id, messageType: 'AUDIO', durationSeconds });
+                  setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
+                  setReplyTo(null);
+                  void groupChatService.markRead(groupId);
+                  void Promise.allSettled([
+                    groupChatService.getAttachments(groupId).then(setAttachments),
+                    groupChatService.getLinks(groupId).then(setLinks),
+                  ]);
+                } finally {
+                  setSending(false);
+                }
+              }}
             />
             <button onClick={() => void send()} disabled={sending || (!text.trim() && !file)} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)]">
               {sending ? <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Send className="size-4" />}
