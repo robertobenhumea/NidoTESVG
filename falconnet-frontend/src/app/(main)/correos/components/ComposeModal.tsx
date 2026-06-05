@@ -776,47 +776,96 @@ export function ComposeModal({ onClose, onSent, mode = 'compose', initialTo, ini
                 {attachments.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {attachments.map(file => {
-                      const ext       = fileExt(file.name);
-                      const extColor  = EXT_COLORS[ext] ?? 'bg-[var(--brand-muted)] text-[var(--brand)]';
-                      const pct       = progress[file.name];
-                      const uploading = pct != null && pct < 100;
+                      const ext      = fileExt(file.name);
+                      const extColor = EXT_COLORS[ext] ?? 'bg-[var(--brand-muted)] text-[var(--brand)]';
+                      const pct      = progress[file.name];
+                      const isUploading = pct != null && pct < 100;
+                      const isDone   = pct === 100;
+                      const isImg    = file.type.startsWith('image/');
+                      const previewSrc = isImg ? URL.createObjectURL(file) : null;
 
                       return (
                         <div
                           key={`${file.name}-${file.size}`}
-                          className="flex items-center gap-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] px-2.5 py-2"
+                          className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border)] overflow-hidden"
                         >
-                          <span className={cn('size-9 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0', extColor)}>
-                            {ext.slice(0, 4).toUpperCase() || 'FILE'}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-[var(--text-primary)] truncate">{file.name}</p>
-                            <p className="text-[10px] text-[var(--text-muted)]">{formatSize(file.size)}</p>
-                            {uploading && (
-                              <div className="mt-1 h-1 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
-                                <div
-                                  className="h-full bg-[var(--brand)] transition-all duration-200"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            )}
-                            {pct === 100 && (
-                              <p className="text-[10px] text-green-500 font-semibold mt-0.5">Subido</p>
+                          {/* Image thumbnail */}
+                          {isImg && previewSrc && (
+                            <div className="border-b border-[var(--border)] bg-[var(--bg-base)] max-h-32 overflow-hidden">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={previewSrc}
+                                alt={file.name}
+                                className="w-full max-h-32 object-contain"
+                                onLoad={() => URL.revokeObjectURL(previewSrc!)}
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2.5 px-2.5 py-2">
+                            <span className={cn('size-9 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0', isImg ? 'bg-sky-500/10 text-sky-600' : extColor)}>
+                              {isImg ? (
+                                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                                </svg>
+                              ) : (
+                                ext.slice(0, 4).toUpperCase() || 'FILE'
+                              )}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-[var(--text-primary)] truncate">{file.name}</p>
+                              <p className="text-[10px] text-[var(--text-muted)]">{formatSize(file.size)}</p>
+                              {(isUploading || isDone) && (
+                                <div className="mt-1">
+                                  <div className="h-1 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                                    <div
+                                      className={cn('h-full transition-all duration-200', isDone ? 'bg-emerald-500' : 'bg-[var(--brand)]')}
+                                      style={{ width: `${pct ?? 0}%` }}
+                                    />
+                                  </div>
+                                  <p className={cn('text-[10px] font-semibold mt-0.5', isDone ? 'text-emerald-500' : 'text-[var(--text-muted)]')}>
+                                    {isDone ? '✓ Subido' : `Subiendo… ${pct}%`}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {!loading && (
+                              <button
+                                type="button"
+                                onClick={() => setAttachments(prev => prev.filter(f => f !== file))}
+                                className="size-7 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-red-500 transition-colors flex items-center justify-center shrink-0"
+                                aria-label="Quitar archivo"
+                              >
+                                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setAttachments(prev => prev.filter(f => f !== file))}
-                            className="size-7 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--error)] transition-colors flex items-center justify-center shrink-0"
-                            aria-label="Quitar archivo"
-                          >
-                            <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
                         </div>
                       );
                     })}
+                  </div>
+                )}
+                {/* Overall send progress */}
+                {loading && attachments.length > 0 && (
+                  <div className="mt-3 rounded-xl bg-[var(--bg-base)] border border-[var(--border)] px-3 py-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)]">
+                        <span className="inline-block size-3.5 rounded-full border-2 border-[var(--brand)]/30 border-t-[var(--brand)] animate-spin" />
+                        Enviando correo con {attachments.length} adjunto{attachments.length !== 1 ? 's' : ''}…
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--brand)] tabular-nums">
+                        {Math.round(Object.values(progress).reduce((sum, v) => sum + v, 0) / Math.max(attachments.length, 1))}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+                      <div
+                        className="h-full bg-[var(--brand)] transition-all duration-150"
+                        style={{
+                          width: `${Math.round(Object.values(progress).reduce((sum, v) => sum + v, 0) / Math.max(attachments.length, 1))}%`,
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

@@ -5,8 +5,9 @@ import { Download, Mic, Paperclip, Pause, Play, Send, Square, Trash2, X } from '
 import { getStoredAuthToken, resolveUrl } from '@/lib/utils';
 
 const MAX_VOICE_SECONDS = 5 * 60;
+const MAX_VOICE_BYTES = 10 * 1024 * 1024;
 const AUDIO_ACCEPT = 'audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.webm,.ogg,.mp3,.m4a,.mp4,.wav';
-const AUDIO_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+const AUDIO_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'];
 const AUDIO_EXTENSIONS = ['webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav'];
 
 type AudioRuntimeInfo = {
@@ -116,6 +117,32 @@ function isAudioFile(file: File): boolean {
   return AUDIO_EXTENSIONS.includes(ext);
 }
 
+function fileSizeLabel(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function readAudioDuration(url: string): Promise<number> {
+  return new Promise(resolve => {
+    const audio = document.createElement('audio');
+    const cleanup = () => {
+      audio.removeAttribute('src');
+      audio.load();
+    };
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      const duration = Number.isFinite(audio.duration) ? Math.max(1, Math.round(audio.duration)) : 0;
+      cleanup();
+      resolve(duration);
+    };
+    audio.onerror = () => {
+      cleanup();
+      resolve(0);
+    };
+    audio.src = url;
+  });
+}
+
 async function fetchObjectUrl(url: string): Promise<string> {
   const res = await fetch(resolveUrl(url) ?? url, { headers: authHeader() });
   if (!res.ok) throw new Error('No se pudo cargar el audio');
@@ -170,8 +197,12 @@ export function VoicePlayer({
       setPlaying(false);
       return;
     }
-    await audio.play();
-    setPlaying(true);
+    try {
+      await audio.play();
+      setPlaying(true);
+    } catch {
+      setAudioState(prev => ({ ...prev, error: 'No se pudo reproducir el audio' }));
+    }
   }
 
   function download() {
@@ -196,18 +227,37 @@ export function VoicePlayer({
         {playing ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
       </button>
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-1">
-          {Array.from({ length: 18 }).map((_, idx) => (
-            <span
-              key={idx}
-              className={`w-1 rounded-full ${isOwn ? 'bg-white/45' : 'bg-[var(--text-muted)]/45'}`}
-              style={{ height: `${8 + ((idx * 7) % 18)}px` }}
-            />
-          ))}
+        <div className="mb-1 flex items-center gap-1" aria-hidden>
+          {Array.from({ length: 18 }).map((_, idx) => {
+            const active = duration > 0 && idx / 18 <= current / duration;
+            return (
+              <span
+                key={idx}
+                className={`w-1 rounded-full ${active ? isOwn ? 'bg-white' : 'bg-[var(--brand)]' : isOwn ? 'bg-white/35' : 'bg-[var(--text-muted)]/35'}`}
+                style={{ height: `${8 + ((idx * 7) % 18)}px` }}
+              />
+            );
+          })}
         </div>
+        <input
+          type="range"
+          min={0}
+          max={Math.max(duration, 1)}
+          step={0.1}
+          value={Math.min(current, Math.max(duration, 1))}
+          onChange={e => {
+            const audio = audioRef.current;
+            const next = Number(e.currentTarget.value);
+            setCurrent(next);
+            if (audio) audio.currentTime = next;
+          }}
+          disabled={!objectUrl || Boolean(error)}
+          aria-label="Progreso del audio"
+          className="mb-1 h-1 w-full accent-[var(--brand)]"
+        />
         <div className={`flex items-center justify-between text-[10px] ${isOwn ? 'text-white/65' : 'text-[var(--text-muted)]'}`}>
           <span>{error || 'Nota de voz'}</span>
-          <span className="tabular-nums">{formatDuration(current || duration)}</span>
+          <span className="tabular-nums">{formatDuration(current)} / {formatDuration(duration)}</span>
         </div>
         {objectUrl && (
           <audio
@@ -240,6 +290,7 @@ export function VoiceRecorder({
   const startedAtRef = useRef<number>(0);
   const timerRef = useRef<number | null>(null);
   const recordingErrorRef = useRef(false);
+  const cancelRequestedRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -292,6 +343,12 @@ export function VoiceRecorder({
     setError('');
   }
 
+  function validateAudioForPreview(file: File): string | null {
+    if (!isAudioFile(file)) return 'Selecciona un archivo de audio válido.';
+    if (file.size > MAX_VOICE_BYTES) return `El audio pesa ${fileSizeLabel(file.size)}. Máximo 10 MB.`;
+    return null;
+  }
+
   async function startRecording() {
     const runtimeInfo = getAudioRuntimeInfo();
     const unsupportedReason = getUnsupportedReason(runtimeInfo);
@@ -307,8 +364,16 @@ export function VoiceRecorder({
       resetPreview();
       chunksRef.current = [];
       recordingErrorRef.current = false;
+      cancelRequestedRef.current = false;
       logAudioDiagnostic('solicitando permiso de micrófono', runtimeInfo);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setError('');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       streamRef.current = stream;
       if (!stream.getAudioTracks().length) {
         logAudioDiagnostic('stream sin pistas de audio', runtimeInfo);
@@ -329,7 +394,14 @@ export function VoiceRecorder({
         stopRecording();
       };
       recorder.onstop = () => {
+        const cancelled = cancelRequestedRef.current;
+        cancelRequestedRef.current = false;
         if (recordingErrorRef.current) {
+          stopTracks();
+          return;
+        }
+        if (cancelled) {
+          chunksRef.current = [];
           stopTracks();
           return;
         }
@@ -341,6 +413,11 @@ export function VoiceRecorder({
           return;
         }
         const blob = new Blob(chunksRef.current, { type });
+        if (blob.size > MAX_VOICE_BYTES) {
+          setError(`El audio pesa ${fileSizeLabel(blob.size)}. Máximo 10 MB.`);
+          stopTracks();
+          return;
+        }
         const ext = extensionFromMime(type);
         const file = new File([blob], `nota-voz-${Date.now()}.${ext}`, { type });
         setPreviewDuration(duration);
@@ -385,6 +462,14 @@ export function VoiceRecorder({
     setRecording(false);
   }
 
+  function cancelRecording() {
+    cancelRequestedRef.current = true;
+    chunksRef.current = [];
+    stopRecording();
+    setSeconds(0);
+    setError('');
+  }
+
   async function sendPreview() {
     if (!previewFile || !canSend) return;
     setSending(true);
@@ -398,18 +483,20 @@ export function VoiceRecorder({
     }
   }
 
-  function onManualAudio(e: ChangeEvent<HTMLInputElement>) {
+  async function onManualAudio(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!isAudioFile(file)) {
-      setError('Selecciona un archivo de audio válido.');
+    const validationError = validateAudioForPreview(file);
+    if (validationError) {
+      setError(validationError);
       e.target.value = '';
       return;
     }
     resetPreview();
+    const nextUrl = URL.createObjectURL(file);
     setPreviewFile(file);
-    setPreviewDuration(0);
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewDuration(await readAudioDuration(nextUrl));
+    setPreviewUrl(nextUrl);
     e.target.value = '';
   }
 
@@ -427,16 +514,29 @@ export function VoiceRecorder({
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => recording ? stopRecording() : void startRecording()}
-          disabled={disabled}
-          className={`grid size-9 place-items-center rounded-full transition-colors ${recording ? 'bg-red-500/15 text-red-500' : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'} disabled:opacity-50`}
-          aria-label={recording ? 'Detener grabación' : 'Grabar audio'}
-          title={recording ? formatDuration(seconds) : 'Grabar nota de voz'}
-        >
-          {recording ? <Square className="size-4" /> : <Mic className="size-5" />}
-        </button>
+        <>
+          {recording && (
+            <button
+              type="button"
+              onClick={cancelRecording}
+              className="grid size-9 place-items-center rounded-full text-red-500 hover:bg-red-500/10"
+              aria-label="Cancelar grabación"
+              title="Cancelar grabación"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => recording ? stopRecording() : void startRecording()}
+            disabled={disabled}
+            className={`grid size-9 place-items-center rounded-full transition-colors ${recording ? 'bg-red-500/15 text-red-500' : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'} disabled:opacity-50`}
+            aria-label={recording ? 'Detener grabación' : 'Grabar audio'}
+            title={recording ? `Detener ${formatDuration(seconds)}` : 'Grabar nota de voz'}
+          >
+            {recording ? <Square className="size-4" /> : <Mic className="size-5" />}
+          </button>
+        </>
       )}
       {recording && <span className="text-[11px] font-semibold tabular-nums text-red-500">{formatDuration(seconds)}</span>}
       {error && (

@@ -72,6 +72,15 @@ public class ChatGrupoMensaje {
     @Column(name = "mensaje_original_id")
     private Long mensajeOriginalId;
 
+    @Column(name = "pinned", nullable = false)
+    private Boolean pinned = false;
+
+    @Column(name = "pinned_by")
+    private Long pinnedBy;
+
+    @Column(name = "pinned_at")
+    private LocalDateTime pinnedAt;
+
     private LocalDateTime fecha;
 
     @Column(name = "actualizado_en")
@@ -87,6 +96,7 @@ public class ChatGrupoMensaje {
         if (esSistema == null) esSistema = false;
         if (editado == null) editado = false;
         if (reenviado == null) reenviado = false;
+        if (pinned == null) pinned = false;
     }
 
     public Long getId() { return id; }
@@ -129,6 +139,12 @@ public class ChatGrupoMensaje {
     public void setReenviado(Boolean reenviado) { this.reenviado = reenviado; }
     public Long getMensajeOriginalId() { return mensajeOriginalId; }
     public void setMensajeOriginalId(Long mensajeOriginalId) { this.mensajeOriginalId = mensajeOriginalId; }
+    public Boolean getPinned() { return pinned; }
+    public void setPinned(Boolean pinned) { this.pinned = pinned; }
+    public Long getPinnedBy() { return pinnedBy; }
+    public void setPinnedBy(Long pinnedBy) { this.pinnedBy = pinnedBy; }
+    public LocalDateTime getPinnedAt() { return pinnedAt; }
+    public void setPinnedAt(LocalDateTime pinnedAt) { this.pinnedAt = pinnedAt; }
     public LocalDateTime getFecha() { return fecha; }
     public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }

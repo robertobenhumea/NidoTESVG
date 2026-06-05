@@ -33,4 +33,7 @@ public interface ChatGrupoMensajeRepository extends JpaRepository<ChatGrupoMensa
 
     @Query("SELECT m FROM ChatGrupoMensaje m WHERE m.grupoId = :grupoId AND m.eliminado = false AND LOWER(m.contenido) LIKE LOWER(CONCAT('%http%', '%')) ORDER BY m.fecha DESC")
     List<ChatGrupoMensaje> findLinksByGrupoId(@Param("grupoId") Long grupoId);
+
+    @Query("SELECT m FROM ChatGrupoMensaje m WHERE m.grupoId = :grupoId AND m.pinned = true ORDER BY m.pinnedAt DESC, m.id DESC")
+    List<ChatGrupoMensaje> findPinnedByGrupoId(@Param("grupoId") Long grupoId);
 }

@@ -4,5 +4,6 @@ public record PresenceEventDTO(
         Long usuarioId,
         String nombre,
         Boolean online,
-        Long activeConnections
+        Long activeConnections,
+        java.time.LocalDateTime lastSeen
 ) {}

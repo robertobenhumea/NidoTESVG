@@ -1,5 +1,7 @@
 package com.tesvg.backend.controller;
 
+import com.tesvg.backend.dto.ChatGroupMessageDTO;
+import com.tesvg.backend.dto.ChatRealtimeEventDTO;
 import com.tesvg.backend.dto.DMRealtimeEventDTO;
 import com.tesvg.backend.dto.MessageDTO;
 import com.tesvg.backend.dto.MessageReactionDTO;
@@ -10,11 +12,15 @@ import com.tesvg.backend.model.DMMessageHidden;
 import com.tesvg.backend.model.DMMessageReaction;
 import com.tesvg.backend.model.ChatAuditLog;
 import com.tesvg.backend.model.ChatBlock;
+import com.tesvg.backend.model.ChatGrupoMensaje;
 import com.tesvg.backend.model.ChatReport;
 import com.tesvg.backend.model.Mensaje;
 import com.tesvg.backend.model.Usuario;
 import com.tesvg.backend.repository.ChatAuditLogRepository;
 import com.tesvg.backend.repository.ChatBlockRepository;
+import com.tesvg.backend.repository.ChatGrupoMensajeRepository;
+import com.tesvg.backend.repository.ChatGrupoMiembroRepository;
+import com.tesvg.backend.repository.ChatGrupoRepository;
 import com.tesvg.backend.repository.ChatReportRepository;
 import com.tesvg.backend.repository.DMConversationPreferenceRepository;
 import com.tesvg.backend.repository.DMMessageHiddenRepository;
@@ -51,12 +57,22 @@ public class MensajeController {
     private static final int MAX_TEXT_LENGTH = 2000;
     private static final int MAX_AUDIO_DURATION_SECONDS = 5 * 60;
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
-    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of(
+            "pdf", "doc", "docx", "xls", "xlsx", "csv", "ppt", "pptx", "txt",
+            "zip", "rar", "7z"
+    );
     private static final Set<String> AUDIO_EXTENSIONS = Set.of("webm", "ogg", "mp3", "m4a", "mp4", "wav");
+    private static final Set<String> AUDIO_CONTENT_TYPES = Set.of(
+            "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "audio/x-m4a",
+            "video/webm", "application/ogg", "application/octet-stream"
+    );
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of("html", "htm", "svg", "js", "exe", "bat", "sh", "cmd", "com", "scr", "msi", "jar");
 
     @Autowired private MensajeRepository mensajeRepository;
     @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private ChatGrupoRepository chatGrupoRepository;
+    @Autowired private ChatGrupoMiembroRepository chatGrupoMiembroRepository;
+    @Autowired private ChatGrupoMensajeRepository chatGrupoMensajeRepository;
     @Autowired private RedisCacheService redisCacheService;
     @Autowired private RateLimitService rateLimitService;
     @Autowired private SimpMessagingTemplate messagingTemplate;
@@ -371,6 +387,17 @@ public class MensajeController {
         return ResponseEntity.ok(Map.of("count", total));
     }
 
+    @GetMapping("/presencia/{usuarioId}")
+    public ResponseEntity<?> presencia(@PathVariable Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        if (usuario == null) return ResponseEntity.notFound().build();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("usuarioId", usuarioId);
+        result.put("online", presenceService.isOnline(usuarioId));
+        result.put("lastSeen", usuario.getLastSeen());
+        return ResponseEntity.ok(result);
+    }
+
     // ── MARCAR LEÍDOS ──
     @PutMapping("/leer/{emisorId}")
     public ResponseEntity<?> marcarLeidos(@PathVariable Long emisorId, HttpServletRequest request) {
@@ -577,12 +604,14 @@ public class MensajeController {
         Mensaje copy = new Mensaje();
         copy.setEmisorId(yo.getId());
         copy.setReceptorId(destinatarioId);
-        copy.setContenido(original.getContenido());
-        copy.setTipo(original.getTipo());
+        copy.setContenido(safeForwardContent(original.getContenido()));
+        copy.setTipo(normalizarTipoReenvio(original.getTipo(), original.getArchivoUrl(), original.getNombreArchivo()));
         copy.setArchivoUrl(original.getArchivoUrl());
         copy.setNombreArchivo(original.getNombreArchivo());
         copy.setFileType(original.getFileType());
         copy.setFileSize(original.getFileSize());
+        copy.setDurationSeconds(original.getDurationSeconds());
+        copy.setWaveformData(original.getWaveformData());
         copy.setFecha(now);
         copy.setSentAt(now);
         copy.setStatus("SENT");
@@ -596,6 +625,49 @@ public class MensajeController {
 
         MessageDTO dto = toDTO(copy, yo, yo.getId(), destinatarioId);
         publishDMEvent("DM_MESSAGE_CREATED", conversationId(yo.getId(), destinatarioId), copy.getId(), yo.getId(), destinatarioId, dto);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/reenviar/grupo/{grupoId}")
+    public ResponseEntity<?> reenviarAGrupo(@PathVariable Long id,
+                                            @PathVariable Long grupoId,
+                                            HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        Mensaje original = mensajeRepository.findById(id).orElse(null);
+        if (original == null) return ResponseEntity.notFound().build();
+        if (!isParticipant(original, yo.getId())) return ResponseEntity.status(403).body(Map.of("error", "No puedes reenviar este mensaje"));
+        if (Boolean.TRUE.equals(original.getEliminado())) return ResponseEntity.badRequest().body(Map.of("error", "No se puede reenviar un mensaje eliminado"));
+        if (chatGrupoRepository.findById(grupoId).isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Grupo destino no encontrado"));
+        if (!chatGrupoMiembroRepository.existsByGrupoIdAndUsuarioIdAndActivoTrue(grupoId, yo.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro del grupo destino"));
+        }
+        if (!rateLimitService.allow("forward:dm", yo.getId().toString(), 10, Duration.ofMinutes(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "DM_FORWARD_GROUP", id, "forward:dm");
+            return ResponseEntity.status(429).body(Map.of("error", "Estás reenviando demasiado rápido"));
+        }
+
+        ChatGrupoMensaje copy = new ChatGrupoMensaje();
+        copy.setGrupoId(grupoId);
+        copy.setEmisorId(yo.getId());
+        copy.setContenido(safeForwardContent(original.getContenido()));
+        copy.setTipo(normalizarTipoReenvio(original.getTipo(), original.getArchivoUrl(), original.getNombreArchivo()));
+        copy.setArchivoUrl(original.getArchivoUrl());
+        copy.setNombreArchivo(original.getNombreArchivo());
+        copy.setFileType(original.getFileType());
+        copy.setFileSize(original.getFileSize());
+        copy.setDurationSeconds(original.getDurationSeconds());
+        copy.setWaveformData(original.getWaveformData());
+        copy.setReferenciaId(null);
+        copy.setEliminado(false);
+        copy.setEsSistema(false);
+        copy.setEditado(false);
+        copy.setReenviado(true);
+        copy.setMensajeOriginalId(original.getId());
+        copy.setFecha(LocalDateTime.now());
+        chatGrupoMensajeRepository.save(copy);
+        chatGrupoMiembroRepository.actualizarUltimaLectura(grupoId, yo.getId(), copy.getFecha());
+        ChatGroupMessageDTO dto = toGroupForwardDTO(copy, yo);
+        publishGroupEvent("message.created", grupoId, copy.getId(), dto, yo.getId());
         return ResponseEntity.ok(dto);
     }
 
@@ -955,6 +1027,57 @@ public class MensajeController {
         }
     }
 
+    private ChatGroupMessageDTO toGroupForwardDTO(ChatGrupoMensaje m, Usuario sender) {
+        boolean deleted = Boolean.TRUE.equals(m.getEliminado());
+        String type = normalizarTipo(m.getTipo());
+        String content = deleted ? "Este mensaje fue eliminado" : safeForwardContent(m.getContenido());
+        String fileUrl = deleted ? null : m.getArchivoUrl();
+        String fileName = deleted ? null : m.getNombreArchivo();
+        return new ChatGroupMessageDTO(
+                m.getId(),
+                m.getGrupoId(),
+                m.getEmisorId(),
+                content,
+                m.getFecha(),
+                type,
+                type,
+                fileUrl,
+                fileName,
+                deleted ? null : m.getFileType(),
+                deleted ? null : m.getFileSize(),
+                deleted ? null : m.getDurationSeconds(),
+                deleted ? null : m.getWaveformData(),
+                fileUrl,
+                fileName,
+                deleted,
+                Boolean.TRUE.equals(m.getEsSistema()),
+                m.getReferenciaId(),
+                null,
+                Boolean.TRUE.equals(m.getEditado()),
+                m.getActualizadoEn(),
+                Boolean.TRUE.equals(m.getReenviado()),
+                m.getMensajeOriginalId(),
+                Boolean.TRUE.equals(m.getPinned()),
+                m.getPinnedBy(),
+                m.getPinnedAt(),
+                List.of(),
+                null,
+                m.getFecha(),
+                sender != null ? sender.getUsername() : null,
+                sender != null ? sender.getFotoPerfil() : null
+        );
+    }
+
+    private void publishGroupEvent(String type, Long grupoId, Long messageId, ChatGroupMessageDTO message, Long actorId) {
+        try {
+            ChatRealtimeEventDTO event = new ChatRealtimeEventDTO(type, grupoId, messageId, message, actorId);
+            messagingTemplate.convertAndSend("/topic/grupos/" + grupoId + "/events", event);
+            redisCacheService.publish("falconnet:chat-events", event);
+        } catch (Exception ignored) {
+            // REST remains authoritative; realtime delivery must not break writes.
+        }
+    }
+
     private void notifyDMRecipient(Usuario sender, Long recipientId, MessageDTO message) {
         try {
             DMConversationPreference pref = preferenceRepository.findByUsuarioIdAndPartnerId(recipientId, sender.getId()).orElse(null);
@@ -984,6 +1107,23 @@ public class MensajeController {
             case "TEXT", "TEXTO" -> "TEXT";
             default -> "TEXT";
         };
+    }
+
+    private String normalizarTipoReenvio(String tipo, String archivoUrl, String nombreArchivo) {
+        String normalized = normalizarTipo(tipo);
+        if (!"TEXT".equals(normalized)) return normalized;
+        String source = nombreArchivo != null && !nombreArchivo.isBlank() ? nombreArchivo : archivoUrl;
+        if (source != null && source.contains(".")) {
+            String ext = source.substring(source.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
+            if (IMAGE_EXTENSIONS.contains(ext)) return "IMAGE";
+            if (AUDIO_EXTENSIONS.contains(ext)) return "AUDIO";
+            if (DOCUMENT_EXTENSIONS.contains(ext)) return "DOCUMENT";
+        }
+        return archivoUrl != null && !archivoUrl.isBlank() ? "DOCUMENT" : "TEXT";
+    }
+
+    private String safeForwardContent(String content) {
+        return content != null ? content : "";
     }
 
     private AttachmentData guardarAdjunto(MultipartFile archivo, String folder, String publicPrefix) throws IOException {
@@ -1033,7 +1173,7 @@ public class MensajeController {
         if ("DOCUMENT".equals(messageType) && lower.startsWith("image/")) {
             throw new IllegalArgumentException("Tipo de documento no permitido");
         }
-        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/")) {
+        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/") && !AUDIO_CONTENT_TYPES.contains(lower)) {
             throw new IllegalArgumentException("Tipo de audio no permitido");
         }
     }

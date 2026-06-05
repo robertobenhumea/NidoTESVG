@@ -16,15 +16,18 @@ import type {
   BChatGrupoDetalle, BChatGrupoMensaje, BChatGrupoMiembro, ChatGrupoRol, GroupAttachment,
   GroupMessage, GroupSharedLink, SearchUser,
 } from '@/types';
-import { SecureImage, openSecureAttachment } from './SecureAttachment';
+import { SecureAttachmentViewer, SecureImage, openSecureAttachment, type AttachmentViewerItem } from './SecureAttachment';
 import { VoicePlayer, VoiceRecorder } from './VoiceMessage';
+import { ForwardMessageModal } from './ForwardMessageModal';
+import { MediaGallery, type GalleryItem } from './MediaGallery';
 
 const EMOJIS = ['😀','😂','😊','😍','😎','👍','👏','🙌','❤️','🔥','✨','💯','🎉','🏆','⚡','🙏','🤔','😅','🥳','👋'];
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮'];
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
-const LONG_PRESS_MS = 650;
-const LONG_PRESS_MOVE_PX = 10;
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
+const ATTACHMENT_ACCEPT = 'image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip,.rar,.7z,.webm,.ogg,.mp3,.m4a,.mp4,.wav';
+const LONG_PRESS_MS = 760;
+const LONG_PRESS_MOVE_PX = 18;
 
 function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -65,6 +68,13 @@ function fileSizeLabel(size?: number | null): string {
   return `${Math.max(1, Math.round(size / 1024))} KB`;
 }
 
+function messageKindLabel(tipo?: string | null): string {
+  if (tipo === 'IMAGE') return 'Imagen';
+  if (tipo === 'DOCUMENT') return 'Archivo';
+  if (tipo === 'AUDIO') return 'Audio';
+  return 'Texto';
+}
+
 function isAudioFile(file: File): boolean {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   return file.type.startsWith('audio/') || ['webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav'].includes(ext);
@@ -87,7 +97,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 }
 
 function GroupBubble({
-  msg, mine, member, onReply, onEdit, onReact, onForward, onDelete, onJumpTo,
+  msg, mine, member, onReply, onEdit, onReact, onForward, onDelete, onJumpTo, onCopy, onPin, onOpenAttachment,
 }: {
   msg: GroupMessage;
   mine: boolean;
@@ -98,6 +108,9 @@ function GroupBubble({
   onForward: (msg: GroupMessage) => void;
   onDelete: (id: number, mode: 'todos' | 'para-mi') => void;
   onJumpTo: (id: number) => void;
+  onCopy: (text: string) => void;
+  onPin: (msg: GroupMessage) => void;
+  onOpenAttachment: (msg: GroupMessage) => void;
 }) {
   const [menu, setMenu] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
@@ -184,7 +197,7 @@ function GroupBubble({
               className={cn('mb-2 block w-full rounded-lg border-l-4 px-2 py-1 text-left text-xs', mine ? 'border-white/50 bg-white/10 text-white/75' : 'border-[var(--brand)] bg-[var(--bg-elevated)] text-[var(--text-muted)]')}
             >
               <p className={cn('truncate font-semibold', mine ? 'text-white/90' : 'text-[var(--brand)]')}>{msg.replyPreview.senderName}</p>
-              <p className="truncate">{msg.replyPreview.eliminado ? 'Mensaje eliminado' : msg.replyPreview.content}</p>
+              <p className="truncate">{msg.replyPreview.eliminado ? 'Mensaje eliminado' : `${messageKindLabel(msg.replyPreview.tipo)} · ${msg.replyPreview.content || 'Adjunto'}`}</p>
             </button>
           )}
           {msg.eliminado ? (
@@ -192,12 +205,17 @@ function GroupBubble({
           ) : (
             <>
               {msg.tipo === 'IMAGE' && (msg.archivoUrl || msg.fileUrl) && (
-                <button type="button" onClick={() => void openSecureAttachment((msg.archivoUrl ?? msg.fileUrl)!, msg.nombreArchivo ?? msg.fileName ?? 'imagen')} className="mb-2 block overflow-hidden rounded-xl text-left">
-                  <SecureImage src={(msg.archivoUrl ?? msg.fileUrl)!} alt={msg.nombreArchivo ?? msg.fileName ?? 'Imagen compartida'} className="max-h-80 w-full max-w-[280px] object-cover" />
-                </button>
+                <div className="mb-2 overflow-hidden rounded-xl">
+                  <SecureImage
+                    src={(msg.archivoUrl ?? msg.fileUrl)!}
+                    alt={msg.nombreArchivo ?? msg.fileName ?? 'Imagen compartida'}
+                    className="max-h-72 w-full max-w-[280px] object-cover rounded-xl"
+                    onClick={() => onOpenAttachment(msg)}
+                  />
+                </div>
               )}
               {msg.tipo === 'DOCUMENT' && (msg.archivoUrl || msg.fileUrl) && (
-                <button type="button" onClick={() => void openSecureAttachment((msg.archivoUrl ?? msg.fileUrl)!, msg.nombreArchivo ?? msg.fileName ?? 'archivo')} className={cn('mb-2 flex items-center gap-2 rounded-xl p-2 text-left', mine ? 'bg-white/10' : 'bg-[var(--bg-elevated)]')}>
+                <button type="button" onClick={() => onOpenAttachment(msg)} className={cn('mb-2 flex items-center gap-2 rounded-xl p-2 text-left', mine ? 'bg-white/10' : 'bg-[var(--bg-elevated)]')}>
                   <FileText className="size-5 shrink-0" />
                   <span className="min-w-0 flex-1 truncate text-xs font-semibold">{msg.nombreArchivo ?? msg.fileName ?? 'Archivo'}</span>
                   <span className="shrink-0 text-[10px] opacity-70">{fileSizeLabel(msg.fileSize)}</span>
@@ -215,6 +233,7 @@ function GroupBubble({
             </>
           )}
           <div className={cn('mt-1 flex items-center justify-end gap-2 text-[10px]', mine ? 'text-white/60' : 'text-[var(--text-muted)]')}>
+            {msg.pinned && <span>fijado</span>}
             {msg.editado && <span>editado</span>}
             <span>{timeStr(msg.createdAt)}</span>
             {!msg.eliminado && (
@@ -228,7 +247,9 @@ function GroupBubble({
               <button onClick={() => { onReply(msg); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Responder</button>
               <button onClick={() => { setReactionsOpen(v => !v); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Reaccionar</button>
               <button onClick={() => { onForward(msg); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Reenviar</button>
-              {mine && <button onClick={() => { onEdit(msg); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Editar</button>}
+              {msg.tipo === 'TEXT' && <button onClick={() => { onCopy(msg.content); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Copiar</button>}
+              {mine && msg.tipo === 'TEXT' && <button onClick={() => { onEdit(msg); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Editar</button>}
+              <button onClick={() => { onPin(msg); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">{msg.pinned ? 'Desfijar' : 'Fijar'}</button>
               <button onClick={() => { onDelete(msg.id, 'para-mi'); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs hover:bg-[var(--bg-elevated)]">Eliminar para mí</button>
               {mine && <button onClick={() => { onDelete(msg.id, 'todos'); setMenu(false); }} className="block w-full px-3 py-2 text-left text-xs text-red-500 hover:bg-red-500/10">Eliminar para todos</button>}
               {reactionsOpen && (
@@ -465,18 +486,79 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
   const [replyTo, setReplyTo] = useState<GroupMessage | null>(null);
   const [editing, setEditing] = useState<GroupMessage | null>(null);
   const [forwarding, setForwarding] = useState<GroupMessage | null>(null);
-  const [groups, setGroups] = useState<Array<{ id: number; nombre: string; foto?: string }>>([]);
-  const [file, setFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [pinnedMessages, setPinnedMessages] = useState<GroupMessage[]>([]);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [toast, setToast] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<Record<string, string>>({});
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileProgresses, setFileProgresses] = useState<Record<string, number>>({});
+  const [currentUploadKey, setCurrentUploadKey] = useState<string | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [viewerItem, setViewerItem] = useState<AttachmentViewerItem | null>(null);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottom = useRef(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<number | null>(null);
 
   const membersById = useMemo(() => new Map((detail?.miembros ?? []).map(m => [m.usuarioId, m])), [detail]);
+  const mediaMessages = useMemo(
+    () => messages.filter(msg => !msg.eliminado && (msg.archivoUrl || msg.fileUrl || msg.nombreArchivo || msg.fileName)),
+    [messages],
+  );
+  const attachmentViewerItems = useMemo<AttachmentViewerItem[]>(
+    () => mediaMessages.map(msg => ({
+      url: (msg.archivoUrl ?? msg.fileUrl)!,
+      fileName: msg.nombreArchivo ?? msg.fileName ?? msg.content ?? 'archivo',
+      type: msg.tipo,
+    })).filter(item => Boolean(item.url)),
+    [mediaMessages],
+  );
+  /* gallery items for MediaGallery */
+  const galleryItems = useMemo<GalleryItem[]>(
+    () => [
+      ...mediaMessages
+        .filter(msg => Boolean(msg.archivoUrl ?? msg.fileUrl))
+        .map(msg => ({
+          id: msg.id,
+          url: (msg.archivoUrl ?? msg.fileUrl)!,
+          fileName: msg.nombreArchivo ?? msg.fileName ?? 'archivo',
+          tipo: msg.tipo,
+          fileType: msg.fileType ?? null,
+          fileSize: msg.fileSize ?? null,
+          content: msg.content ?? null,
+          createdAt: msg.createdAt ?? null,
+        })),
+      ...messages
+        .filter(msg => !msg.eliminado && msg.tipo === 'TEXT' && /https?:\/\//i.test(msg.content ?? ''))
+        .map(msg => ({
+          id: msg.id,
+          url: '',
+          fileName: '',
+          tipo: 'TEXT' as const,
+          fileType: null,
+          fileSize: null,
+          content: msg.content ?? null,
+          createdAt: msg.createdAt ?? null,
+        })),
+    ],
+    [mediaMessages, messages],
+  );
+
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2000);
+  }
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior, block: 'end' });
+    });
+  }, []);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(groupId) || groupId <= 0) {
@@ -513,12 +595,23 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
       if (event.type === 'message.created' && event.message) {
         const message = mapGroupMessage(event.message);
         if (hasRenderableMessage(message)) {
+          const shouldScroll = isAtBottom.current || message.senderId === user?.id;
           setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message]);
+          if (message.senderId !== user?.id) void groupChatService.markRead(groupId).catch(() => {});
+          if (shouldScroll) {
+            isAtBottom.current = true;
+            window.setTimeout(() => scrollToBottom('smooth'), 50);
+          }
         }
       }
       if ((event.type === 'message.updated' || event.type === 'reaction.updated') && event.message) {
         const message = mapGroupMessage(event.message);
         setMessages(prev => prev.map(m => m.id === message.id ? message : m).filter(hasRenderableMessage));
+        if (event.type === 'message.updated') {
+          setPinnedMessages(prev => message.pinned
+            ? [message, ...prev.filter(item => item.id !== message.id)]
+            : prev.filter(item => item.id !== message.id));
+        }
       }
       if (event.type === 'message.deleted') {
         setMessages(prev => prev.map(m => m.id === event.messageId ? { ...m, eliminado: true, content: 'Este mensaje fue eliminado' } : m));
@@ -548,11 +641,17 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
         window.clearTimeout(typingTimerRef.current);
         typingTimerRef.current = null;
       }
+      stompClient.send(`/app/grupos/${groupId}/typing`, { typing: false });
       unsubState();
       unsubEvents();
       unsubTyping();
     };
-  }, [groupId, user?.id]);
+  }, [groupId, scrollToBottom, user?.id]);
+
+  useEffect(() => {
+    if (!Number.isFinite(groupId) || groupId <= 0) return;
+    void groupChatService.markRead(groupId).catch(() => {});
+  }, [groupId]);
 
   useEffect(() => {
     if (!Number.isFinite(groupId) || groupId <= 0) return;
@@ -565,15 +664,21 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
       if (cancelled) return;
       if (files.status === 'fulfilled') setAttachments(files.value);
       if (sharedLinks.status === 'fulfilled') setLinks(sharedLinks.value);
-      groupChatService.getGroups()
-        .then(items => {
-          if (!cancelled) setGroups(items.map(g => ({ id: g.id, nombre: g.nombre, foto: g.foto })));
-        })
-        .catch(() => {});
     }
     void loadSideData();
     return () => { cancelled = true; };
   }, [groupId, messages.length]);
+
+  useEffect(() => {
+    if (!Number.isFinite(groupId) || groupId <= 0) return;
+    let cancelled = false;
+    groupChatService.getPinned(groupId)
+      .then(items => {
+        if (!cancelled) setPinnedMessages(items);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [groupId]);
 
   useEffect(() => {
     if (!Number.isFinite(groupId) || groupId <= 0) return;
@@ -584,61 +689,119 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
         setMessages(prev => {
           const lastPrev = prev.at(-1)?.id;
           const lastNext = next.at(-1)?.id;
-          return prev.length !== next.length || lastPrev !== lastNext ? next : prev;
+          if (prev.length !== next.length || lastPrev !== lastNext) {
+            const shouldScroll = isAtBottom.current;
+            window.setTimeout(() => { if (shouldScroll) scrollToBottom('smooth'); }, 50);
+            return next;
+          }
+          return prev;
         });
       } catch {
         // Polling must not kick the user out of an open chat.
       }
     }, wsConnected ? 30000 : 8000);
     return () => window.clearInterval(id);
-  }, [groupId, wsConnected]);
+  }, [groupId, scrollToBottom, wsConnected]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: loading ? 'instant' : 'smooth' }); }, [messages.length, loading]);
+  useEffect(() => {
+    if (isAtBottom.current) scrollToBottom(loading ? 'instant' : 'smooth');
+  }, [messages.length, loading, scrollToBottom]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handler = () => {
+      isAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    };
+    el.addEventListener('scroll', handler, { passive: true });
+    handler();
+    return () => el.removeEventListener('scroll', handler);
+  }, []);
+
+  useEffect(() => {
+    const keepBottomVisible = () => {
+      if (isAtBottom.current) scrollToBottom('instant');
+    };
+    const handleFocus = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement && event.target.closest('textarea,input')) {
+        window.setTimeout(keepBottomVisible, 80);
+      }
+    };
+    window.visualViewport?.addEventListener('resize', keepBottomVisible);
+    window.visualViewport?.addEventListener('scroll', keepBottomVisible);
+    document.addEventListener('focusin', handleFocus);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', keepBottomVisible);
+      window.visualViewport?.removeEventListener('scroll', keepBottomVisible);
+      document.removeEventListener('focusin', handleFocus);
+    };
+  }, [scrollToBottom]);
 
   useEffect(() => {
     return () => {
-      if (filePreview) URL.revokeObjectURL(filePreview);
+      Object.values(filePreviews).forEach(URL.revokeObjectURL);
     };
-  }, [filePreview]);
+  }, [filePreviews]);
+
+  function fileKey(file: File): string {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+  }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const next = e.target.files?.[0];
-    if (!next) return;
-    const ext = next.name.split('.').pop()?.toLowerCase() ?? '';
-    if (!ALLOWED_EXTENSIONS.has(ext)) {
-      setError('Tipo no permitido. Usa imagen, documento o audio compatible.');
-      e.target.value = '';
-      return;
-    }
-    if (next.size > MAX_ATTACHMENT_SIZE) {
-      setError('Archivo demasiado pesado. Máximo 10 MB.');
+    const selected = Array.from(e.target.files ?? []);
+    if (selected.length === 0) return;
+    const invalid = selected.find(file => {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      return !ALLOWED_EXTENSIONS.has(ext) || file.size > MAX_ATTACHMENT_SIZE;
+    });
+    if (invalid) {
+      setError(invalid.size > MAX_ATTACHMENT_SIZE ? 'Archivo demasiado pesado. Máximo 10 MB.' : 'Tipo no permitido. Usa imagen, documento o audio compatible.');
       e.target.value = '';
       return;
     }
     setError('');
-    setFile(next);
-    if (filePreview) URL.revokeObjectURL(filePreview);
-    setFilePreview(next.type.startsWith('image/') ? URL.createObjectURL(next) : null);
+    setFiles(prev => [...prev, ...selected]);
+    setFilePreviews(prev => {
+      const next = { ...prev };
+      selected.forEach(file => {
+        if (file.type.startsWith('image/')) next[fileKey(file)] = URL.createObjectURL(file);
+      });
+      return next;
+    });
     e.target.value = '';
   }
 
-  function clearSelectedFile() {
-    if (filePreview) URL.revokeObjectURL(filePreview);
-    setFile(null);
-    setFilePreview(null);
+  function clearSelectedFile(file?: File) {
+    if (!file) {
+      Object.values(filePreviews).forEach(URL.revokeObjectURL);
+      setFiles([]);
+      setFilePreviews({});
+      return;
+    }
+    const key = fileKey(file);
+    setFiles(prev => prev.filter(item => fileKey(item) !== key));
+    setFilePreviews(prev => {
+      const next = { ...prev };
+      if (next[key]) URL.revokeObjectURL(next[key]);
+      delete next[key];
+      return next;
+    });
   }
 
   function sendTyping() {
-    stompClient.send(`/app/grupos/${groupId}/typing`, { typing: true });
+    if (!typingTimerRef.current) stompClient.send(`/app/grupos/${groupId}/typing`, { typing: true });
     if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
     typingTimerRef.current = window.setTimeout(() => {
       stompClient.send(`/app/grupos/${groupId}/typing`, { typing: false });
+      typingTimerRef.current = null;
     }, 1200);
   }
 
   async function loadOlder() {
     const firstId = messages[0]?.id;
-    if (!firstId || loadingOlder || !hasOlder) return;
+    const el = scrollRef.current;
+    if (!el || !firstId || loadingOlder || !hasOlder) return;
+    const previousHeight = el.scrollHeight;
     setLoadingOlder(true);
     try {
       const older = (await groupChatService.getMessagesPage(groupId, { beforeId: firstId, limit: 50 })).filter(hasRenderableMessage);
@@ -647,34 +810,63 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
         const seen = new Set(prev.map(m => m.id));
         return [...older.filter(m => !seen.has(m.id)), ...prev];
       });
+      window.requestAnimationFrame(() => {
+        if (!scrollRef.current) return;
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight - previousHeight;
+      });
     } finally {
       setLoadingOlder(false);
     }
   }
 
   async function send() {
-    if ((!text.trim() && !file) || sending) return;
+    if ((!text.trim() && files.length === 0) || sending) return;
     setSending(true);
+    stompClient.send(`/app/grupos/${groupId}/typing`, { typing: false });
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
     try {
       setError('');
       let msg: GroupMessage;
       if (editing) {
         msg = await groupChatService.editMessage(groupId, editing.id, text.trim());
         setMessages(prev => prev.map(item => item.id === msg.id ? msg : item));
-      } else if (file) {
-        msg = await groupChatService.sendWithAttachment(groupId, text.trim(), file, {
-          replyToMessageId: replyTo?.id,
-          messageType: isAudioFile(file) ? 'AUDIO' : undefined,
-        });
-        setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
+      } else if (files.length > 0) {
+        setFileProgresses({});
+        for (let index = 0; index < files.length; index++) {
+          const file = files[index];
+          const key = fileKey(file);
+          setCurrentUploadKey(key);
+          setUploadProgress(0);
+          setFileProgresses(prev => ({ ...prev, [key]: 0 }));
+          msg = await groupChatService.sendWithAttachment(groupId, index === 0 ? text.trim() : '', file, {
+            replyToMessageId: replyTo?.id,
+            messageType: isAudioFile(file) ? 'AUDIO' : undefined,
+            onProgress: (p) => {
+              setUploadProgress(p);
+              setFileProgresses(prev => ({ ...prev, [key]: p }));
+            },
+          });
+          setFileProgresses(prev => ({ ...prev, [key]: 100 }));
+          setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
+          isAtBottom.current = true;
+          window.setTimeout(() => scrollToBottom('smooth'), 50);
+        }
+        setFileProgresses({});
+        setCurrentUploadKey(null);
       } else {
         msg = await groupChatService.sendMessage(groupId, { contenido: text.trim(), replyToMessageId: replyTo?.id });
         setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
+        isAtBottom.current = true;
+        window.setTimeout(() => scrollToBottom('smooth'), 50);
       }
       setText('');
       setReplyTo(null);
       setEditing(null);
       clearSelectedFile();
+      setUploadProgress(0);
       void groupChatService.markRead(groupId);
       void Promise.allSettled([
         groupChatService.getAttachments(groupId).then(setAttachments),
@@ -688,10 +880,15 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
   }
 
   async function deleteMessageMode(id: number, mode: 'todos' | 'para-mi') {
-    await groupChatService.deleteMessage(groupId, id, mode);
-    setMessages(prev => mode === 'para-mi'
-      ? prev.filter(m => m.id !== id)
-      : prev.map(m => m.id === id ? { ...m, eliminado: true, content: 'Este mensaje fue eliminado' } : m));
+    try {
+      await groupChatService.deleteMessage(groupId, id, mode);
+      setMessages(prev => mode === 'para-mi'
+        ? prev.filter(m => m.id !== id)
+        : prev.map(m => m.id === id ? { ...m, eliminado: true, content: 'Este mensaje fue eliminado', archivoUrl: null, fileUrl: null, nombreArchivo: null, fileName: null } : m));
+      if (mode === 'todos') setPinnedMessages(prev => prev.filter(msg => msg.id !== id));
+    } catch {
+      showToast('No se pudo eliminar');
+    }
   }
 
   async function reactToMessage(msg: GroupMessage, reactionType: string) {
@@ -700,6 +897,10 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
   }
 
   function startEdit(msg: GroupMessage) {
+    if (msg.eliminado || msg.tipo !== 'TEXT') {
+      showToast('Solo puedes editar mensajes de texto activos');
+      return;
+    }
     setEditing(msg);
     setReplyTo(null);
     setText(msg.content);
@@ -709,11 +910,75 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
     document.getElementById(`group-msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  async function forwardTo(targetGroupId: number) {
+  function openMessageAttachment(msg: GroupMessage) {
+    const url = msg.archivoUrl ?? msg.fileUrl;
+    if (!url) return;
+    setViewerItem({
+      url,
+      fileName: msg.nombreArchivo ?? msg.fileName ?? msg.content ?? 'archivo',
+      type: msg.tipo,
+    });
+  }
+
+  async function forwardToGroup(targetGroupId: number) {
     if (!forwarding) return;
-    const forwarded = await groupChatService.forwardMessage(groupId, forwarding.id, targetGroupId);
-    if (targetGroupId === groupId && hasRenderableMessage(forwarded)) setMessages(prev => [...prev, forwarded]);
-    setForwarding(null);
+    try {
+      const forwarded = await groupChatService.forwardMessage(groupId, forwarding.id, targetGroupId);
+      if (targetGroupId === groupId && hasRenderableMessage(forwarded)) setMessages(prev => [...prev, forwarded]);
+      setForwarding(null);
+      showToast('Mensaje reenviado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo reenviar';
+      showToast(message);
+      throw err;
+    }
+  }
+
+  async function forwardToUser(recipientId: number) {
+    if (!forwarding) return;
+    try {
+      await groupChatService.forwardMessageToUser(groupId, forwarding.id, recipientId);
+      setForwarding(null);
+      showToast('Mensaje reenviado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo reenviar';
+      showToast(message);
+      throw err;
+    }
+  }
+
+  async function handleCopy(content: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const area = document.createElement('textarea');
+        area.value = content;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+      }
+      showToast('Mensaje copiado');
+    } catch {
+      showToast('No se pudo copiar');
+    }
+  }
+
+  async function togglePin(msg: GroupMessage) {
+    try {
+      const updated = await groupChatService.pin(groupId, msg.id, !msg.pinned);
+      setMessages(prev => prev.map(item => item.id === updated.id ? updated : item));
+      setPinnedMessages(prev => updated.pinned
+        ? [updated, ...prev.filter(item => item.id !== updated.id)]
+        : prev.filter(item => item.id !== updated.id));
+      showToast(updated.pinned ? 'Mensaje fijado' : 'Mensaje desfijado');
+    } catch {
+      showToast('No se pudo actualizar fijado');
+    }
   }
 
   const grouped: Array<{ type: 'date'; label: string } | { type: 'msg'; msg: GroupMessage }> = [];
@@ -738,11 +1003,53 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               <p className="truncate text-[11px] text-[var(--text-muted)]">{detail ? `${detail.miembros.length} miembros · ${detail.tipo}` : 'Cargando'}</p>
             </div>
           </button>
+          <button onClick={() => setMediaOpen(v => !v)} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><ImageIcon className="size-4" /></button>
           <button onClick={() => setInfoOpen(true)} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><Info className="size-4" /></button>
           <button className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><MoreVertical className="size-4" /></button>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4">
+        {mediaOpen && (
+          <MediaGallery
+            items={galleryItems}
+            title={`Archivos — ${detail?.nombre ?? 'Grupo'}`}
+            onOpen={galleryItem => {
+              if (!galleryItem.url) return;
+              setViewerItem({ url: galleryItem.url, fileName: galleryItem.fileName, type: galleryItem.tipo });
+            }}
+            onClose={() => setMediaOpen(false)}
+          />
+        )}
+
+        {pinnedMessages.length > 0 && (
+          <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1.5">
+            <button
+              type="button"
+              onClick={() => setPinnedOpen(v => !v)}
+              className="w-full truncate text-left text-[11px] font-medium text-[var(--brand)]"
+            >
+              Fijados ({pinnedMessages.length}): {pinnedMessages[0].content || pinnedMessages[0].nombreArchivo || messageKindLabel(pinnedMessages[0].tipo)}
+            </button>
+            {pinnedOpen && (
+              <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+                {pinnedMessages.map(msg => (
+                  <button
+                    key={msg.id}
+                    type="button"
+                    onClick={() => {
+                      setPinnedOpen(false);
+                      jumpToMessage(msg.id);
+                    }}
+                    className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+                  >
+                    {messageKindLabel(msg.tipo)} · {msg.content || msg.nombreArchivo || 'Mensaje fijado'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div ref={scrollRef} className="flex-1 touch-pan-y overscroll-contain overflow-y-auto px-3 py-4">
           {loading ? (
             <div className="flex justify-center py-12"><span className="size-6 animate-spin rounded-full border-2 border-[var(--brand)] border-t-transparent" /></div>
           ) : messages.length === 0 ? (
@@ -776,6 +1083,9 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
                 onForward={setForwarding}
                 onDelete={deleteMessageMode}
                 onJumpTo={jumpToMessage}
+                onCopy={handleCopy}
+                onPin={togglePin}
+                onOpenAttachment={openMessageAttachment}
               />
                 </div>
               ))}
@@ -809,11 +1119,73 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               <button onClick={() => { setEditing(null); setText(''); }}><X className="size-4" /></button>
             </div>
           )}
-          {file && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl bg-[var(--bg-elevated)] p-2">
-              {filePreview ? <img src={filePreview} alt="" className="size-11 rounded-lg object-cover" /> : <FileText className="size-5" />}
-              <span className="min-w-0 flex-1 truncate text-xs font-semibold">{file.name}</span>
-              <button onClick={clearSelectedFile}><X className="size-4" /></button>
+          {files.length > 0 && (
+            <div className="mb-2">
+              <div className="flex max-h-32 gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {files.map(file => {
+                  const key = fileKey(file);
+                  const filePct = fileProgresses[key];
+                  const isUp = sending && currentUploadKey === key;
+                  const isDone = sending && filePct === 100;
+                  return (
+                    <div key={key} className="flex w-48 shrink-0 flex-col gap-2 rounded-xl bg-[var(--bg-elevated)] p-2.5">
+                      <div className="flex items-center gap-2">
+                        {filePreviews[key]
+                          ? <img src={filePreviews[key]} alt="" className="size-11 shrink-0 rounded-lg object-cover" />
+                          : <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[var(--brand-muted)] text-xl">
+                              {isAudioFile(file) ? '🎵' : file.name.endsWith('.pdf') ? '📄' : '📎'}
+                            </span>
+                        }
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-[var(--text-primary)]">{file.name}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{(file.size / 1024).toFixed(0)} KB</p>
+                        </div>
+                        {!sending && (
+                          <button onClick={() => clearSelectedFile(file)} className="shrink-0">
+                            <X className="size-4 text-[var(--text-muted)] hover:text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                      {(isUp || isDone) && (
+                        <div>
+                          <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-base)]">
+                            <div className={`h-full transition-all duration-150 ${isDone ? 'bg-emerald-500' : 'bg-[var(--brand)]'}`}
+                              style={{ width: `${filePct ?? 0}%` }} />
+                          </div>
+                          <p className="mt-0.5 text-right text-[10px] text-[var(--text-muted)]">
+                            {isDone ? '✓ Listo' : `${filePct ?? 0}%`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {sending && files.length > 1 && (
+                <div className="mt-1.5">
+                  <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
+                    <span>Subiendo {files.length} archivos…</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-base)]">
+                    <div className="h-full bg-[var(--brand)] transition-all" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {sending && files.length === 0 && uploadProgress > 0 && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mb-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block size-3 rounded-full border-2 border-[var(--brand)]/30 border-t-[var(--brand)] animate-spin" />
+                  Subiendo…
+                </span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+                <div className="h-full bg-[var(--brand)] transition-all" style={{ width: `${uploadProgress}%` }} />
+              </div>
             </div>
           )}
           <div className="flex items-end gap-2">
@@ -826,7 +1198,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               )}
             </div>
             <button onClick={() => fileRef.current?.click()} className="grid size-9 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><Paperclip className="size-5" /></button>
-            <input ref={fileRef} type="file" onChange={onFileChange} className="hidden" accept="image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt,.webm,.ogg,.mp3,.m4a,.mp4,.wav" />
+            <input ref={fileRef} type="file" onChange={onFileChange} className="hidden" accept={ATTACHMENT_ACCEPT} multiple />
             <textarea
               value={text}
               onChange={e => { setText(e.target.value); sendTyping(); }}
@@ -841,8 +1213,10 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
               onSend={async (voiceFile, durationSeconds) => {
                 setSending(true);
                 try {
-                  const msg = await groupChatService.sendWithAttachment(groupId, '', voiceFile, { replyToMessageId: replyTo?.id, messageType: 'AUDIO', durationSeconds });
+                  const msg = await groupChatService.sendWithAttachment(groupId, '', voiceFile, { replyToMessageId: replyTo?.id, messageType: 'AUDIO', durationSeconds, onProgress: setUploadProgress });
                   setMessages(prev => hasRenderableMessage(msg) && !prev.some(m => m.id === msg.id) ? [...prev, msg] : prev);
+                  isAtBottom.current = true;
+                  window.setTimeout(() => scrollToBottom('smooth'), 50);
                   setReplyTo(null);
                   void groupChatService.markRead(groupId);
                   void Promise.allSettled([
@@ -854,7 +1228,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
                 }
               }}
             />
-            <button onClick={() => void send()} disabled={sending || (!text.trim() && !file)} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)]">
+            <button onClick={() => void send()} disabled={sending || (!text.trim() && files.length === 0)} className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white disabled:bg-[var(--bg-elevated)] disabled:text-[var(--text-muted)]">
               {sending ? <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <Send className="size-4" />}
             </button>
           </div>
@@ -870,21 +1244,22 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
         </div>
       )}
       {forwarding && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-4">
-          <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-2xl sm:max-w-sm sm:rounded-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Reenviar a grupo</h3>
-              <button onClick={() => setForwarding(null)} className="grid size-8 place-items-center rounded-full hover:bg-[var(--bg-elevated)]"><X className="size-4" /></button>
-            </div>
-            <div className="space-y-2">
-              {groups.map(group => (
-                <button key={group.id} onClick={() => void forwardTo(group.id)} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-[var(--bg-elevated)]">
-                  <Avatar src={group.foto} name={group.nombre} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]">{group.nombre}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+        <ForwardMessageModal
+          onClose={() => setForwarding(null)}
+          onForwardUser={forwardToUser}
+          onForwardGroup={forwardToGroup}
+        />
+      )}
+      {viewerItem && (
+        <SecureAttachmentViewer
+          item={viewerItem}
+          items={attachmentViewerItems}
+          onClose={() => setViewerItem(null)}
+        />
+      )}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-[var(--text-primary)] px-3 py-1.5 text-xs font-medium text-[var(--bg-base)] shadow-lg pointer-events-none">
+          {toast}
         </div>
       )}
     </div>

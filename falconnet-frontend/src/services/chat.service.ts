@@ -246,6 +246,41 @@ export function mapMessage(b: BMensaje): Message {
   };
 }
 
+function postFormWithProgress<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const token = getStoredAuthToken();
+    if (!token) {
+      reject(new Error('No hay sesión activa. Inicia sesión de nuevo.'));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getApiBaseUrl()}${path}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = event => {
+      if (event.lengthComputable && onProgress) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        try {
+          resolve(JSON.parse(xhr.responseText) as T);
+        } catch {
+          reject(new Error('Respuesta inválida del servidor'));
+        }
+      } else {
+        try {
+          const data = JSON.parse(xhr.responseText) as { error?: string; message?: string };
+          reject(new Error(data.error ?? data.message ?? `HTTP ${xhr.status}`));
+        } catch {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      }
+    };
+    xhr.onerror = () => reject(new Error('Error de conexión. Verifica tu internet.'));
+    xhr.send(formData);
+  });
+}
+
 function mapConversation(b: BConversacion): Conversation {
   const raw = b as BConversacion & {
     id?: number | null;
@@ -430,9 +465,10 @@ export const chatService = {
     return mapMessage(data);
   },
 
-  async sendWithAttachment(receiverId: number, content: string, file: File, extra?: { referenciaId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string }): Promise<Message> {
+  async sendWithAttachment(receiverId: number, content: string, file: File, extra?: { referenciaId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string; onProgress?: (percent: number) => void }): Promise<Message> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('archivo', file);
     formData.append('conversationId', String(receiverId));
     if (extra?.messageType) {
       formData.append('messageType', extra.messageType);
@@ -444,15 +480,8 @@ export const chatService = {
     if (extra?.referenciaId) formData.append('referenciaId', String(extra.referenciaId));
     if (extra?.durationSeconds) formData.append('durationSeconds', String(extra.durationSeconds));
     if (extra?.waveformData) formData.append('waveformData', extra.waveformData);
-    const token = getStoredAuthToken();
-    if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
-    const res = await fetch(`${getApiBaseUrl()}/mensajes/enviar/${receiverId}/adjunto`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (!res.ok) throw new Error(await readError(res));
-    return mapMessage(await res.json() as BMensaje);
+    const data = await postFormWithProgress<BMensaje>(`/mensajes/enviar/${receiverId}/adjunto`, formData, extra?.onProgress);
+    return mapMessage(data);
   },
 
   async uploadAttachment(receiverId: number, file: File): Promise<{ url: string; tipo: MsgTipo; nombre: string; fileType?: string; fileSize?: number }> {
@@ -500,6 +529,10 @@ export const chatService = {
     return mapMessage(data);
   },
 
+  async forwardToGroup(id: number, groupId: number): Promise<void> {
+    await api.post(`/mensajes/${id}/reenviar/grupo/${groupId}`, undefined, OPTS);
+  },
+
   async search(partnerId: number, q: string, limit = 50): Promise<Message[]> {
     const params = new URLSearchParams({ q, limit: String(limit) });
     const data = await api.get<BMensaje[]>(`/mensajes/conversacion/${partnerId}/buscar?${params.toString()}`, OPTS);
@@ -541,9 +574,18 @@ export const chatService = {
     return mapMessage(data);
   },
 
+  async markRead(senderId: number): Promise<void> {
+    await api.put(`/mensajes/leer/${senderId}`, undefined, OPTS);
+  },
+
   async getUnreadCount(): Promise<number> {
     const data = await api.get<{ count: number }>('/mensajes/no-leidos', OPTS);
     return data.count ?? 0;
+  },
+
+  async getPresence(userId: number): Promise<{ online: boolean; lastSeen: string | null }> {
+    const data = await api.get<{ online?: boolean; lastSeen?: string | null }>(`/mensajes/presencia/${userId}`, OPTS);
+    return { online: Boolean(data.online), lastSeen: data.lastSeen ?? null };
   },
 };
 

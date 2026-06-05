@@ -798,6 +798,9 @@ export interface BChatGrupoMensaje {
   actualizadoEn?: string | null;
   reenviado?: boolean;
   mensajeOriginalId?: number | null;
+  pinned?: boolean;
+  pinnedBy?: number | null;
+  pinnedAt?: string | null;
   reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
   myReaction?: string | null;
   createdAt?: string;
@@ -865,6 +868,9 @@ export interface GroupMessage {
   actualizadoEn?: string | null;
   reenviado?: boolean;
   mensajeOriginalId?: number | null;
+  pinned?: boolean;
+  pinnedBy?: number | null;
+  pinnedAt?: string | null;
   reactions?: Array<{ reactionType: string; count: number; mine: boolean }>;
   myReaction?: string | null;
 }

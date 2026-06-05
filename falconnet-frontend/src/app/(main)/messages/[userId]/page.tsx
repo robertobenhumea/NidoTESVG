@@ -3,15 +3,17 @@
 import { useParams } from 'next/navigation';
 import { ConvList }   from '../components/ConvList';
 import { ChatThread } from '../components/ChatThread';
+import { useChatViewport } from '../components/useChatViewport';
 
 /* Desktop: two-pane — conv list (left) + chat (right)
    Mobile:  full-screen chat only (with back button) */
 export default function MessageThreadPage() {
   const { userId } = useParams<{ userId: string }>();
   const partnerId  = Number(userId);
+  useChatViewport();
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden md:h-[calc(100dvh-var(--nav-h)-var(--safe-top))]">
+    <div className="flex h-[var(--chat-vh,100dvh)] overflow-hidden pt-[env(safe-area-inset-top,0px)] md:h-[calc(100dvh-var(--nav-h)-var(--safe-top))] md:pt-0">
       {/* Left panel — desktop only */}
       <aside className="hidden md:flex w-80 lg:w-[340px] xl:w-[360px] shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)] flex-col">
         <ConvList activePartnerId={partnerId} />

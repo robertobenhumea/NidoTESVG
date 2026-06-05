@@ -1,10 +1,10 @@
 import { api } from '@/services/api';
 import { STORAGE_KEYS, getApiBaseUrl, getStoredAuthToken, resolveUrl as resolveBackendUrl } from '@/lib/utils';
-import { emitChatDebug } from '@/services/chat.service';
+import { emitChatDebug, mapMessage } from '@/services/chat.service';
 import type {
   BChatGrupo, BChatGrupoMensaje, BChatGrupoDetalle,
   ChatGroup, GroupMessage, ChatGroupMember,
-  MsgTipo, LegacyMsgTipo, ChatGrupoRol, GroupAttachment, GroupSharedLink,
+  MsgTipo, LegacyMsgTipo, ChatGrupoRol, GroupAttachment, GroupSharedLink, BMensaje, Message,
 } from '@/types';
 
 const OPTS = { suppressAuthExpiry: true } as const;
@@ -41,6 +41,41 @@ function extractList<T>(raw: unknown): T[] {
     }
   }
   return [];
+}
+
+function postFormWithProgress<T>(path: string, formData: FormData, onProgress?: (percent: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const token = getStoredAuthToken();
+    if (!token) {
+      reject(new Error('No hay sesión activa. Inicia sesión de nuevo.'));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getApiBaseUrl()}${path}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = event => {
+      if (event.lengthComputable && onProgress) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        try {
+          resolve(JSON.parse(xhr.responseText) as T);
+        } catch {
+          reject(new Error('Respuesta inválida del servidor'));
+        }
+      } else {
+        try {
+          const data = JSON.parse(xhr.responseText) as { error?: string; message?: string };
+          reject(new Error(data.error ?? data.message ?? `HTTP ${xhr.status}`));
+        } catch {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      }
+    };
+    xhr.onerror = () => reject(new Error('Error de conexión. Verifica tu internet.'));
+    xhr.send(formData);
+  });
 }
 
 function responseType(raw: unknown): string {
@@ -151,6 +186,9 @@ export function mapGroupMessage(b: BChatGrupoMensaje | GroupMessage): GroupMessa
     actualizadoEn: raw.actualizadoEn ?? null,
     reenviado: raw.reenviado ?? false,
     mensajeOriginalId: raw.mensajeOriginalId ?? null,
+    pinned: raw.pinned ?? false,
+    pinnedBy: raw.pinnedBy ?? null,
+    pinnedAt: raw.pinnedAt ?? null,
     reactions: raw.reactions ?? [],
     myReaction: raw.myReaction ?? null,
   };
@@ -248,9 +286,10 @@ export const groupChatService = {
     return mapGroupMessage(data);
   },
 
-  async sendWithAttachment(groupId: number, content: string, file: File, opts?: { replyToMessageId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string }): Promise<GroupMessage> {
+  async sendWithAttachment(groupId: number, content: string, file: File, opts?: { replyToMessageId?: number; messageType?: MsgTipo; durationSeconds?: number; waveformData?: string; onProgress?: (percent: number) => void }): Promise<GroupMessage> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('archivo', file);
     formData.append('groupId', String(groupId));
     if (opts?.messageType) {
       formData.append('messageType', opts.messageType);
@@ -262,18 +301,8 @@ export const groupChatService = {
     if (opts?.replyToMessageId) formData.append('replyToMessageId', String(opts.replyToMessageId));
     if (opts?.durationSeconds) formData.append('durationSeconds', String(opts.durationSeconds));
     if (opts?.waveformData) formData.append('waveformData', opts.waveformData);
-    const token = getStoredAuthToken();
-    if (!token) throw new Error('No hay sesión activa. Inicia sesión de nuevo.');
-    const res = await fetch(
-      `${getApiBaseUrl()}/grupos/chat/${groupId}/mensajes/adjunto`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      }
-    );
-    if (!res.ok) throw new Error(await readError(res));
-    return mapGroupMessage(await res.json() as BChatGrupoMensaje);
+    const data = await postFormWithProgress<BChatGrupoMensaje>(`/grupos/chat/${groupId}/mensajes/adjunto`, formData, opts?.onProgress);
+    return mapGroupMessage(data);
   },
 
   async editMessage(groupId: number, msgId: number, contenido: string): Promise<GroupMessage> {
@@ -291,8 +320,23 @@ export const groupChatService = {
     return mapGroupMessage(data);
   },
 
+  async forwardMessageToUser(groupId: number, msgId: number, recipientId: number): Promise<Message> {
+    const data = await api.post<BMensaje>(`/grupos/chat/${groupId}/mensajes/${msgId}/reenviar/usuario/${recipientId}`, undefined, OPTS);
+    return mapMessage(data);
+  },
+
   async deleteMessage(groupId: number, msgId: number, modo: 'todos' | 'para-mi' = 'todos'): Promise<void> {
     await api.delete(`/grupos/chat/${groupId}/mensajes/${msgId}?modo=${encodeURIComponent(modo)}`, OPTS);
+  },
+
+  async getPinned(groupId: number): Promise<GroupMessage[]> {
+    const data = await api.get<BChatGrupoMensaje[]>(`/grupos/chat/${groupId}/mensajes/fijados`, OPTS);
+    return data.map(mapGroupMessage);
+  },
+
+  async pin(groupId: number, msgId: number, pinned: boolean): Promise<GroupMessage> {
+    const data = await api.put<BChatGrupoMensaje>(`/grupos/chat/${groupId}/mensajes/${msgId}/fijar`, { pinned }, OPTS);
+    return mapGroupMessage(data);
   },
 
   async getMembers(id: number): Promise<ChatGroupMember[]> {

@@ -73,7 +73,7 @@ public class PresenceService {
     private void publish(Usuario user, boolean online, long connections) {
         messagingTemplate.convertAndSend(
                 "/topic/presence",
-                new PresenceEventDTO(user.getId(), user.getUsername(), online, connections)
+                new PresenceEventDTO(user.getId(), user.getUsername(), online, connections, user.getLastSeen())
         );
     }
 }

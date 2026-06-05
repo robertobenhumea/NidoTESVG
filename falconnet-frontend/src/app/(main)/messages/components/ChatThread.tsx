@@ -11,16 +11,19 @@ import { userService } from '@/services/user.service';
 import { useAuth } from '@/hooks/useAuth';
 import { stompClient, type ConnectionState } from '@/lib/stomp';
 import type { BMensaje, Message, MessageStatus, User } from '@/types';
-import { SecureImage, openSecureAttachment } from './SecureAttachment';
+import { SecureAttachmentViewer, SecureImage, type AttachmentViewerItem } from './SecureAttachment';
 import { VoicePlayer, VoiceRecorder } from './VoiceMessage';
+import { ForwardMessageModal } from './ForwardMessageModal';
+import { MediaGallery, type GalleryItem } from './MediaGallery';
 
 const POLL_MS = 5_000;
 const PAGE_SIZE = 50;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
+const ATTACHMENT_ACCEPT = 'image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip,.rar,.7z,.webm,.ogg,.mp3,.m4a,.mp4,.wav';
 const REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
-const LONG_PRESS_MS = 650;
-const LONG_PRESS_MOVE_PX = 10;
+const LONG_PRESS_MS = 760;
+const LONG_PRESS_MOVE_PX = 18;
 
 /* ── Emoji picker ─────────────────────────────────────────── */
 const EMOJIS = [
@@ -34,7 +37,12 @@ function lastSeenLabel(iso?: string | null): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return `últ. vez ${date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} ${date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+  const diff = Date.now() - date.getTime();
+  if (diff < 60_000) return 'Última vez activo hace unos segundos';
+  if (diff < 60 * 60_000) return `Última vez activo hace ${Math.max(1, Math.round(diff / 60_000))} min`;
+  if (diff < 24 * 60 * 60_000) return `Última vez activo hace ${Math.max(1, Math.round(diff / (60 * 60_000)))} h`;
+  if (diff < 48 * 60 * 60_000) return 'Última vez activo ayer';
+  return `Última vez activo ${date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}`;
 }
 
 function fileSizeLabel(size?: number | null): string {
@@ -47,6 +55,13 @@ function hasVisibleMessage(msg: Message): boolean {
   if (msg.eliminado) return true;
   if ((msg.content ?? '').trim()) return true;
   return Boolean((msg.tipo === 'IMAGE' || msg.tipo === 'DOCUMENT' || msg.tipo === 'AUDIO') && msg.archivoUrl);
+}
+
+function messageKindLabel(tipo?: string | null): string {
+  if (tipo === 'IMAGE') return 'Imagen';
+  if (tipo === 'DOCUMENT') return 'Archivo';
+  if (tipo === 'AUDIO') return 'Audio';
+  return 'Texto';
 }
 
 function mergeMessages(current: Message[], incoming: Message[]): Message[] {
@@ -101,17 +116,8 @@ interface BubbleProps {
   onDeleteForMe: (id: number) => void;
   onPin: (msg: Message) => void;
   onReport: (msg: Message) => void;
-}
-
-function statusLabel(status?: MessageStatus) {
-  switch (status) {
-    case 'PENDING': return 'enviando';
-    case 'SENT': return 'enviado';
-    case 'DELIVERED': return 'entregado';
-    case 'READ': return 'visto';
-    case 'FAILED': return 'error';
-    default: return '';
-  }
+  onJumpTo: (id: number) => void;
+  onOpenAttachment: (msg: Message) => void;
 }
 
 function StatusIcon({ status }: { status?: MessageStatus }) {
@@ -146,7 +152,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && Boolean(target.closest('button,a,input,textarea,select,audio,video'));
 }
 
-function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onReact, onEdit, onForward, onDeleteForMe, onPin, onReport }: BubbleProps) {
+function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onReact, onEdit, onForward, onDeleteForMe, onPin, onReport, onJumpTo, onOpenAttachment }: BubbleProps) {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<number | null>(null);
@@ -218,16 +224,20 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
       <div className="relative max-w-[78%] sm:max-w-[68%]">
         {/* Quoted reply */}
         {msg.referencia && (
-          <div className={`mb-1 px-2.5 py-1.5 rounded-xl border-l-4 text-xs ${
+          <button
+            type="button"
+            onClick={() => onJumpTo(msg.referencia!.id)}
+            className={`mb-1 block w-full px-2.5 py-1.5 rounded-xl border-l-4 text-left text-xs ${
             isOwn
               ? 'bg-white/10 border-white/40 text-white/70'
               : 'bg-[var(--bg-surface)] border-[var(--brand)] text-[var(--text-muted)]'
-          }`}>
+          }`}
+          >
             <p className={`font-semibold mb-0.5 truncate ${isOwn ? 'text-white/80' : 'text-[var(--brand)]'}`}>
               {msg.referencia.senderName}
             </p>
-            <p className="truncate">{msg.referencia.tipo !== 'TEXT' ? 'Archivo' : msg.referencia.content}</p>
-          </div>
+            <p className="truncate">{messageKindLabel(msg.referencia.tipo)} · {msg.referencia.content || 'Adjunto'}</p>
+          </button>
         )}
 
         {/* Bubble */}
@@ -257,24 +267,21 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
         >
           {/* Image */}
           {msg.tipo === 'IMAGE' && msg.archivoUrl && (
-            <button
-              type="button"
-              onClick={() => void openSecureAttachment(msg.archivoUrl!, msg.nombreArchivo ?? 'imagen')}
-              className="block mb-1.5 text-left"
-            >
+            <div className="mb-1.5 overflow-hidden rounded-xl">
               <SecureImage
                 src={msg.archivoUrl}
                 alt={msg.nombreArchivo ?? 'Imagen'}
-                className="max-w-[220px] rounded-xl object-cover"
+                className="max-w-[240px] max-h-72 w-full object-cover rounded-xl"
+                onClick={() => onOpenAttachment(msg)}
               />
-            </button>
+            </div>
           )}
 
           {/* File */}
           {msg.tipo === 'DOCUMENT' && msg.archivoUrl && (
             <button
               type="button"
-              onClick={() => void openSecureAttachment(msg.archivoUrl!, msg.nombreArchivo ?? 'archivo')}
+              onClick={() => onOpenAttachment(msg)}
               className={`flex items-center gap-2 mb-1.5 p-2 rounded-xl ${isOwn ? 'bg-white/10' : 'bg-[var(--bg-surface)]'}`}
             >
               <span className={`size-9 rounded-lg flex items-center justify-center shrink-0 ${isOwn ? 'bg-white/20' : 'bg-[var(--brand-muted)]'}`}>
@@ -316,6 +323,7 @@ function Bubble({ msg, isOwn, showTail, onReply, onDelete, onCopy, onRetry, onRe
 
           {/* Footer: time + read receipt */}
           <div className={`flex items-center justify-end gap-1 mt-0.5 ${isOwn ? 'text-white/55' : 'text-[var(--text-muted)]'}`}>
+            {msg.pinned && <span className="text-[10px]">fijado</span>}
             {msg.editado && <span className="text-[10px]">editado</span>}
             <span className="text-[10px] tabular-nums">{chatTimeLabel(parseMessageDate(msg))}</span>
             {isOwn && <StatusIcon status={msg.status ?? (msg.read ? 'READ' : 'SENT')} />}
@@ -416,8 +424,11 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
   const [text, setText]           = useState('');
   const [sending, setSending]     = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [attPreview, setAttPreview] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attPreviews, setAttPreviews] = useState<Record<string, string>>({});
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileProgresses, setFileProgresses] = useState<Record<string, number>>({});
+  const [currentUploadKey, setCurrentUploadKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const textRef  = useRef<HTMLTextAreaElement>(null);
@@ -433,55 +444,90 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
     return () => document.removeEventListener('mousedown', close);
   }, [showEmoji]);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    return () => {
+      Object.values(attPreviews).forEach(URL.revokeObjectURL);
+    };
+  }, [attPreviews]);
+
+  function fileKey(file: File): string {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+  }
+
+  function validateFile(file: File): string | null {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    if (!ALLOWED_EXTENSIONS.has(ext)) {
-      setError('Tipo no permitido. Usa imagen, documento o audio compatible.');
-      if (fileRef.current) fileRef.current.value = '';
-      return;
-    }
-    if (file.size > MAX_ATTACHMENT_SIZE) {
-      setError('Archivo demasiado pesado. Máximo 10 MB.');
-      if (fileRef.current) fileRef.current.value = '';
+    if (!ALLOWED_EXTENSIONS.has(ext)) return 'Tipo no permitido. Usa imagen, documento o audio compatible.';
+    if (file.size > MAX_ATTACHMENT_SIZE) return 'Archivo demasiado pesado. Máximo 10 MB.';
+    return null;
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files ?? []);
+    if (selected.length === 0) return;
+    const invalid = selected.map(validateFile).find(Boolean);
+    if (invalid) {
+      setError(invalid);
+      e.target.value = '';
       return;
     }
     setError('');
-    setAttachment(file);
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = ev => setAttPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setAttPreview(null);
-    }
-    if (fileRef.current) fileRef.current.value = '';
+    setAttachments(prev => [...prev, ...selected]);
+    setAttPreviews(prev => {
+      const next = { ...prev };
+      selected.forEach(file => {
+        if (file.type.startsWith('image/')) next[fileKey(file)] = URL.createObjectURL(file);
+      });
+      return next;
+    });
+    e.target.value = '';
   }
 
-  function removeAttachment() {
-    setAttachment(null);
-    setAttPreview(null);
+  function removeAttachment(file: File) {
+    const key = fileKey(file);
+    setAttachments(prev => prev.filter(item => fileKey(item) !== key));
+    setAttPreviews(prev => {
+      const next = { ...prev };
+      if (next[key]) URL.revokeObjectURL(next[key]);
+      delete next[key];
+      return next;
+    });
   }
 
   async function handleSend() {
     const trimmed = text.trim();
-    if (disabled || (!trimmed && !attachment) || sending || uploading) return;
+    if (disabled || (!trimmed && attachments.length === 0) || sending || uploading) return;
     setSending(true);
 
     try {
-      let msg: Message;
-      if (attachment) {
+      if (attachments.length > 0) {
         setUploading(true);
-        msg = await chatService.sendWithAttachment(partnerId, trimmed, attachment, { referenciaId: replyTo?.id });
-        setUploading(false);
-        onSent(msg);
+        setFileProgresses({});
+        for (let index = 0; index < attachments.length; index++) {
+          const file = attachments[index];
+          const key = fileKey(file);
+          setCurrentUploadKey(key);
+          setUploadProgress(0);
+          setFileProgresses(prev => ({ ...prev, [key]: 0 }));
+          const msg = await chatService.sendWithAttachment(partnerId, index === 0 ? trimmed : '', file, {
+            referenciaId: replyTo?.id,
+            onProgress: (p) => {
+              setUploadProgress(p);
+              setFileProgresses(prev => ({ ...prev, [key]: p }));
+            },
+          });
+          setFileProgresses(prev => ({ ...prev, [key]: 100 }));
+          onSent(msg);
+        }
       } else {
         await onSendText(trimmed, replyTo?.id);
       }
       setText('');
-      setAttachment(null);
-      setAttPreview(null);
+      Object.values(attPreviews).forEach(URL.revokeObjectURL);
+      setAttachments([]);
+      setAttPreviews({});
+      setUploadProgress(0);
+      setFileProgresses({});
+      setCurrentUploadKey(null);
       onClearReply();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo enviar el archivo.');
@@ -496,7 +542,7 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  const hasContent = text.trim() || attachment;
+  const hasContent = text.trim() || attachments.length > 0;
 
   return (
     <div className="shrink-0 border-t border-[var(--border)] bg-[var(--bg-surface)]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 4px)' }}>
@@ -518,26 +564,80 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
       )}
 
       {/* Attachment preview */}
-      {attachment && (
-        <div className="flex items-center gap-2 px-4 pt-2 pb-1">
-          <div className="flex-1 min-w-0 flex items-center gap-2 bg-[var(--bg-elevated)] rounded-xl p-2">
-            {attPreview ? (
-              <img src={attPreview} alt="" className="size-10 rounded-lg object-cover shrink-0" />
-            ) : (
-              <span className="size-10 rounded-lg bg-[var(--brand-muted)] flex items-center justify-center shrink-0">
-                <svg className="size-5 text-[var(--brand)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                </svg>
-              </span>
-            )}
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-[var(--text-primary)] truncate">{attachment.name}</p>
-              <p className="text-[10px] text-[var(--text-muted)]">{(attachment.size / 1024).toFixed(0)} KB</p>
-            </div>
+      {attachments.length > 0 && (
+        <div className="px-4 pt-2 pb-1">
+          <div className="flex max-h-32 gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {attachments.map(file => {
+              const key = fileKey(file);
+              const filePct = fileProgresses[key];
+              const isUploading = uploading && currentUploadKey === key;
+              const isDone = uploading && filePct === 100;
+              return (
+                <div key={key} className="relative flex w-48 shrink-0 flex-col rounded-xl bg-[var(--bg-elevated)] p-2.5 gap-2">
+                  <div className="flex items-center gap-2">
+                    {attPreviews[key]
+                      ? <img src={attPreviews[key]} alt="" className="size-11 shrink-0 rounded-lg object-cover" />
+                      : <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[var(--brand-muted)] text-xl">
+                          {file.type.startsWith('audio/') ? '🎵' : file.name.endsWith('.pdf') ? '📄' : '📎'}
+                        </span>
+                    }
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-[var(--text-primary)]">{file.name}</p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{(file.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    {!uploading && (
+                      <button onClick={() => removeAttachment(file)}
+                        className="grid size-5 shrink-0 place-items-center rounded-full text-[var(--text-muted)] hover:bg-red-500/10 hover:text-red-500">
+                        <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {/* per-file progress bar */}
+                  {(isUploading || isDone) && (
+                    <div>
+                      <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-base)]">
+                        <div
+                          className={`h-full transition-all duration-150 ${isDone ? 'bg-emerald-500' : 'bg-[var(--brand)]'}`}
+                          style={{ width: `${filePct ?? 0}%` }}
+                        />
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-[var(--text-muted)] text-right">
+                        {isDone ? '✓ Listo' : `${filePct ?? 0}%`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <button onClick={removeAttachment} className="size-6 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors">
-            <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
+          {/* global progress when no inline previews */}
+          {uploading && attachments.length > 1 && (
+            <div className="mt-1.5">
+              <div className="flex justify-between text-[10px] text-[var(--text-muted)] mb-1">
+                <span>Subiendo {attachments.length} archivos…</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-base)]">
+                <div className="h-full bg-[var(--brand)] transition-all" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {uploading && attachments.length === 0 && (
+        <div className="px-4 pt-2 pb-1">
+          <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mb-1">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block size-3 rounded-full border-2 border-[var(--brand)]/30 border-t-[var(--brand)] animate-spin" />
+              Subiendo…
+            </span>
+            <span>{uploadProgress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
+            <div className="h-full bg-[var(--brand)] transition-all" style={{ width: `${uploadProgress}%` }} />
+          </div>
         </div>
       )}
       {error && (
@@ -586,8 +686,8 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
         </button>
-        <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange}
-          accept="image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mpeg,audio/mp4,audio/wav,.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.txt,.webm,.ogg,.mp3,.m4a,.mp4,.wav" />
+        <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} multiple
+          accept={ATTACHMENT_ACCEPT} />
 
         {/* Textarea */}
         <textarea
@@ -609,7 +709,7 @@ function ChatInput({ partnerId, partnerName, replyTo, onClearReply, onSent, onSe
           onSend={async (file, durationSeconds) => {
             try {
               setUploading(true);
-              const msg = await chatService.sendWithAttachment(partnerId, '', file, { referenciaId: replyTo?.id, messageType: 'AUDIO', durationSeconds });
+              const msg = await chatService.sendWithAttachment(partnerId, '', file, { referenciaId: replyTo?.id, messageType: 'AUDIO', durationSeconds, onProgress: setUploadProgress });
               onSent(msg);
               onClearReply();
             } finally {
@@ -652,6 +752,8 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
   const router          = useRouter();
   const { user }        = useAuth();
   const [partner, setPartner]   = useState<User | null>(null);
+  const [partnerOnline, setPartnerOnline] = useState(false);
+  const [partnerLastSeen, setPartnerLastSeen] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading]   = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -665,12 +767,15 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Message[]>([]);
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [forwarding, setForwarding] = useState<Message | null>(null);
   const [muted, setMuted] = useState(false);
   const [blockedByMe, setBlockedByMe] = useState(false);
   const [blockedMe, setBlockedMe] = useState(false);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [syncing, setSyncing] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [viewerItem, setViewerItem] = useState<AttachmentViewerItem | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef(true);
@@ -682,6 +787,45 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     () => messages.filter(msg => !msg.eliminado && (msg.archivoUrl || msg.fileUrl || msg.fileName || msg.nombreArchivo)),
     [messages],
   );
+  const attachmentViewerItems = useMemo<AttachmentViewerItem[]>(
+    () => mediaMessages.map(msg => ({
+      url: (msg.archivoUrl ?? msg.fileUrl)!,
+      fileName: msg.nombreArchivo ?? msg.fileName ?? msg.content ?? 'archivo',
+      type: msg.tipo,
+    })).filter(item => Boolean(item.url)),
+    [mediaMessages],
+  );
+  /* gallery items for MediaGallery component — include text messages with links too */
+  const galleryItems = useMemo<GalleryItem[]>(
+    () => [
+      ...mediaMessages
+        .filter(msg => Boolean(msg.archivoUrl ?? msg.fileUrl))
+        .map(msg => ({
+          id: msg.id,
+          url: (msg.archivoUrl ?? msg.fileUrl)!,
+          fileName: msg.nombreArchivo ?? msg.fileName ?? 'archivo',
+          tipo: msg.tipo,
+          fileType: msg.fileType ?? null,
+          fileSize: msg.fileSize ?? null,
+          content: msg.content ?? null,
+          createdAt: msg.createdAt ?? null,
+        })),
+      /* text messages that contain URLs */
+      ...messages
+        .filter(msg => !msg.eliminado && msg.tipo === 'TEXT' && /https?:\/\//i.test(msg.content ?? ''))
+        .map(msg => ({
+          id: msg.id,
+          url: '',
+          fileName: '',
+          tipo: 'TEXT' as const,
+          fileType: null,
+          fileSize: null,
+          content: msg.content ?? null,
+          createdAt: msg.createdAt ?? null,
+        })),
+    ],
+    [mediaMessages, messages],
+  );
   const visibleMessages = useMemo(() => messages.filter(hasVisibleMessage), [messages]);
 
   function showToast(msg: string) {
@@ -689,15 +833,24 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     setTimeout(() => setToast(''), 2000);
   }
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior, block: 'end' });
+    });
+  }, []);
+
   const load = useCallback(async () => {
     try {
-      const [msgs, partnerUser] = await Promise.all([
+      const [msgs, partnerUser, presence] = await Promise.all([
         chatService.getMessages(partnerId, { limit: PAGE_SIZE }),
         userService.getUser(partnerId),
+        chatService.getPresence(partnerId).catch(() => ({ online: false, lastSeen: null })),
       ]);
       setMessages(msgs);
       setHasMore(msgs.length === PAGE_SIZE);
       setPartner(partnerUser);
+      setPartnerOnline(presence.online);
+      setPartnerLastSeen(presence.lastSeen ?? partnerUser.lastSeen ?? null);
     } catch {
       router.replace('/messages');
     } finally {
@@ -755,6 +908,12 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       setWsState(state);
       if (connected) stompClient.send(`/app/dm/${conversationId}/status`, { status: 'connected' });
     });
+    const unsubPresence = stompClient.subscribe('/topic/presence', body => {
+      const event = body as { usuarioId?: number; online?: boolean; lastSeen?: string | null };
+      if (event.usuarioId !== partnerId) return;
+      setPartnerOnline(Boolean(event.online));
+      if (!event.online) setPartnerLastSeen(event.lastSeen ?? new Date().toISOString());
+    });
     const unsubEvents = stompClient.subscribe(`/topic/dm/${conversationId}/events`, body => {
       const event = body as DMRealtimeEvent;
       if (!event.eventType || event.conversationId !== conversationId) return;
@@ -765,11 +924,13 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
         const shouldScroll = isAtBottom.current || msg.senderId === user.id;
         setMessages(prev => mergeMessages(prev, [msg]));
         if (msg.senderId === partnerId && msg.status !== 'READ') {
-          void chatService.markDelivered(msg.id).catch(() => {});
+          void chatService.markRead(partnerId).catch(() => {
+            void chatService.markDelivered(msg.id).catch(() => {});
+          });
         }
         if (shouldScroll) {
           isAtBottom.current = true;
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+          window.setTimeout(() => scrollToBottom('smooth'), 50);
         } else {
           setNewMessages(count => count + 1);
         }
@@ -820,6 +981,12 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
           setTypingName('');
         }
       }
+
+      if (event.eventType === 'DM_CONNECTION_STATUS' && event.senderId === partnerId) {
+        const payload = event.payload as { status?: string } | undefined;
+        setPartnerOnline(payload?.status !== 'disconnected');
+        if (payload?.status === 'disconnected') setPartnerLastSeen(new Date().toISOString());
+      }
     });
 
     return () => {
@@ -828,11 +995,17 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       stompClient.send(`/app/dm/${conversationId}/typing`, { typing: false });
       stompClient.send(`/app/dm/${conversationId}/status`, { status: 'disconnected' });
       unsubState();
+      unsubPresence();
       unsubEvents();
       setTypingName('');
       setNewMessages(0);
     };
-  }, [partnerId, partnerName, user?.id]);
+  }, [partnerId, partnerName, scrollToBottom, user?.id]);
+
+  useEffect(() => {
+    if (!partnerId) return;
+    void chatService.markRead(partnerId).catch(() => {});
+  }, [partnerId]);
 
   useEffect(() => {
     void chatService.getPinned(partnerId).then(setPinnedMessages).catch(() => {});
@@ -855,20 +1028,32 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       try {
         const msgs = await chatService.getMessages(partnerId, { limit: PAGE_SIZE });
         setMessages(prev => {
+          const shouldScroll = isAtBottom.current;
+          const applyNext = (next: Message[]) => {
+            window.setTimeout(() => { if (shouldScroll) scrollToBottom('smooth'); }, 50);
+            return next;
+          };
           if (prev.some(m => m.status === 'PENDING' || m.status === 'FAILED')) return mergeMessages(prev, msgs);
           if (prev.length > PAGE_SIZE) return mergeMessages(prev, msgs);
-          if (msgs.length !== prev.length) return msgs;
+          if (msgs.length !== prev.length) return applyNext(msgs);
           const a = prev[prev.length - 1], b = msgs[msgs.length - 1];
-          return (!a || !b || a.id !== b.id || a.read !== b.read) ? msgs : prev;
+          return (!a || !b || a.id !== b.id || a.read !== b.read) ? applyNext(msgs) : prev;
         });
       } catch { /* silent */ }
     }
-    const start = () => { id = setInterval(poll, POLL_MS); };
+    const start = () => {
+      if (id) return;
+      id = setInterval(poll, POLL_MS);
+    };
     const stop  = () => { if (id) clearInterval(id); id = null; };
     start();
-    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' ? start() : stop());
-    return stop;
-  }, [partnerId]);
+    const handleVisibility = () => document.visibilityState === 'visible' ? start() : stop();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [partnerId, scrollToBottom]);
 
   const loadOlder = useCallback(async () => {
     const el = scrollRef.current;
@@ -908,9 +1093,28 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
   // Scroll to bottom on new messages (only if already at bottom)
   useEffect(() => {
     if (isAtBottom.current) {
-      bottomRef.current?.scrollIntoView({ behavior: loading ? 'instant' : 'smooth' });
+      scrollToBottom(loading ? 'instant' : 'smooth');
     }
-  }, [messages, loading]);
+  }, [messages, loading, scrollToBottom]);
+
+  useEffect(() => {
+    const keepBottomVisible = () => {
+      if (isAtBottom.current) scrollToBottom('instant');
+    };
+    const handleFocus = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement && event.target.closest('textarea,input')) {
+        window.setTimeout(keepBottomVisible, 80);
+      }
+    };
+    window.visualViewport?.addEventListener('resize', keepBottomVisible);
+    window.visualViewport?.addEventListener('scroll', keepBottomVisible);
+    document.addEventListener('focusin', handleFocus);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', keepBottomVisible);
+      window.visualViewport?.removeEventListener('scroll', keepBottomVisible);
+      document.removeEventListener('focusin', handleFocus);
+    };
+  }, [scrollToBottom]);
 
   async function handleDelete(id: number) {
     try {
@@ -929,16 +1133,32 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     } catch { /* silent */ }
   }
 
-  function handleCopy(text: string) {
-    navigator.clipboard.writeText(text).catch(() => {});
-    showToast('Copiado');
+  async function handleCopy(text: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+      }
+      showToast('Mensaje copiado');
+    } catch {
+      showToast('No se pudo copiar');
+    }
   }
 
   function handleSent(msg: Message) {
     setMessages(prev => mergeMessages(prev, [msg]));
     isAtBottom.current = true;
     setNewMessages(0);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    window.setTimeout(() => scrollToBottom('smooth'), 50);
   }
 
   async function sendTextOptimistic(content: string, referenciaId?: number) {
@@ -976,7 +1196,12 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     };
     setMessages(prev => mergeMessages(prev, [tempMessage]));
     isAtBottom.current = true;
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    window.setTimeout(() => scrollToBottom('smooth'), 50);
+    stompClient.send(`/app/dm/${dmConversationId(user.id, partnerId)}/typing`, { typing: false });
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
 
     if (queued) {
       showToast('Sin conexión. Se enviará al reconectar.');
@@ -1009,10 +1234,11 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
   function handleTyping() {
     if (!user?.id) return;
     const conversationId = dmConversationId(user.id, partnerId);
-    stompClient.send(`/app/dm/${conversationId}/typing`, { typing: true });
+    if (!typingTimerRef.current) stompClient.send(`/app/dm/${conversationId}/typing`, { typing: true });
     if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
     typingTimerRef.current = window.setTimeout(() => {
       stompClient.send(`/app/dm/${conversationId}/typing`, { typing: false });
+      typingTimerRef.current = null;
     }, 1200);
   }
 
@@ -1036,15 +1262,33 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     }
   }
 
-  async function forwardMessage(msg: Message) {
-    const raw = window.prompt('ID del usuario destino');
-    const recipientId = raw ? Number(raw) : NaN;
-    if (!Number.isFinite(recipientId) || recipientId <= 0) return;
+  function forwardMessage(msg: Message) {
+    setForwarding(msg);
+  }
+
+  async function forwardToUser(recipientId: number) {
+    if (!forwarding) return;
     try {
-      await chatService.forward(msg.id, recipientId);
+      await chatService.forward(forwarding.id, recipientId);
+      setForwarding(null);
       showToast('Mensaje reenviado');
-    } catch {
-      showToast('No se pudo reenviar');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo reenviar';
+      showToast(message);
+      throw err;
+    }
+  }
+
+  async function forwardToGroup(groupId: number) {
+    if (!forwarding) return;
+    try {
+      await chatService.forwardToGroup(forwarding.id, groupId);
+      setForwarding(null);
+      showToast('Mensaje reenviado');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo reenviar';
+      showToast(message);
+      throw err;
     }
   }
 
@@ -1082,6 +1326,16 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
 
   function jumpToMessage(id: number) {
     document.getElementById(`dm-msg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function openMessageAttachment(msg: Message) {
+    const url = msg.archivoUrl ?? msg.fileUrl;
+    if (!url) return;
+    setViewerItem({
+      url,
+      fileName: msg.nombreArchivo ?? msg.fileName ?? msg.content ?? 'archivo',
+      type: msg.tipo,
+    });
   }
 
   async function setArchived(archived: boolean) {
@@ -1172,22 +1426,15 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
         <Link href={`/profile/${partnerId}`} className="flex items-center gap-3 flex-1 min-w-0 group">
           <div className="relative shrink-0">
             <Avatar src={partner?.avatarUrl} name={partnerName} size="sm" />
-            {partner?.isOnline && (
-              <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 border-2 border-[var(--bg-surface)]" />
-            )}
+            <span className={`absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-[var(--bg-surface)] ${partnerOnline ? 'bg-emerald-500' : 'bg-[var(--text-muted)]'}`} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--text-primary)] truncate group-hover:text-[var(--brand)] transition-colors">
               {partnerName}
             </p>
-            {(partner?.carrera ?? partner?.lastSeen ?? (partner as { carrera?: string } | null)?.carrera) && (
-              <p className={`text-[11px] truncate ${typingName ? 'text-[var(--brand)]' : 'text-[var(--text-muted)]'}`}>
-                {typingName ? `${typingName} está escribiendo...` : (partner as { carrera?: string }).carrera || lastSeenLabel(partner?.lastSeen)}
-              </p>
-            )}
-            {!partner?.carrera && typingName && (
-              <p className="text-[11px] text-[var(--brand)] truncate">escribiendo...</p>
-            )}
+            <p className={`text-[11px] truncate ${typingName || partnerOnline ? 'text-[var(--brand)]' : 'text-[var(--text-muted)]'}`}>
+              {typingName ? `${typingName} está escribiendo...` : partnerOnline ? 'Online' : lastSeenLabel(partnerLastSeen ?? partner?.lastSeen) || 'Offline'}
+            </p>
           </div>
         </Link>
 
@@ -1276,9 +1523,30 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
 
       {pinnedMessages.length > 0 && (
         <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1.5">
-          <button onClick={() => jumpToMessage(pinnedMessages[0].id)} className="w-full truncate text-left text-[11px] font-medium text-[var(--brand)]">
-            Fijado: {pinnedMessages[0].content || pinnedMessages[0].nombreArchivo || 'Archivo'}
+          <button
+            type="button"
+            onClick={() => setPinnedOpen(v => !v)}
+            className="w-full truncate text-left text-[11px] font-medium text-[var(--brand)]"
+          >
+            Fijados ({pinnedMessages.length}): {pinnedMessages[0].content || pinnedMessages[0].nombreArchivo || messageKindLabel(pinnedMessages[0].tipo)}
           </button>
+          {pinnedOpen && (
+            <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+              {pinnedMessages.map(msg => (
+                <button
+                  key={msg.id}
+                  type="button"
+                  onClick={() => {
+                    setPinnedOpen(false);
+                    jumpToMessage(msg.id);
+                  }}
+                  className="block w-full truncate rounded-lg px-2 py-1.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
+                >
+                  {messageKindLabel(msg.tipo)} · {msg.content || msg.nombreArchivo || 'Mensaje fijado'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1295,39 +1563,19 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       )}
 
       {galleryOpen && (
-        <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-surface)] px-3 py-3">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-[var(--text-secondary)]">Multimedia y archivos</p>
-            <button onClick={() => setGalleryOpen(false)} className="text-xs text-[var(--text-muted)]">Cerrar</button>
-          </div>
-          {mediaMessages.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)]">Sin archivos compartidos.</p>
-          ) : (
-            <div className="grid max-h-44 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-5">
-              {mediaMessages.map(msg => (
-                <button
-                  key={msg.id}
-                  type="button"
-                  onClick={() => void openSecureAttachment((msg.archivoUrl ?? msg.fileUrl)!, msg.nombreArchivo ?? msg.fileName ?? 'archivo')}
-                  className="min-w-0 rounded-lg bg-[var(--bg-elevated)] p-2 text-left"
-                >
-                  {msg.tipo === 'IMAGE' && (msg.archivoUrl || msg.fileUrl) ? (
-                    <SecureImage src={(msg.archivoUrl ?? msg.fileUrl)!} alt={msg.nombreArchivo ?? 'imagen'} className="aspect-square w-full rounded-md object-cover" />
-                  ) : (
-                    <div className="grid aspect-square place-items-center rounded-md bg-[var(--brand-muted)] text-[var(--brand)]">
-                      <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
-                    </div>
-                  )}
-                  <p className="mt-1 truncate text-[10px] text-[var(--text-muted)]">{msg.nombreArchivo ?? msg.fileName ?? msg.content ?? 'Archivo'}</p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <MediaGallery
+          items={galleryItems}
+          title={`Archivos compartidos con ${partnerName}`}
+          onOpen={galleryItem => {
+            if (!galleryItem.url) return;
+            setViewerItem({ url: galleryItem.url, fileName: galleryItem.fileName, type: galleryItem.tipo });
+          }}
+          onClose={() => setGalleryOpen(false)}
+        />
       )}
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-0.5">
+      <div ref={scrollRef} className="flex-1 touch-pan-y overscroll-contain overflow-y-auto scrollbar-hide px-3 py-4 space-y-0.5">
         {loading ? (
           <div className="flex justify-center py-10">
             <span className="size-6 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
@@ -1372,6 +1620,8 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
                   onDeleteForMe={deleteForMe}
                   onPin={togglePin}
                   onReport={reportMessage}
+                  onJumpTo={jumpToMessage}
+                  onOpenAttachment={openMessageAttachment}
                 />
               </div>
             )
@@ -1385,7 +1635,7 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
             onClick={() => {
               setNewMessages(0);
               isAtBottom.current = true;
-              bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+              scrollToBottom('smooth');
             }}
             className="sticky bottom-2 left-1/2 z-20 mx-auto mt-2 block -translate-x-0 rounded-full bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
           >
@@ -1406,6 +1656,22 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
         disabled={blockedByMe || blockedMe}
         disabledReason={blockedByMe ? 'Usuario bloqueado.' : blockedMe ? 'No puedes enviar mensajes a este usuario.' : undefined}
       />
+
+      {forwarding && (
+        <ForwardMessageModal
+          onClose={() => setForwarding(null)}
+          onForwardUser={forwardToUser}
+          onForwardGroup={forwardToGroup}
+        />
+      )}
+
+      {viewerItem && (
+        <SecureAttachmentViewer
+          item={viewerItem}
+          items={attachmentViewerItems}
+          onClose={() => setViewerItem(null)}
+        />
+      )}
 
       {/* Toast */}
       {toast && (

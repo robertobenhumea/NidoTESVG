@@ -7,6 +7,7 @@ import { Plus, Search, Users, X } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { timeAgo } from '@/lib/utils';
 import { chatOffline } from '@/lib/chatOffline';
+import { stompClient } from '@/lib/stomp';
 import { chatService } from '@/services/chat.service';
 import { groupChatService } from '@/services/groupChat.service';
 import { searchService } from '@/services/search.service';
@@ -17,6 +18,11 @@ function safeTimeAgo(value?: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return timeAgo(value);
+}
+
+function lastSeenText(value?: string | null): string {
+  const label = safeTimeAgo(value);
+  return label ? `Última vez activo ${label}` : 'Offline';
 }
 
 function chatListLog(message: string, extra?: unknown) {
@@ -44,12 +50,14 @@ interface ConvRowProps {
   conv: Conversation;
   active: boolean;
   onlineIds: Set<number>;
+  presence?: { online: boolean; lastSeen?: string | null };
 }
 
-function ConvRow({ conv, active, onlineIds }: ConvRowProps) {
-  const isOnline = onlineIds.has(conv.partnerId);
+function ConvRow({ conv, active, onlineIds, presence }: ConvRowProps) {
+  const isOnline = presence?.online ?? (onlineIds.has(conv.partnerId) || Boolean(conv.online));
   const hasUnread = conv.unreadCount > 0;
   const updatedLabel = safeTimeAgo(conv.updatedAt);
+  const presenceLabel = isOnline ? 'Online' : lastSeenText(presence?.lastSeen ?? conv.lastSeen);
 
   const lastPreview = conv.isMine
     ? `Tú: ${conv.lastMessage ?? ''}`
@@ -58,18 +66,16 @@ function ConvRow({ conv, active, onlineIds }: ConvRowProps) {
   return (
     <Link
       href={`/messages/${conv.partnerId}`}
-      className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${
+      className={`flex min-h-[72px] items-center gap-3 px-4 py-3 transition-colors duration-100 ${
         active
           ? 'bg-[var(--brand-muted)]'
           : 'hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-elevated)]'
       }`}
     >
       {/* Avatar + online dot */}
-      <div className="relative shrink-0">
+      <div className="relative shrink-0" title={presenceLabel}>
         <Avatar src={conv.partnerAvatar} name={conv.partnerName} size="md" />
-        {isOnline && (
-          <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 border-2 border-[var(--bg-surface)]" />
-        )}
+        <span className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-[var(--bg-surface)] ${isOnline ? 'bg-emerald-500' : 'bg-[var(--text-muted)]'}`} />
       </div>
 
       {/* Text */}
@@ -115,7 +121,7 @@ function GroupRow({ group, active }: { group: ChatGroup; active: boolean }) {
   return (
     <Link
       href={`/messages/groups/${group.id}`}
-      className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${
+      className={`flex min-h-[72px] items-center gap-3 px-4 py-3 transition-colors duration-100 ${
         active ? 'bg-[var(--brand-muted)]' : 'hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-elevated)]'
       }`}
     >
@@ -263,12 +269,53 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
   const [query, setQuery]     = useState('');
   const [tab, setTab]         = useState<'chats' | 'groups'>(activeGroupId ? 'groups' : 'chats');
   const [creating, setCreating] = useState(false);
+  const [presence, setPresence] = useState<Record<number, { online: boolean; lastSeen?: string | null }>>({});
   const stateRef = useRef({ convCount: 0, groupCount: 0, query: '' });
   const lastBackendDmCountRef = useRef(0);
 
   useEffect(() => {
     stateRef.current = { convCount: convs.length, groupCount: groups.length, query };
   }, [convs.length, groups.length, query]);
+
+  const seedPresence = useCallback((items: Conversation[]) => {
+    setPresence(prev => {
+      const next = { ...prev };
+      for (const conv of items) {
+        if (!next[conv.partnerId]) {
+          next[conv.partnerId] = { online: Boolean(conv.online), lastSeen: conv.lastSeen ?? null };
+        } else {
+          next[conv.partnerId] = {
+            online: next[conv.partnerId].online || Boolean(conv.online),
+            lastSeen: next[conv.partnerId].lastSeen ?? conv.lastSeen ?? null,
+          };
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsub = stompClient.subscribe('/topic/presence', body => {
+      const event = body as { usuarioId?: number; online?: boolean; lastSeen?: string | null };
+      if (!event.usuarioId) return;
+      setPresence(prev => ({
+        ...prev,
+        [event.usuarioId!]: {
+          online: Boolean(event.online),
+          lastSeen: event.online ? prev[event.usuarioId!]?.lastSeen ?? null : event.lastSeen ?? new Date().toISOString(),
+        },
+      }));
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!activePartnerId) return;
+    const id = window.setTimeout(() => {
+      setConvs(prev => prev.map(conv => conv.partnerId === activePartnerId ? { ...conv, unreadCount: 0 } : conv));
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [activePartnerId]);
 
   const applyDmState = useCallback((params: {
     next: Conversation[];
@@ -306,6 +353,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
         reason: 'initial-cache-fallback',
         backendCount: 0,
       });
+      seedPresence(cached);
     }
     try {
       const result = await chatService.getConversationsResult();
@@ -315,6 +363,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
         reason: result.reason,
         backendCount: result.backendCount,
       });
+      seedPresence(result.conversations);
       setError('');
     } catch (err) {
       chatListLog('error cargando DM en ConvList', { source: 'backend/cache', error: err });
@@ -322,7 +371,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
     } finally {
       setLoading(false);
     }
-  }, [applyDmState]);
+  }, [applyDmState, seedPresence]);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -454,7 +503,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
       )}
 
       {/* List */}
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+      <div className="min-h-0 flex-1 touch-pan-y overscroll-contain overflow-y-auto scrollbar-hide">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <ConvSkeleton key={i} />)
         ) : isGroupsTab ? (
@@ -484,6 +533,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
               conv={c}
               active={c.partnerId === activePartnerId}
               onlineIds={onlineIds}
+              presence={presence[c.partnerId]}
             />
           ))
         )}

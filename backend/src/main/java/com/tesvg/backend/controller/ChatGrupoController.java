@@ -33,8 +33,15 @@ public class ChatGrupoController {
     private static final long MAX_ATTACHMENT_SIZE = 10L * 1024L * 1024L;
     private static final int MAX_AUDIO_DURATION_SECONDS = 5 * 60;
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
-    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "doc", "docx", "txt");
+    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of(
+            "pdf", "doc", "docx", "xls", "xlsx", "csv", "ppt", "pptx", "txt",
+            "zip", "rar", "7z"
+    );
     private static final Set<String> AUDIO_EXTENSIONS = Set.of("webm", "ogg", "mp3", "m4a", "mp4", "wav");
+    private static final Set<String> AUDIO_CONTENT_TYPES = Set.of(
+            "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "audio/x-m4a",
+            "video/webm", "application/ogg", "application/octet-stream"
+    );
     private static final Set<String> DANGEROUS_EXTENSIONS = Set.of("html", "htm", "svg", "js", "exe", "bat", "sh", "cmd", "com", "scr", "msi", "jar");
 
     @Autowired private ChatGrupoRepository grupoRepo;
@@ -43,6 +50,8 @@ public class ChatGrupoController {
     @Autowired private GroupAttachmentRepository attachmentRepo;
     @Autowired private MessageReactionRepository reactionRepo;
     @Autowired private ChatGrupoMensajeOcultoRepository ocultoRepo;
+    @Autowired private MensajeRepository dmMensajeRepo;
+    @Autowired private ChatBlockRepository blockRepo;
     @Autowired private UsuarioRepository usuarioRepo;
     @Autowired private SimpMessagingTemplate messagingTemplate;
     @Autowired private RedisCacheService redisCacheService;
@@ -444,6 +453,8 @@ public class ChatGrupoController {
         if (!m.getEmisorId().equals(yo.getId()) || Boolean.TRUE.equals(m.getEsSistema())) {
             return ResponseEntity.status(403).body(Map.of("error", "Solo puedes editar tus mensajes"));
         }
+        if (Boolean.TRUE.equals(m.getEliminado())) return ResponseEntity.badRequest().body(Map.of("error", "No se puede editar un mensaje eliminado"));
+        if (!"TEXT".equals(normalizarTipo(m.getTipo()))) return ResponseEntity.badRequest().body(Map.of("error", "Solo se pueden editar mensajes de texto"));
 
         String contenido = body.contenido() != null ? body.contenido().trim() : "";
         if (contenido.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "El mensaje no puede quedar vacío"));
@@ -524,10 +535,14 @@ public class ChatGrupoController {
         ChatGrupoMensaje copy = new ChatGrupoMensaje();
         copy.setGrupoId(destinoId);
         copy.setEmisorId(yo.getId());
-        copy.setContenido(original.getContenido());
-        copy.setTipo(original.getTipo());
+        copy.setContenido(safeForwardContent(original.getContenido()));
+        copy.setTipo(normalizarTipoReenvio(original.getTipo(), original.getArchivoUrl(), original.getNombreArchivo()));
         copy.setArchivoUrl(original.getArchivoUrl());
         copy.setNombreArchivo(original.getNombreArchivo());
+        copy.setFileType(original.getFileType());
+        copy.setFileSize(original.getFileSize());
+        copy.setDurationSeconds(original.getDurationSeconds());
+        copy.setWaveformData(original.getWaveformData());
         copy.setReferenciaId(null);
         copy.setEliminado(false);
         copy.setEsSistema(false);
@@ -539,6 +554,53 @@ public class ChatGrupoController {
         miembroRepo.actualizarUltimaLectura(destinoId, yo.getId(), copy.getFecha());
         ChatGroupMessageDTO dto = toMessageDTO(copy, yo.getId());
         publishGroupEvent("message.created", destinoId, copy.getId(), dto, yo.getId());
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/mensajes/{msgId}/reenviar/usuario/{destinatarioId}")
+    public ResponseEntity<?> reenviarAUsuario(@PathVariable Long id,
+                                              @PathVariable Long msgId,
+                                              @PathVariable Long destinatarioId,
+                                              HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        ChatGrupoMensaje original = mensajeRepo.findById(msgId).orElse(null);
+        if (original == null || !original.getGrupoId().equals(id)) return ResponseEntity.notFound().build();
+        if (!miembroRepo.existsByGrupoIdAndUsuarioIdAndActivoTrue(id, yo.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro del grupo origen"));
+        }
+        if (Boolean.TRUE.equals(original.getEliminado()) || Boolean.TRUE.equals(original.getEsSistema())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No se puede reenviar este mensaje"));
+        }
+        if (usuarioRepo.findById(destinatarioId).isEmpty()) return ResponseEntity.status(404).body(Map.of("error", "Destinatario no encontrado"));
+        if (blockRepo.existsByBlockerIdAndBlockedId(yo.getId(), destinatarioId) || blockRepo.existsByBlockerIdAndBlockedId(destinatarioId, yo.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No puedes enviar mensajes a este usuario"));
+        }
+        if (!rateLimitService.allow("forward:group", yo.getId().toString(), 10, Duration.ofMinutes(1))) {
+            audit(yo.getId(), "RATE_LIMIT", "GROUP_FORWARD_DM", msgId, "forward:group");
+            return ResponseEntity.status(429).body(Map.of("error", "Estás reenviando demasiado rápido"));
+        }
+
+        Mensaje copy = new Mensaje();
+        copy.setEmisorId(yo.getId());
+        copy.setReceptorId(destinatarioId);
+        copy.setContenido(safeForwardContent(original.getContenido()));
+        copy.setTipo(normalizarTipoReenvio(original.getTipo(), original.getArchivoUrl(), original.getNombreArchivo()));
+        copy.setArchivoUrl(original.getArchivoUrl());
+        copy.setNombreArchivo(original.getNombreArchivo());
+        copy.setFileType(original.getFileType());
+        copy.setFileSize(original.getFileSize());
+        copy.setDurationSeconds(original.getDurationSeconds());
+        copy.setWaveformData(original.getWaveformData());
+        copy.setFecha(LocalDateTime.now());
+        copy.setSentAt(copy.getFecha());
+        copy.setStatus("SENT");
+        copy.setLeido(false);
+        copy.setEliminado(false);
+        copy.setReenviado(true);
+        copy.setMensajeOriginalId(original.getId());
+        dmMensajeRepo.save(copy);
+        MessageDTO dto = toDMForwardDTO(copy, yo);
+        publishDMEvent("DM_MESSAGE_CREATED", conversationId(yo.getId(), destinatarioId), copy.getId(), yo.getId(), destinatarioId, dto);
         return ResponseEntity.ok(dto);
     }
 
@@ -571,9 +633,54 @@ public class ChatGrupoController {
 
         m.setEliminado(true);
         m.setContenido("Este mensaje fue eliminado");
+        m.setArchivoUrl(null);
+        m.setNombreArchivo(null);
+        m.setFileType(null);
+        m.setFileSize(null);
+        m.setDurationSeconds(null);
+        m.setWaveformData(null);
         mensajeRepo.save(m);
         publishGroupEvent("message.deleted", id, msgId, toMessageDTO(m, yo.getId()), yo.getId());
         return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @GetMapping("/{id}/mensajes/fijados")
+    public ResponseEntity<?> mensajesFijados(@PathVariable Long id, HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        if (!miembroRepo.existsByGrupoIdAndUsuarioIdAndActivoTrue(id, yo.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro de este grupo"));
+        }
+        return ResponseEntity.ok(mensajeRepo.findPinnedByGrupoId(id).stream()
+                .filter(m -> !ocultoRepo.existsByMensajeIdAndUsuarioId(m.getId(), yo.getId()))
+                .map(m -> toMessageDTO(m, yo.getId()))
+                .toList());
+    }
+
+    @PutMapping("/{id}/mensajes/{msgId}/fijar")
+    public ResponseEntity<?> fijarMensaje(@PathVariable Long id,
+                                          @PathVariable Long msgId,
+                                          @RequestBody Map<String, Object> body,
+                                          HttpServletRequest request) {
+        Usuario yo = getUsuario(request);
+        ChatGrupoMensaje m = mensajeRepo.findById(msgId).orElse(null);
+        if (m == null || !m.getGrupoId().equals(id)) return ResponseEntity.notFound().build();
+        ChatGrupoMiembro miembro = miembroRepo.findByGrupoIdAndUsuarioId(id, yo.getId()).orElse(null);
+        if (miembro == null || !Boolean.TRUE.equals(miembro.getActivo())) {
+            return ResponseEntity.status(403).body(Map.of("error", "No eres miembro activo de este grupo"));
+        }
+        boolean esAutor = m.getEmisorId().equals(yo.getId());
+        if (!esAutor && !esAdmin(miembro)) return ResponseEntity.status(403).body(Map.of("error", "Sin permiso para fijar"));
+        if (Boolean.TRUE.equals(m.getEliminado()) || Boolean.TRUE.equals(m.getEsSistema())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No se puede fijar este mensaje"));
+        }
+        boolean pinned = !Boolean.FALSE.equals(body.get("pinned"));
+        m.setPinned(pinned);
+        m.setPinnedBy(pinned ? yo.getId() : null);
+        m.setPinnedAt(pinned ? LocalDateTime.now() : null);
+        mensajeRepo.save(m);
+        ChatGroupMessageDTO dto = toMessageDTO(m, yo.getId());
+        publishGroupEvent("message.updated", id, msgId, dto, yo.getId());
+        return ResponseEntity.ok(dto);
     }
 
     // ── MIEMBROS ──
@@ -819,9 +926,11 @@ public class ChatGrupoController {
         if (!miembroRepo.existsByGrupoIdAndUsuarioIdAndActivoTrue(id, yo.getId())) {
             return ResponseEntity.status(403).body(Map.of("error", "No eres miembro de este grupo"));
         }
-        miembroRepo.actualizarUltimaLectura(id, yo.getId(), LocalDateTime.now());
+        LocalDateTime readAt = LocalDateTime.now();
+        miembroRepo.actualizarUltimaLectura(id, yo.getId(), readAt);
         redisCacheService.delete("chat:groups:unread:" + yo.getId());
-        return ResponseEntity.ok(Map.of("ok", true));
+        publishGroupEvent("read.updated", id, null, null, yo.getId());
+        return ResponseEntity.ok(Map.of("ok", true, "readAt", readAt));
     }
 
     // ── HELPERS ──
@@ -901,6 +1010,9 @@ public class ChatGrupoController {
                 m.getActualizadoEn(),
                 Boolean.TRUE.equals(m.getReenviado()),
                 m.getMensajeOriginalId(),
+                Boolean.TRUE.equals(m.getPinned()),
+                m.getPinnedBy(),
+                m.getPinnedAt(),
                 reactions,
                 myReaction,
                 m.getFecha(),
@@ -926,6 +1038,82 @@ public class ChatGrupoController {
         ChatRealtimeEventDTO event = new ChatRealtimeEventDTO(type, grupoId, messageId, message, actorId);
         messagingTemplate.convertAndSend("/topic/grupos/" + grupoId + "/events", event);
         redisCacheService.publish("falconnet:chat-events", event);
+    }
+
+    private MessageDTO toDMForwardDTO(Mensaje m, Usuario sender) {
+        boolean deleted = Boolean.TRUE.equals(m.getEliminado());
+        String type = normalizarTipo(m.getTipo());
+        String content = deleted ? "Mensaje eliminado" : safeForwardContent(m.getContenido());
+        String fileUrl = deleted ? null : m.getArchivoUrl();
+        String fileName = deleted ? null : m.getNombreArchivo();
+        LocalDateTime createdAt = m.getFecha() != null ? m.getFecha() : m.getSentAt();
+        return new MessageDTO(
+                m.getId(),
+                content,
+                m.getEmisorId(),
+                sender != null ? sender.getUsername() : null,
+                m.getReceptorId(),
+                m.getStatus() != null ? m.getStatus() : "SENT",
+                m.getSentAt(),
+                m.getDeliveredAt(),
+                m.getReadAt(),
+                deleted,
+                null,
+                m.getEmisorId(),
+                m.getReceptorId(),
+                content,
+                createdAt,
+                createdAt,
+                Boolean.TRUE.equals(m.getLeido()),
+                type,
+                type,
+                fileUrl,
+                fileName,
+                deleted ? null : m.getFileType(),
+                deleted ? null : m.getFileSize(),
+                deleted ? null : m.getDurationSeconds(),
+                deleted ? null : m.getWaveformData(),
+                fileUrl,
+                fileName,
+                deleted,
+                m.getReferenciaId(),
+                sender != null ? sender.getUsername() : null,
+                sender != null ? sender.getFotoPerfil() : null,
+                Boolean.TRUE.equals(m.getEditado()),
+                m.getActualizadoEn(),
+                Boolean.TRUE.equals(m.getReenviado()),
+                m.getMensajeOriginalId(),
+                Boolean.TRUE.equals(m.getPinned()),
+                m.getPinnedBy(),
+                m.getPinnedAt(),
+                List.of(),
+                null
+        );
+    }
+
+    private String conversationId(Long first, Long second) {
+        long min = Math.min(first, second);
+        long max = Math.max(first, second);
+        return min + "-" + max;
+    }
+
+    private void publishDMEvent(String eventType, String conversationId, Long messageId, Long senderId, Long recipientId, MessageDTO payload) {
+        try {
+            messagingTemplate.convertAndSend(
+                    "/topic/dm/" + conversationId + "/events",
+                    new DMRealtimeEventDTO(
+                            eventType,
+                            conversationId,
+                            messageId,
+                            senderId,
+                            recipientId,
+                            LocalDateTime.now(),
+                            payload
+                    )
+            );
+        } catch (Exception ignored) {
+            // REST remains authoritative; realtime delivery must not break writes.
+        }
     }
 
     private void notifyGroupMembers(Long grupoId, Usuario sender, ChatGrupoMensaje message) {
@@ -1045,6 +1233,23 @@ public class ChatGrupoController {
             case "TEXT", "TEXTO" -> "TEXT";
             default -> "TEXT";
         };
+    }
+
+    private String normalizarTipoReenvio(String tipo, String archivoUrl, String nombreArchivo) {
+        String normalized = normalizarTipo(tipo);
+        if (!"TEXT".equals(normalized)) return normalized;
+        String source = nombreArchivo != null && !nombreArchivo.isBlank() ? nombreArchivo : archivoUrl;
+        if (source != null && source.contains(".")) {
+            String ext = source.substring(source.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
+            if (IMAGE_EXTENSIONS.contains(ext)) return "IMAGE";
+            if (AUDIO_EXTENSIONS.contains(ext)) return "AUDIO";
+            if (DOCUMENT_EXTENSIONS.contains(ext)) return "DOCUMENT";
+        }
+        return archivoUrl != null && !archivoUrl.isBlank() ? "DOCUMENT" : "TEXT";
+    }
+
+    private String safeForwardContent(String content) {
+        return content != null ? content : "";
     }
 
     private String normalizarGrupoTipo(String tipo) {
@@ -1170,7 +1375,7 @@ public class ChatGrupoController {
         if ("DOCUMENT".equals(messageType) && lower.startsWith("image/")) {
             throw new IllegalArgumentException("Tipo de documento no permitido");
         }
-        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/")) {
+        if ("AUDIO".equals(messageType) && !lower.startsWith("audio/") && !AUDIO_CONTENT_TYPES.contains(lower)) {
             throw new IllegalArgumentException("Tipo de audio no permitido");
         }
     }
