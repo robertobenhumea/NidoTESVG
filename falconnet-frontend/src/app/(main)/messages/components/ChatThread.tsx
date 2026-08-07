@@ -16,7 +16,6 @@ import { VoicePlayer, VoiceRecorder } from './VoiceMessage';
 import { ForwardMessageModal } from './ForwardMessageModal';
 import { MediaGallery, type GalleryItem } from './MediaGallery';
 
-const POLL_MS = 5_000;
 const PAGE_SIZE = 50;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'zip', 'rar', '7z', 'webm', 'ogg', 'mp3', 'm4a', 'mp4', 'wav']);
@@ -781,6 +780,7 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
   const isAtBottom = useRef(true);
   const typingTimerRef = useRef<number | null>(null);
   const typingClearRef = useRef<number | null>(null);
+  const reconnectSyncRef = useRef(false);
   const tempIdRef = useRef(-1);
   const partnerName = partner ? (partner.displayName ?? partner.username) : '…';
   const mediaMessages = useMemo(
@@ -906,7 +906,15 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     const conversationId = dmConversationId(user.id, partnerId);
     const unsubState = stompClient.onState((connected, state) => {
       setWsState(state);
-      if (connected) stompClient.send(`/app/dm/${conversationId}/status`, { status: 'connected' });
+      if (connected) {
+        stompClient.send(`/app/dm/${conversationId}/status`, { status: 'connected' });
+        if (reconnectSyncRef.current) {
+          reconnectSyncRef.current = false;
+          void load();
+        }
+      } else if (state === 'reconnecting' || state === 'disconnected') {
+        reconnectSyncRef.current = true;
+      }
     });
     const unsubPresence = stompClient.subscribe('/topic/presence', body => {
       const event = body as { usuarioId?: number; online?: boolean; lastSeen?: string | null };
@@ -1000,7 +1008,7 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       setTypingName('');
       setNewMessages(0);
     };
-  }, [partnerId, partnerName, scrollToBottom, user?.id]);
+  }, [load, partnerId, partnerName, scrollToBottom, user?.id]);
 
   useEffect(() => {
     if (!partnerId) return;
@@ -1020,40 +1028,15 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
     return () => window.clearTimeout(id);
   }, [load]);
 
-  // Poll for new messages
   useEffect(() => {
-    let id: ReturnType<typeof setInterval> | null = null;
-    async function poll() {
-      if (document.visibilityState !== 'visible') return;
-      try {
-        const msgs = await chatService.getMessages(partnerId, { limit: PAGE_SIZE });
-        setMessages(prev => {
-          const shouldScroll = isAtBottom.current;
-          const applyNext = (next: Message[]) => {
-            window.setTimeout(() => { if (shouldScroll) scrollToBottom('smooth'); }, 50);
-            return next;
-          };
-          if (prev.some(m => m.status === 'PENDING' || m.status === 'FAILED')) return mergeMessages(prev, msgs);
-          if (prev.length > PAGE_SIZE) return mergeMessages(prev, msgs);
-          if (msgs.length !== prev.length) return applyNext(msgs);
-          const a = prev[prev.length - 1], b = msgs[msgs.length - 1];
-          return (!a || !b || a.id !== b.id || a.read !== b.read) ? applyNext(msgs) : prev;
-        });
-      } catch { /* silent */ }
-    }
-    const start = () => {
-      if (id) return;
-      id = setInterval(poll, POLL_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void load();
     };
-    const stop  = () => { if (id) clearInterval(id); id = null; };
-    start();
-    const handleVisibility = () => document.visibilityState === 'visible' ? start() : stop();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      stop();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [partnerId, scrollToBottom]);
+  }, [load]);
 
   const loadOlder = useCallback(async () => {
     const el = scrollRef.current;
@@ -1559,6 +1542,12 @@ export function ChatThread({ partnerId, showBack = false }: ChatThreadProps) {
       {(!online || syncing) && (
         <div className="shrink-0 border-b border-[var(--border)] bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600">
           {!online ? 'Sin conexión. Los mensajes se guardarán para enviar después.' : 'Sincronizando mensajes pendientes...'}
+        </div>
+      )}
+
+      {online && wsState !== 'connected' && (
+        <div className="shrink-0 border-b border-[var(--border)] bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600">
+          {wsState === 'connecting' || wsState === 'reconnecting' ? 'Reconectando chat...' : 'Chat desconectado. Intentando recuperar conexión...'}
         </div>
       )}
 

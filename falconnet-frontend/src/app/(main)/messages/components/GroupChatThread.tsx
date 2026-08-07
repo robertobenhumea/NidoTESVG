@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { stompClient } from '@/lib/stomp';
+import { stompClient, type ConnectionState } from '@/lib/stomp';
 import { cn } from '@/lib/utils';
 import { groupChatService, mapGroupMessage } from '@/services/groupChat.service';
 import { searchService } from '@/services/search.service';
@@ -479,7 +479,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
   const [loading, setLoading] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasOlder, setHasOlder] = useState(true);
-  const [wsConnected, setWsConnected] = useState(false);
+  const [wsState, setWsState] = useState<ConnectionState>('disconnected');
   const [typingUsers, setTypingUsers] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
   const [text, setText] = useState('');
@@ -504,6 +504,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
   const isAtBottom = useRef(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<number | null>(null);
+  const reconnectSyncRef = useRef(false);
 
   const membersById = useMemo(() => new Map((detail?.miembros ?? []).map(m => [m.usuarioId, m])), [detail]);
   const mediaMessages = useMemo(
@@ -588,7 +589,18 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
 
   useEffect(() => {
     if (!Number.isFinite(groupId) || groupId <= 0) return;
-    const unsubState = stompClient.onState(setWsConnected);
+    const unsubState = stompClient.onState((connected, state) => {
+      setWsState(state);
+      if (connected) {
+        if (reconnectSyncRef.current) {
+          reconnectSyncRef.current = false;
+          void load();
+          void groupChatService.markRead(groupId).catch(() => {});
+        }
+      } else if (state === 'reconnecting' || state === 'disconnected') {
+        reconnectSyncRef.current = true;
+      }
+    });
     const unsubEvents = stompClient.subscribe(`/topic/grupos/${groupId}/events`, body => {
       const event = body as { type?: string; messageId?: number; message?: GroupMessage | BChatGrupoMensaje };
       if (!event.type) return;
@@ -646,7 +658,7 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
       unsubEvents();
       unsubTyping();
     };
-  }, [groupId, scrollToBottom, user?.id]);
+  }, [groupId, load, scrollToBottom, user?.id]);
 
   useEffect(() => {
     if (!Number.isFinite(groupId) || groupId <= 0) return;
@@ -682,26 +694,14 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
 
   useEffect(() => {
     if (!Number.isFinite(groupId) || groupId <= 0) return;
-    const id = window.setInterval(async () => {
+    const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      try {
-        const next = (await groupChatService.getMessages(groupId)).filter(hasRenderableMessage);
-        setMessages(prev => {
-          const lastPrev = prev.at(-1)?.id;
-          const lastNext = next.at(-1)?.id;
-          if (prev.length !== next.length || lastPrev !== lastNext) {
-            const shouldScroll = isAtBottom.current;
-            window.setTimeout(() => { if (shouldScroll) scrollToBottom('smooth'); }, 50);
-            return next;
-          }
-          return prev;
-        });
-      } catch {
-        // Polling must not kick the user out of an open chat.
-      }
-    }, wsConnected ? 30000 : 8000);
-    return () => window.clearInterval(id);
-  }, [groupId, scrollToBottom, wsConnected]);
+      void load();
+      void groupChatService.markRead(groupId).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [groupId, load]);
 
   useEffect(() => {
     if (isAtBottom.current) scrollToBottom(loading ? 'instant' : 'smooth');
@@ -1000,7 +1000,10 @@ export function GroupChatThread({ groupId, showBack = false }: { groupId: number
             <Avatar src={detail?.foto ?? undefined} name={detail?.nombre ?? 'Grupo'} size="sm" />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-[var(--text-primary)]">{detail?.nombre ?? 'Grupo'}</p>
-              <p className="truncate text-[11px] text-[var(--text-muted)]">{detail ? `${detail.miembros.length} miembros · ${detail.tipo}` : 'Cargando'}</p>
+              <p className="truncate text-[11px] text-[var(--text-muted)]">
+                {detail ? `${detail.miembros.length} miembros · ${detail.tipo}` : 'Cargando'}
+                {wsState !== 'connected' ? ` · ${wsState === 'connecting' || wsState === 'reconnecting' ? 'reconectando...' : 'desconectado'}` : ' · conectado'}
+              </p>
             </div>
           </button>
           <button onClick={() => setMediaOpen(v => !v)} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"><ImageIcon className="size-4" /></button>

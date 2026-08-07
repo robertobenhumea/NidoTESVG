@@ -1,0 +1,222 @@
+{
+  "main": {
+    "id": "a7636ad65e91088b",
+    "type": "split",
+    "children": [
+      {
+        "id": "3768a9fb0c492b64",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "16375fc9cbfca523",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista gráfica"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "82e036debd4a8e7e",
+    "type": "split",
+    "children": [
+      {
+        "id": "edbc19d8b7f55a87",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "13450193b9ddb3db",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "5649892bd39ba456",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "]",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "84f1a16a15beaff6",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200,
+    "collapsed": true
+  },
+  "right": {
+    "id": "c4d523f118831a3e",
+    "type": "split",
+    "children": [
+      {
+        "id": "a730dec90cada928",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8d193352ec66219b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes"
+            }
+          },
+          {
+            "id": "aefa3fb53e548bb4",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes"
+            }
+          },
+          {
+            "id": "e5f80dde93e264f2",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "835ed328d83d3d7e",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "6589759fe54eb1c7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "16375fc9cbfca523",
+  "lastOpenFiles": [
+    "06-Correo/Correo-Bandejas.md",
+    "HOME.md",
+    "HOME.md.tmp.9676.e0ddac96fe89",
+    "99-Wiki/Diagramas-Mermaid.md",
+    "99-Wiki/Diagramas-Mermaid.md.tmp.9676.3c6015ed5c5a",
+    "99-Wiki/Modulos-Estado.md",
+    "99-Wiki/Modulos-Estado.md.tmp.9676.538d7f0e41e3",
+    "99-Wiki/Convenciones-Desarrollo.md",
+    "99-Wiki/Convenciones-Desarrollo.md.tmp.9676.fc5690821d5b",
+    "99-Wiki/Glosario.md",
+    "99-Wiki/Glosario.md.tmp.9676.d87b9d8d097b",
+    "16-Infraestructura-Futura/Plan-Infraestructura.md",
+    "16-Infraestructura-Futura/Plan-Infraestructura.md.tmp.9676.7d1256cf5938",
+    "15-Decisiones/Decisiones-Arquitectura.md",
+    "15-Decisiones/Decisiones-Arquitectura.md.tmp.9676.89301167195e",
+    "14-Bugs/Bugs-Conocidos.md",
+    "14-Bugs/Bugs-Conocidos.md.tmp.9676.1e3ba7da3f95",
+    "13-Roadmap/Fase-Siguiente.md",
+    "13-Roadmap/Fase-Actual.md",
+    "13-Roadmap/Fase-Actual.md.tmp.9676.36d68ff32913",
+    "13-Roadmap/Roadmap-Principal.md",
+    "13-Roadmap/Roadmap-Principal.md.tmp.9676.d7c6fbe24bcd",
+    "12-Seguridad/Seguridad-Overview.md",
+    "11-PWA/PWA-Overview.md",
+    "10-Equipos/Equipos-Overview.md",
+    "09-Marketplace/Marketplace-Overview.md",
+    "08-Perfiles/Perfiles-Overview.md",
+    "07-Feed/Feed-Overview.md",
+    "06-Correo/Correo-Pendientes.md",
+    "06-Correo/Correo-Push-Notifications.md",
+    "06-Correo/Correo-Threading.md",
+    "06-Correo/Correo-Adjuntos.md",
+    "06-Correo/Correo-Arquitectura.md",
+    "05-Chat/Chat-Bugs-Pendientes.md",
+    "05-Chat/Chat-WebSocket-Futuro.md",
+    "05-Chat/Chat-Audios.md",
+    "Sin título 1.canvas",
+    "Sin título.canvas"
+  ]
+}

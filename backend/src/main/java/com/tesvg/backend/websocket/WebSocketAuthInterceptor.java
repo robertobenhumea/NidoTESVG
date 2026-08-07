@@ -76,6 +76,13 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                     return null;
                 }
             }
+            if (destination != null && destination.startsWith("/topic/usuarios/")) {
+                Long usuarioId = extractUserTopicId(destination);
+                String correo = accessor.getUser() != null ? accessor.getUser().getName() : null;
+                if (usuarioId == null || correo == null) return null;
+                Usuario usuario = usuarioRepository.findByCorreo(correo).orElse(null);
+                if (usuario == null || !usuario.getId().equals(usuarioId)) return null;
+            }
         }
         return message;
     }
@@ -100,6 +107,16 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             Long second = Long.valueOf(parts[1]);
             if (first.equals(second) || first > second) return null;
             return new Long[] { first, second };
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private Long extractUserTopicId(String destination) {
+        try {
+            String rest = destination.substring("/topic/usuarios/".length());
+            String id = rest.contains("/") ? rest.substring(0, rest.indexOf('/')) : rest;
+            return Long.valueOf(id);
         } catch (Exception ignored) {
             return null;
         }

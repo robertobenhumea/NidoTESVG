@@ -45,11 +45,12 @@ class StompClient {
   }
 
   subscribe(destination: string, handler: MessageHandler): () => void {
-    const current = this.subscriptions.get(destination) ?? { id: `sub-${this.nextSubId++}`, handlers: new Set<MessageHandler>() };
+    const existing = this.subscriptions.get(destination);
+    const current = existing ?? { id: `sub-${this.nextSubId++}`, handlers: new Set<MessageHandler>() };
     current.handlers.add(handler);
     this.subscriptions.set(destination, current);
     this.ensure();
-    if (this.connected) this.safeSendFrame(frame('SUBSCRIBE', { id: current.id, destination }));
+    if (!existing && this.connected) this.safeSendFrame(frame('SUBSCRIBE', { id: current.id, destination }));
     return () => {
       const sub = this.subscriptions.get(destination);
       if (!sub) return;

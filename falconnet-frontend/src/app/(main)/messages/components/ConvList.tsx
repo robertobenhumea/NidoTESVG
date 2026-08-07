@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Users, X } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
+import { useAuth } from '@/hooks/useAuth';
 import { timeAgo } from '@/lib/utils';
 import { chatOffline } from '@/lib/chatOffline';
 import { stompClient } from '@/lib/stomp';
@@ -29,6 +30,10 @@ function chatListLog(message: string, extra?: unknown) {
   if (process.env.NODE_ENV !== 'production' && /error|falló|fallo|rechaz/i.test(message)) {
     console.warn(`[chat-list] ${message}`, extra ?? '');
   }
+}
+
+function dmConversationId(a: number, b: number): string {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
 }
 
 function ConvSkeleton() {
@@ -262,6 +267,7 @@ function CreateGroupModal({ onClose, onCreated }: { onClose: () => void; onCreat
 }
 
 export function ConvList({ activePartnerId, activeGroupId, className = '', onlineIds = new Set() }: ConvListProps) {
+  const { user } = useAuth();
   const [convs, setConvs]     = useState<Conversation[]>([]);
   const [groups, setGroups]   = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,6 +278,7 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
   const [presence, setPresence] = useState<Record<number, { online: boolean; lastSeen?: string | null }>>({});
   const stateRef = useRef({ convCount: 0, groupCount: 0, query: '' });
   const lastBackendDmCountRef = useRef(0);
+  const syncTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     stateRef.current = { convCount: convs.length, groupCount: groups.length, query };
@@ -391,23 +398,78 @@ export function ConvList({ activePartnerId, activeGroupId, className = '', onlin
     }
   }, []);
 
+  const scheduleChatSync = useCallback((scope: 'dm' | 'groups' | 'all' = 'all') => {
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = window.setTimeout(() => {
+      syncTimerRef.current = null;
+      if (scope === 'dm' || scope === 'all') void loadDM();
+      if (scope === 'groups' || scope === 'all') void loadGroups();
+    }, 250);
+  }, [loadDM, loadGroups]);
+
   useEffect(() => {
     const firstLoad = window.setTimeout(() => { void loadDM(); }, 0);
-    const id = setInterval(loadDM, 15_000);
     return () => {
       window.clearTimeout(firstLoad);
-      clearInterval(id);
     };
   }, [loadDM]);
 
   useEffect(() => {
     const firstLoad = window.setTimeout(() => { void loadGroups(); }, 0);
-    const id = setInterval(loadGroups, 15_000);
     return () => {
       window.clearTimeout(firstLoad);
-      clearInterval(id);
     };
   }, [loadGroups]);
+
+  useEffect(() => () => {
+    if (syncTimerRef.current) window.clearTimeout(syncTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const unsubState = stompClient.onState(connected => {
+      if (connected) scheduleChatSync('all');
+    });
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') scheduleChatSync('all');
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      unsubState();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [scheduleChatSync]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = stompClient.subscribe(`/topic/usuarios/${user.id}/chat`, body => {
+      const event = body as { eventType?: string; type?: string; senderId?: number; messageId?: number | null };
+      if (event.eventType === 'DM_MESSAGE_CREATED' && event.senderId !== user.id && event.messageId) {
+        void chatService.markDelivered(event.messageId).catch(() => {});
+      }
+      if (event.eventType || event.type) scheduleChatSync('all');
+    });
+    return unsub;
+  }, [scheduleChatSync, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || convs.length === 0) return;
+    const unsubs = convs.map(conv => stompClient.subscribe(`/topic/dm/${dmConversationId(user.id, conv.partnerId)}/events`, body => {
+      const event = body as { eventType?: string };
+      if (!event.eventType) return;
+      scheduleChatSync('dm');
+    }));
+    return () => unsubs.forEach(unsub => unsub());
+  }, [convs, scheduleChatSync, user?.id]);
+
+  useEffect(() => {
+    if (groups.length === 0) return;
+    const unsubs = groups.map(group => stompClient.subscribe(`/topic/grupos/${group.id}/events`, body => {
+      const event = body as { type?: string };
+      if (!event.type) return;
+      scheduleChatSync('groups');
+    }));
+    return () => unsubs.forEach(unsub => unsub());
+  }, [groups, scheduleChatSync]);
 
   useEffect(() => {
     if (!activeGroupId) return;

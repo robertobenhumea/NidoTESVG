@@ -1037,6 +1037,9 @@ public class ChatGrupoController {
     private void publishGroupEvent(String type, Long grupoId, Long messageId, ChatGroupMessageDTO message, Long actorId) {
         ChatRealtimeEventDTO event = new ChatRealtimeEventDTO(type, grupoId, messageId, message, actorId);
         messagingTemplate.convertAndSend("/topic/grupos/" + grupoId + "/events", event);
+        miembroRepo.findByGrupoIdAndActivoTrue(grupoId).forEach(miembro ->
+                messagingTemplate.convertAndSend("/topic/usuarios/" + miembro.getUsuarioId() + "/chat", event)
+        );
         redisCacheService.publish("falconnet:chat-events", event);
     }
 
@@ -1099,18 +1102,18 @@ public class ChatGrupoController {
 
     private void publishDMEvent(String eventType, String conversationId, Long messageId, Long senderId, Long recipientId, MessageDTO payload) {
         try {
-            messagingTemplate.convertAndSend(
-                    "/topic/dm/" + conversationId + "/events",
-                    new DMRealtimeEventDTO(
-                            eventType,
-                            conversationId,
-                            messageId,
-                            senderId,
-                            recipientId,
-                            LocalDateTime.now(),
-                            payload
-                    )
+            DMRealtimeEventDTO event = new DMRealtimeEventDTO(
+                    eventType,
+                    conversationId,
+                    messageId,
+                    senderId,
+                    recipientId,
+                    LocalDateTime.now(),
+                    payload
             );
+            messagingTemplate.convertAndSend("/topic/dm/" + conversationId + "/events", event);
+            messagingTemplate.convertAndSend("/topic/usuarios/" + senderId + "/chat", event);
+            messagingTemplate.convertAndSend("/topic/usuarios/" + recipientId + "/chat", event);
         } catch (Exception ignored) {
             // REST remains authoritative; realtime delivery must not break writes.
         }
